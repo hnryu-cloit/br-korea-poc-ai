@@ -1,5 +1,5 @@
-from schemas.contracts import GenerationInput
-from services.generator import DraftGenerator
+from src.schemas.contracts import GenerationInput
+from src.services.generator import DraftGenerator
 
 
 FEATURES = [

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from schemas.contracts import BrandProfile, GenerationInput, GenerationOutput
+from src.schemas.contracts import BrandProfile, GenerationInput, GenerationOutput
 
 
 class DraftGenerator:

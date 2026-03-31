@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from pipeline.run import run_pipeline
+from src.pipeline.run import run_pipeline
 
 
 def main() -> None:
