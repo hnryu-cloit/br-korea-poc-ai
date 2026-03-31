@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import verify_token
-from api.schemas import GenerationResponse
+from api.schemas import GenerationResponse, SalesQueryRequest
 from pipeline.run import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -13,10 +13,10 @@ router = APIRouter(prefix="/generation", tags=["generation"])
 
 
 @router.post("", response_model=GenerationResponse, dependencies=[Depends(verify_token)])
-async def generate() -> GenerationResponse:
+async def generate(payload: SalesQueryRequest) -> GenerationResponse:
     try:
-        logger.info("파이프라인 실행 시작")
-        result = await asyncio.to_thread(run_pipeline)
+        logger.info("파이프라인 실행 시작 (프롬프트: %s)", payload.prompt[:30])
+        result = await run_pipeline(payload.prompt)
         logger.info("파이프라인 실행 완료")
         return GenerationResponse(status="ok", result=result)
     except Exception as exc:

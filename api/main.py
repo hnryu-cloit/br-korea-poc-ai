@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from api.config import get_settings
-from api.routers import generation
+from api.routers import generation, sales
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +34,8 @@ app = FastAPI(
 )
 
 app.include_router(generation.router)
+app.include_router(sales.router)
+app.include_router(management.router)
 
 
 @app.get("/health")
