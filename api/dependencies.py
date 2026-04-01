@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 from fastapi import Depends, HTTPException, status
@@ -44,7 +46,7 @@ async def verify_token(
         return True
     if credentials is None or credentials.credentials != settings.AI_SERVICE_TOKEN:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing service token",
         )
     return True
