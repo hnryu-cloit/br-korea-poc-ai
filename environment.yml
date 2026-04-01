@@ -1,0 +1,22 @@
+name: br-korea-ai
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - fastapi==0.115.0
+      - uvicorn[standard]==0.30.6
+      - pydantic==2.9.2
+      - pydantic-settings==2.5.2
+      - google-generativeai
+      - pandas
+      - numpy
+      - scikit-learn
+      - python-dotenv
+      - faiss-cpu
+      - pgvector
+      - sqlalchemy
+      - psycopg2-binary
+      - pytest
