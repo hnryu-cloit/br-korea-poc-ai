@@ -82,6 +82,38 @@ class InventoryPredictor:
             return float(current_stock), 0.0
 
 
+class StatisticalAnalyzer:
+    """
+    기본 통계 분석 엔진:
+    BI 툴의 핵심 기능을 AI 에이전트에 내장하여 수치적 신뢰성을 보장합니다.
+    """
+    def calculate_moving_average(self, data: List[float], window: int = 7) -> float:
+        """이동 평균 산출 (트렌드 파악용)"""
+        if len(data) < window:
+            return sum(data) / len(data) if data else 0.0
+        return sum(data[-window:]) / window
+
+    def detect_outliers(self, data: List[float], threshold: float = 2.0) -> List[int]:
+        """Z-Score 기반 이상치(급변점) 탐지"""
+        if len(data) < 3: return []
+        mean = np.mean(data)
+        std = np.std(data)
+        if std == 0: return []
+        
+        z_scores = [(x - mean) / std for x in data]
+        return [i for i, score in enumerate(z_scores) if abs(score) > threshold]
+
+    def get_summary_stats(self, data: List[float]) -> Dict[str, float]:
+        """주요 기술 통계량 산출"""
+        if not data: return {}
+        return {
+            "avg": float(np.mean(data)),
+            "max": float(np.max(data)),
+            "min": float(np.min(data)),
+            "std": float(np.std(data))
+        }
+
+
 class QueryClassifier:
     """
     자연어 질의 분류기 (ML/DL 기반 의도 파악)

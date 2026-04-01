@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel
@@ -20,6 +22,8 @@ class SalesQueryResponse(BaseModel):
     confidence_score: float | None = 1.0
     semantic_logic: str | None = None
     sources: list[str] | None = None
+    # 시각화를 위한 구조화된 데이터 (차트 타입, 라벨, 수치 등)
+    visual_data: dict[str, Any] | None = None 
 
 
 class ProductionPredictRequest(BaseModel):

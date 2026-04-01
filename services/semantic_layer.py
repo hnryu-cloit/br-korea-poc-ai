@@ -8,12 +8,17 @@ class SemanticLayer:
     이를 통해 AI가 임의로 수치를 계산하는 것을 방지하고 일관된 지표를 제공합니다.
     """
     def __init__(self):
-        # 비즈니스 지표 정의 (Data Governance)
+        # 비즈니스 및 통계 지표 정의 (Data Governance)
         self.metrics_definition = {
-            "장사가 잘됐다": "매출액이 전주 동일 요일 대비 5% 이상 상승했을 때",
-            "재고 위험": "1시간 후 예상 재고가 안전 재고(10개) 미만으로 떨어질 때",
-            "배달 성과 저조": "전체 매출 중 배달 비중이 20% 미만이거나 취소율이 5% 이상일 때",
-            "재방문율 하락": "프로모션 종료 후 1주 내 고객 재방문 비중이 전월 평균 대비 10%p 하락 시"
+            "장사가 잘됐다": "매출액이 7일 이동 평균(SMA) 대비 5% 이상 상승했을 때",
+            "재고 위험": "1시간 후 예상 재고가 최근 4주 평균 생산량의 10% 미만일 때",
+            "판매 급증": "Z-Score 분석 결과 매출액이 표준 편차의 2배 이상 상회하는 이상치 발생 시",
+            "배달 성과 저조": "전체 매출 중 배달 비중이 20% 미만이거나 취소율이 5% 이상일 때"
+        }
+        # BI 데이터 마트 테이블 구조 정의 (Metadata)
+        self.data_marts = {
+            "daily_sales_summary": ["store_id", "date", "total_sales", "moving_avg_7d", "outlier_flag"],
+            "inventory_health": ["sku_id", "current_stock", "predicted_stock_1h", "burn_rate_avg"]
         }
 
     def get_logic(self, query: str) -> str:

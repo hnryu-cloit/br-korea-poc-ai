@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from api.config import get_settings
-from api.routers import generation, sales
+from api.routers import generation, management, sales
 
 logging.basicConfig(
     level=logging.INFO,
