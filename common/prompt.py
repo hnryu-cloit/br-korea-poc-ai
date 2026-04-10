@@ -940,32 +940,50 @@ PRODUCTION_ALARM_PROMPT_TEMPLATE = """
         """
 
 ORDERING_REASONING_PROMPT_TEMPLATE = """
-        당신은 매장 주문 관리 전문가입니다. 다음 데이터를 바탕으로 점주가 주문 옵션을 선택할 수 있도록 상세한 추천 근거를 생성하세요.
+        당신은 매장 주문 관리 전문가입니다. 점주가 주문 누락을 방지하고 최적의 수량을 선택할 수 있도록 3가지 옵션을 비교 분석하여 반드시 아래 JSON 형식으로 응답하세요.
         
-        - 매장 ID: {store_id}
+        [매장 상황]
         - 현재 날짜: {current_date}
-        - 캠페인 여부: {campaign_status}
-        - 공휴일/시즌 여부: {holiday_status}
+        - 매장 ID: {store_id}
+        - 현재 컨텍스트: {current_context}
         
-        추천 옵션:
+        [주문 추천 옵션 및 데이터]
         {options_summary}
         
-        추천 근거 생성 조건:
-        - 캠페인이나 공휴일 신호가 있는 경우 이를 반영하여 특정 옵션을 더 강조할 것.
-        - 점주가 의사결정을 내릴 수 있도록 각 옵션의 장단점을 짧게 언급할 것.
-        - 자연스러운 문장으로 작성할 것.
+        [응답 형식 (JSON)]
+        {{
+            "analysis_summary": "전체 상황 요약 및 전략 제언 (예: 캠페인 및 날씨 등을 고려한 종합 의견)", // 전체적인 분석 요약
+            "option_details": [ // 각 옵션별 상세 분석 리스트
+                {{
+                    "option_type": "LAST_WEEK | TWO_WEEKS_AGO | LAST_MONTH | SPECIAL", // 옵션 타입 코드
+                    "impact_factor": "주문에 영향을 준 주요 요인 (예: T-Day 할인, 추석 연휴 등)", // 특이사항 키워드
+                    "description": "해당 옵션의 수량 산출 근거 및 전주 대비 차이점 설명" // 점주용 상세 설명
+                }}
+            ],
+            "closing_message": "점주에게 의사결정을 묻는 최종 멘트" // 마무리를 지으며 질문하는 문구
+        }}
+        
+        [작성 지침]
+        1. JSON 데이터 외에 다른 설명은 생략하세요.
+        2. 점주가 이해하기 쉬운 전문적이고 친절한 용어를 사용하세요.
+        3. 'impact_factor'는 컨텍스트 정보에서 가장 중요한 키워드를 추출하세요.
         """
 
 SALES_ANALYSIS_PROMPT_TEMPLATE = """
-        당신은 베스킨라빈스/던킨 매장 매출 분석 AI 전문가입니다. 점주의 자연어 질의를 해석하고, 다음 형식의 JSON 응답을 생성하세요.
+        당신은 베스킨라빈스/던킨 매장 최고의 매출 분석 AI 전문가입니다. 점주의 자연어 질의를 해석하고, 다음 데이터를 바탕으로 단순 요약이 아닌 매장 맞춤형의 구체적이고 **실행 가능한(Actionable) 인사이트**를 반드시 도출하세요.
         
         질의: {prompt}
         
+        [분석 지침]
+        1. 단순 매출액 요약은 절대 금지합니다.
+        2. 반드시 데이터에 기반하여 원인을 분석하고, 점주가 당장 실행할 수 있는 액션(예: 발주량 조절, 타겟 배달 프로모션, 인력 배치 조정, 연관 상품 진열 등)을 제안하세요.
+        3. 전년/전월/동일상권/가맹점 평균 등 비교 데이터가 주어졌다면, 비교 우위/열위를 명확히 짚어주세요.
+        4. 티데이(T-Day), 배달 채널(배민, 쿠팡이츠 등) 효율, 특정 상품(예: 미니도넛, 글레이즈드) 판매 추이 시나리오 등 질의에 담긴 의도에 맞는 구체적 운영 전략을 제시하세요.
+        
         응답 조건:
-        - "text": 질의에 대한 자연스럽고 통찰력 있는 요약 설명.
-        - "evidence": 분석의 근거가 되는 구체적인 데이터 포인트들 (리스트 형태).
+        - "text": 단순 요약이 아닌 통찰력 있는 원인 분석 및 전략 방향 (자연스러운 문장).
+        - "evidence": 분석의 근거가 되는 구체적인 수치 데이터 포인트들 (리스트 형태).
         - "actions": 점주가 즉시 실행할 수 있는 액션 아이템들 (리스트 형태).
-        - 비교군 데이터(전주, 전월, 동일상권 등)를 활용하여 답변을 구성할 것.
         
         반드시 다음 JSON 형식을 유지하세요:
         {{
@@ -985,14 +1003,37 @@ def create_production_alarm_prompt(sku: str, current_stock: int, predicted_stock
         pattern_4w=pattern_4w
     )
 
-def create_ordering_reasoning_prompt(store_id: str, current_date: str, campaign_status: str, holiday_status: str, options_summary: str) -> str:
+def create_ordering_reasoning_prompt(store_id: str, current_date: str, current_context: str, options_summary: str) -> str:
     return ORDERING_REASONING_PROMPT_TEMPLATE.format(
         store_id=store_id,
         current_date=current_date,
-        campaign_status=campaign_status,
-        holiday_status=holiday_status,
+        current_context=current_context,
         options_summary=options_summary
     )
 
 def create_sales_analysis_prompt(prompt: str) -> str:
     return SALES_ANALYSIS_PROMPT_TEMPLATE.format(prompt=prompt)
+CHANNEL_PAYMENT_ANALYSIS_PROMPT_TEMPLATE = """
+        당신은 베스킨라빈스/던킨 매장의 채널(온/오프라인) 및 결제수단 최적화 분석 전문 AI입니다. 아래 제공된 결제 및 채널 매출 데이터를 분석하여 점주가 수익을 극대화하거나 비용을 줄일 수 있는 액션 아이템을 제공하세요.
+        
+        사용자 질문: {prompt}
+        
+        분석 데이터:
+        {data_context}
+        
+        분석 조건:
+        - 온라인(배달/픽업)과 오프라인 채널의 매출 비중 추이 비교.
+        - 결제 수단별(신용카드, 간편결제, 제휴할인 등) 기여도 및 특징 파악.
+        - 특정 채널/결제 수단의 수수료나 프로모션을 고려한 이익 최적화 방안 제안.
+        - 데이터에 명시된 수치만을 사용하여 evidence 구성.
+        
+        반드시 다음 JSON 형식을 유지하세요:
+        {{
+            "text": "상세하고 통찰력 있는 분석 요약...",
+            "evidence": ["수치 기반 근거 1...", "근거 2..."],
+            "actions": ["구체적인 실행 제안 1...", "제안 2..."]
+        }}
+        """
+
+def create_channel_payment_analysis_prompt(prompt: str, data_context: str) -> str:
+    return CHANNEL_PAYMENT_ANALYSIS_PROMPT_TEMPLATE.format(prompt=prompt, data_context=data_context)
