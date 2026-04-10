@@ -7,6 +7,7 @@ from api.config import Settings, get_settings
 
 from common.gemini import Gemini
 from services.sales_analyzer import SalesAnalyzer
+from services.channel_payment_analyzer import ChannelPaymentAnalyzer
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
 from services.rag_service import RAGService
@@ -28,6 +29,9 @@ def get_orchestrator(gemini: Gemini = Depends(get_gemini_client)) -> AgentOrches
 
 def get_sales_analyzer(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:
     return SalesAnalyzer(gemini_client=gemini)
+
+def get_channel_payment_analyzer(gemini: Gemini = Depends(get_gemini_client)) -> ChannelPaymentAnalyzer:
+    return ChannelPaymentAnalyzer(gemini_client=gemini)
 
 def get_production_service(gemini: Gemini = Depends(get_gemini_client)) -> ProductionService:
     return ProductionService(gemini_client=gemini)

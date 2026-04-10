@@ -8,3 +8,6 @@ pandas
 numpy
 scikit-learn
 python-dotenv
+colorlog
+pgvector
+psycopg2-binary
