@@ -12,8 +12,8 @@ from google.genai import types
 from dotenv import load_dotenv
 from PIL import Image
 
-import vertexai
-from common.logger import timefn
+# logger는 파일 상단에서 한 번만 임포트합니다.
+from common.logger import init_logger, timefn
 
 # CSV 로깅을 위한 전역 변수
 BILLING_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../results/billing.csv")
@@ -84,20 +84,18 @@ class Gemini:
 
     def __init__(self):
         load_dotenv()
-        vertexai.init(project=os.getenv('PROJECT_ID'), location=os.getenv('LOCATION'))
         self.api_key = os.getenv('API_KEY')
 
         # Developer API 클라이언트 (텍스트 및 이미지 생성용)
         self.client = genai.Client(api_key=self.api_key)
 
-        self.model = "gemini-3.0-flash"
-        self.image_model = "gemini-3-pro-image-preview"  # 이미지 생성 모델
+        self.model = "gemini-2.5-flash"
+        self.image_model = "gemini-3.1-flash-image-preview"  # 이미지 생성 모델
         self.max_retries = 3
         self.initial_delay = 1
 
-        # logger 초기화 추가
-        from common import logger
-        self.logger = logger.init_logger()
+        # init_logger 사용
+        self.logger = init_logger()
 
     def retry_with_delay(max_retries=None):
         """재시도 데코레이터 - 함수별로 다른 retry 횟수 지원"""
@@ -123,7 +121,7 @@ class Gemini:
 
     @retry_with_delay(max_retries=3)
     @timefn
-    def get_embeddings(self, text: str, model: str = "text-embedding-004") -> list[float]:
+    def get_embeddings(self, text: str, model: str = "gemini-embedding-001", api_call_count=1) -> list[float]:
         """텍스트를 벡터로 변환하는 임베딩 메서드"""
         try:
             result = self.client.models.embed_content(
@@ -193,7 +191,7 @@ class Gemini:
                 api_call_count=api_call_count
             )
 
-    @retry_with_delay(max_retries=5)
+    @retry_with_delay(max_retries=3)
     @timefn
     def call_generate_image(self, prompt, reference_image=None, product_images=None, aspect_ratio="1:1", resolution="1K", output_mime_type="image/png", system_prompt=None, api_call_count=1):
         """
@@ -333,26 +331,46 @@ class Gemini:
                 api_call_count=api_call_count
             )
 
-    @retry_with_delay(max_retries=5)
+    @retry_with_delay(max_retries=3)
     @timefn
-    def call_gemini_text(self, prompt, response_type="application/json", api_call_count=1):
-        """텍스트만 처리하는 함수"""
+    def call_gemini_text(self, prompt, system_instruction=None, response_type="application/json", api_call_count=1):
+        """텍스트만 처리하는 함수 (시스템 프롬프트 지원 및 실행 시간 콘솔 출력 추가)"""
         response_text = None
         status = "실패"
+        start_t = time.time()
+        
+        # MIME type 보정
+        mime_type = response_type
+        if mime_type == "text":
+            mime_type = "text/plain"
+        elif mime_type == "json":
+            mime_type = "application/json"
 
         try:
+            parts = [types.Part.from_text(text=prompt)]
+            contents = [types.Content(parts=parts)]
+            
+            # config 구성
+            config_args = {
+                "response_mime_type": mime_type,
+                "temperature": 0,
+                "top_p": 1,
+                "top_k": 1,
+            }
+            if system_instruction:
+                config_args["system_instruction"] = system_instruction
+                
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=[prompt],
-                config={
-                    "response_mime_type": response_type,
-                    "temperature": 0,
-                    "top_p": 1,
-                    "top_k": 1,
-                }
+                contents=contents,
+                config=types.GenerateContentConfig(**config_args)
             )
-            response_text = response.candidates[0].content.parts[0].text
+            response_text = response.text
             status = "성공"
+            
+            elapsed = time.time() - start_t
+            print(f"\n  [System] ⏱️ LLM(Gemini) 분석 생성 소요 시간: {elapsed:.2f}초")
+            
             return response_text
         except Exception as e:
             try:
@@ -372,7 +390,7 @@ class Gemini:
                 api_call_count=api_call_count
             )
 
-    @retry_with_delay(max_retries=4)
+    @retry_with_delay(max_retries=3)
     @timefn
     def call_extract_metadata(self, content, response_type="application/json", api_call_count=1):
         """이미지와 텍스트를 함께 처리하는 함수"""
