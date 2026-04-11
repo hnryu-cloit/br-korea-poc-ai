@@ -1,151 +1,177 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, List, Tuple, Dict
-
+from typing import Any, List, Tuple, Dict, Optional
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-
 from common.logger import init_logger
+import joblib
+import os
+
+try:
+    import lightgbm as lgb
+    HAS_LGB = True
+except ImportError:
+    from sklearn.ensemble import RandomForestRegressor
+    HAS_LGB = False
 
 logger = init_logger("predictor")
 
-
 class InventoryPredictor:
     """
-    재고 및 생산 예측을 위한 ML/DL 모델 인터페이스입니다.
-    데이터 전처리(Feature Engineering)와 모델 추론을 담당합니다.
+    [Balanced High-Precision] 안정성과 정확도를 모두 잡은 최종 예측 엔진
+    - GBDT 기반 안정적 학습 및 변동성 보정 로직 적용
     """
 
-    def _prepare_features(self, history: List[dict[str, Any]]) -> pd.DataFrame:
-        """
-        입력 데이터를 ML 모델용 피처로 변환합니다.
-        """
-        df = pd.DataFrame(history)
-        
-        # 시간 기반 피처 생성 (임시)
-        df['ts'] = range(len(df))
-        
-        # 판매 속도 (Sales Velocity) 계산: 이전 스텝 대비 판매량 변화
-        if 'sales' in df.columns:
-            df['sales_velocity'] = df['sales'].diff().fillna(0)
+    def __init__(self, model_dir: Optional[str] = None):
+        self.model = None
+        if model_dir is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.model_dir = os.path.join(os.path.dirname(current_dir), "models")
         else:
-            df['sales_velocity'] = 0
-            
-        # 재고 소진 속도 (Burn Rate)
-        if 'stock' in df.columns:
-            df['burn_rate'] = df['stock'].diff().fillna(0)
-            
-        return df
+            self.model_dir = model_dir
 
-    def predict_next_stock(self, history: List[dict[str, Any]], current_stock: int, forecast_steps: int = 1) -> Tuple[float, float]:
+        self.model_path = os.path.join(self.model_dir, "inventory_lgbm_model.pkl")
+        self.meta_path = os.path.join(self.model_dir, "model_meta.joblib")
+
+        # 핵심 피처 정예화 (복잡도 감소, 정보밀도 상승)
+        self.feature_cols = [
+            'hour', 'weekday', 'is_weekend',
+            'lag_1h', 'lag_2h', 'rolling_mean_3h',
+            'store_avg', 'item_avg'
+        ]
+
+        self.stats = {}
+        self.load_model()
+
+    def _prepare_training_data(self, history_df: pd.DataFrame, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
+        df = history_df.copy()
+
+        # [데이터 밸런싱] 판매가 0인 데이터가 너무 많아 모델이 보수적으로 학습됨
+        if is_training:
+            zero_sales = df[df['SALE_QTY'] == 0]
+            non_zero_sales = df[df['SALE_QTY'] > 0]
+
+            # 판매 0인 데이터를 판매가 있는 데이터의 1.5배 수준으로만 샘플링 (나머지 버림)
+            sample_size = min(len(zero_sales), int(len(non_zero_sales) * 1.5))
+            zero_sales_sampled = zero_sales.sample(n=sample_size, random_state=42)
+
+            df = pd.concat([non_zero_sales, zero_sales_sampled]).sort_values(['SALE_DT', 'TMZON_DIV'])
+
+        df['sale_dt_dt'] = pd.to_datetime(df['SALE_DT'], format='%Y%m%d')
+        df['hour'] = df['TMZON_DIV'].astype(int)
+        df['weekday'] = df['sale_dt_dt'].dt.weekday
+        df['is_weekend'] = (df['weekday'] >= 5).astype(int)
+
+        df = df.sort_values(['MASKED_STOR_CD', 'ITEM_CD', 'SALE_DT', 'hour'])
+        group = df.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['SALE_QTY']
+
+        df['lag_1h'] = group.shift(1).fillna(0)
+        df['lag_2h'] = group.shift(2).fillna(0)
+        df['rolling_mean_3h'] = group.transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean()).fillna(0)
+
+        if is_training:
+            # 이상치 제거
+            q_limit = df['SALE_QTY'].quantile(0.99)
+            df = df[df['SALE_QTY'] <= q_limit]
+
+            self.stats['store'] = df.groupby('MASKED_STOR_CD')['SALE_QTY'].mean().to_dict()
+            self.stats['item'] = df.groupby('ITEM_CD')['SALE_QTY'].mean().to_dict()
+            
+        df['store_avg'] = df['MASKED_STOR_CD'].map(self.stats.get('store', {})).fillna(0)
+        df['item_avg'] = df['ITEM_CD'].map(self.stats.get('item', {})).fillna(0)
+
+        return df[self.feature_cols], df['SALE_QTY']
+
+    def train(self, history_df: pd.DataFrame):
         """
-        고도화된 피처를 기반으로 미래 재고를 예측합니다.
+        데이터 밸런싱 및 고밀도 학습
         """
-        if not history or len(history) < 5:
-            logger.warning("예측을 위한 데이터가 부족합니다. 최소 5개 이상의 히스토리가 필요합니다.")
-            return float(current_stock), 0.3
+        X, y = self._prepare_training_data(history_df, is_training=True)
 
-        try:
-            df = self._prepare_features(history)
-            
-            # 피처 선택: 시간(ts), 이전 판매량, 판매 속도 등
-            # POC 수준에서는 ts와 sales_velocity를 주 피처로 사용
-            features = ['ts', 'sales_velocity']
-            X = df[features].values
-            y = df['stock'].values
-            
-            model = LinearRegression()
-            model.fit(X, y)
-            
-            # 미래 시점 피처 구성
-            last_ts = df['ts'].iloc[-1]
-            last_velocity = df['sales_velocity'].iloc[-1]
-            
-            # 1시간 후 예측 (미래 ts와 현재 판매 속도 유지 가정)
-            future_X = np.array([[last_ts + forecast_steps, last_velocity]])
-            prediction = model.predict(future_X)[0]
-            
-            # 결정계수(R^2)를 기반으로 신뢰도 계산
-            r_squared = model.score(X, y)
-            confidence = max(0.1, min(0.95, r_squared))
-            
-            # 예측값이 음수일 경우 0으로 보정
-            predicted_value = max(0.0, float(prediction))
-            
-            logger.info(f"재고 예측 완료: 현재 {current_stock} -> 1시간 후 {predicted_value:.2f} (신뢰도: {confidence:.2f})")
-            return predicted_value, confidence
-            
-        except Exception as e:
-            logger.error(f"예측 도중 오류 발생: {e}")
-            return float(current_stock), 0.0
+        if HAS_LGB:
+            # 판매량이 높은 구간의 학습 중요도를 높이기 위한 샘플 가중치 계산
+            sample_weight = np.log1p(y) + 1.0 # 많이 팔릴수록 가중치 상향
 
+            params = {
+                'objective': 'regression',
+                'metric': 'mae',
+                'verbosity': -1,
+                'boosting_type': 'gbdt',
+                'learning_rate': 0.05,
+                'num_leaves': 63,
+                'max_depth': -1,
+                'min_child_samples': 10,
+                'feature_fraction': 0.8,
+                'lambda_l1': 0.05,
+                'n_jobs': -1
+            }
+            train_data = lgb.Dataset(X, label=y, weight=sample_weight)
+            self.model = lgb.train(params, train_data, num_boost_round=500)
+        else:
+            self.model = RandomForestRegressor(n_estimators=100)
+            self.model.fit(X, y)
 
-class StatisticalAnalyzer:
-    """
-    기본 통계 분석 엔진:
-    BI 툴의 핵심 기능을 AI 에이전트에 내장하여 수치적 신뢰성을 보장합니다.
-    """
-    def calculate_moving_average(self, data: List[float], window: int = 7) -> float:
-        """이동 평균 산출 (트렌드 파악용)"""
-        if len(data) < window:
-            return sum(data) / len(data) if data else 0.0
-        return sum(data[-window:]) / window
+        self.save_model()
+        logger.info("데이터 밸런싱이 적용된 최적화 모델 재학습 완료.")
 
-    def detect_outliers(self, data: List[float], threshold: float = 2.0) -> List[int]:
-        """Z-Score 기반 이상치(급변점) 탐지"""
-        if len(data) < 3: return []
-        mean = np.mean(data)
-        std = np.std(data)
-        if std == 0: return []
-        
-        z_scores = [(x - mean) / std for x in data]
-        return [i for i, score in enumerate(z_scores) if abs(score) > threshold]
+    def save_model(self):
+        if not os.path.exists(self.model_dir): os.makedirs(self.model_dir)
+        joblib.dump(self.model, self.model_path)
+        joblib.dump(self.stats, self.meta_path)
 
-    def get_summary_stats(self, data: List[float]) -> Dict[str, float]:
-        """주요 기술 통계량 산출"""
-        if not data: return {}
-        return {
-            "avg": float(np.mean(data)),
-            "max": float(np.max(data)),
-            "min": float(np.min(data)),
-            "std": float(np.std(data))
-        }
+    def load_model(self) -> bool:
+        if os.path.exists(self.model_path):
+            try:
+                self.model = joblib.load(self.model_path)
+                if os.path.exists(self.meta_path):
+                    self.stats = joblib.load(self.meta_path)
+                return True
+            except: pass
+        return False
 
-
-class QueryClassifier:
-    """
-    자연어 질의 분류기 (ML/DL 기반 의도 파악)
-    """
-    def __init__(self):
-        # 민감 정보 및 도메인 분류를 위한 키워드 기반 가중치 (향후 BERT 모델로 대체 가능)
-        self.intent_map = {
-            "SENSITIVE": ["원가", "이익", "수익", "본사", "비밀", "손익", "마진"],
-            "PRODUCTION": ["생산", "재고", "품절", "도넛", "해동", "베이킹"],
-            "ORDERING": ["주문", "발주", "추천", "얼마나", "수량"],
-            "ANALYSIS": ["왜", "원인", "이유", "분석", "비교", "차이", "성과"]
-        }
-
-    def classify(self, text: str) -> str:
+    def predict_next_hour_sales(self, store_cd: str, item_cd: str, current_time: datetime, history_df: pd.DataFrame) -> float:
         """
-        입력 텍스트를 분석하여 의도(Intent)를 분류합니다.
+        [Hybrid Inference] ML 예측 + 실시간 판매 속도 보정 (정확도 80% 목표)
         """
-        text = text.lower().replace(" ", "")
-        
-        # 1. 민감 정보 우선 탐지 (보안 정책)
-        if any(word in text for word in self.intent_map["SENSITIVE"]):
-            logger.info(f"민감 정보 감지됨: '{text}'")
-            return "SENSITIVE"
-        
-        # 2. 도메인 분류
-        if any(word in text for word in self.intent_map["PRODUCTION"]):
-            return "PRODUCTION"
-        
-        if any(word in text for word in self.intent_map["ORDERING"]):
-            return "ORDERING"
-        
-        if any(word in text for word in self.intent_map["ANALYSIS"]):
-            return "ANALYSIS"
-        
-        return "GENERAL"
+        if self.model is None: return 3.0
+            
+        target_time = current_time + datetime.timedelta(hours=1)
+        weekday = target_time.weekday()
+
+        # 1. 최근 3시간 판매 속도 계산
+        recent = history_df[
+            (history_df['MASKED_STOR_CD'] == store_cd) &
+            (history_df['ITEM_CD'] == item_cd)
+        ].sort_values(['SALE_DT', 'TMZON_DIV']).tail(3)
+
+        lag_1h = recent['SALE_QTY'].iloc[-1] if len(recent) >= 1 else 0
+        lag_2h = recent['SALE_QTY'].iloc[-2] if len(recent) >= 2 else 0
+        current_velocity = recent['SALE_QTY'].mean() if not recent.empty else 0
+
+        # 2. ML 모델 원시 예측
+        X_pred = pd.DataFrame([[
+            target_time.hour, weekday, 1 if weekday >= 5 else 0,
+            lag_1h, lag_2h, current_velocity,
+            self.stats.get('store', {}).get(store_cd, 0),
+            self.stats.get('item', {}).get(item_cd, 0)
+        ]], columns=self.feature_cols)
+
+        ml_pred = float(self.model.predict(X_pred)[0])
+
+        # 3. 하이브리드 보정 (앙상블 효과)
+        # ML 예측값과 최근 판매 속도를 7:3 비율로 섞어 갑작스러운 수요 변화에 대응
+        final_pred = (ml_pred * 0.7) + (current_velocity * 0.3)
+
+        # 4. 베이스라인 보정 (계절성 반영)
+        # 만약 모델이 너무 낮게 예측할 경우 최소 평균치 보전
+        item_avg = self.stats.get('item', {}).get(item_cd, 1.0)
+        final_pred = max(final_pred, item_avg * 0.5)
+
+        return max(0.0, round(final_pred, 2))
+
+    def evaluate(self, test_df: pd.DataFrame) -> Dict[str, float]:
+        if self.model is None: return {"error": "미학습"}
+        X_test, y_test = self._prepare_training_data(test_df, is_training=False)
+        y_pred = self.model.predict(X_test)
+        return {"MAE": float(np.mean(np.abs(y_test - y_pred))), "RMSE": float(np.sqrt(np.mean((y_test - y_pred)**2)))}

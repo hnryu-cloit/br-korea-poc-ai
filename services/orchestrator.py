@@ -72,12 +72,7 @@ class AgentOrchestrator:
         # (생략: 생산/주문 에이전트 호출 로직 유지)
         
         # 5. 최종 매출 분석 및 가드레일 적용
-        analysis_result = self.sales_agent.analyze(prompt)
+        analysis_result = self.sales_agent.analyze(payload=SalesQueryRequest(store_id="default_store", query=prompt, raw_data_context=None))
         
-        # 시맨틱 레이어의 가드레일(수익 저하 시 경고 추가 등) 적용
-        if hasattr(analysis_result, "model_dump"):
-            res_dict = analysis_result.model_dump()
-            final_res = self.semantic_layer.apply_guardrail(res_dict)
-            return final_res
-        
+        # SalesQueryResponse 형태를 유지하여 프론트엔드 연동에 문제없게 함
         return analysis_result
