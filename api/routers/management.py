@@ -11,8 +11,12 @@ from schemas.contracts import (
     OrderingRecommendationRequest, OrderingRecommendationResponse,
     SimulationRequest, SimulationReportResponse
 )
+from services.production_service import ProductionService
+from services.ordering_service import OrderingService
 
-# ... (기존 임포트 유지)
+router = APIRouter(prefix="/api", tags=["management"])
+logger = logging.getLogger(__name__)
+
 
 @router.post("/production/simulation", response_model=SimulationReportResponse, dependencies=[Depends(verify_token)])
 async def get_production_simulation(
