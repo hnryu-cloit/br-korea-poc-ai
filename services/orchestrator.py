@@ -8,7 +8,7 @@ from services.sales_analyzer import SalesAnalyzer
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
 from services.rag_service import RAGService
-from services.predictor import QueryClassifier
+from services.query_classifier import QueryClassifier
 from services.semantic_layer import SemanticLayer
 from evaluators.basic import QualityEvaluator
 

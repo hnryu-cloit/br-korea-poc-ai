@@ -5,7 +5,7 @@ from schemas.contracts import SalesQueryRequest, SalesQueryResponse, SalesInsigh
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_sales_analysis_prompt
-from services.predictor import QueryClassifier
+from services.query_classifier import QueryClassifier
 from services.semantic_layer import SemanticLayer
 from services.rag_service import RAGService
 from services.sales_analysis_engine import SalesAnalysisEngine

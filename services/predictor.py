@@ -170,6 +170,42 @@ class InventoryPredictor:
 
         return max(0.0, round(final_pred, 2))
 
+    def predict_with_confidence(
+        self,
+        store_cd: str,
+        item_cd: str,
+        current_time: datetime,
+        history_df: pd.DataFrame,
+    ) -> Dict[str, Any]:
+        """
+        예측값과 신뢰구간을 함께 반환한다.
+        confidence_level: 최근 데이터 충분도 기반 0~1 값.
+        """
+        predicted = self.predict_next_hour_sales(store_cd, item_cd, current_time, history_df)
+
+        recent = history_df[
+            (history_df['MASKED_STOR_CD'] == store_cd)
+            & (history_df['ITEM_CD'] == item_cd)
+        ]
+        data_points = len(recent)
+        confidence_level = min(1.0, data_points / 50)  # 50행 이상이면 신뢰도 1.0
+
+        spread = 0.2 + (1.0 - confidence_level) * 0.2  # 데이터 부족할수록 범위 넓게
+        lower_bound = round(max(0.0, predicted * (1 - spread)), 2)
+        upper_bound = round(predicted * (1 + spread), 2)
+
+        logger.info(
+            "predict_with_confidence: store=%s, item=%s, pred=%.2f [%.2f~%.2f] confidence=%.2f",
+            store_cd, item_cd, predicted, lower_bound, upper_bound, confidence_level,
+        )
+
+        return {
+            "predicted": predicted,
+            "lower_bound": lower_bound,
+            "upper_bound": upper_bound,
+            "confidence_level": round(confidence_level, 2),
+        }
+
     def evaluate(self, test_df: pd.DataFrame) -> Dict[str, float]:
         if self.model is None: return {"error": "미학습"}
         X_test, y_test = self._prepare_training_data(test_df, is_training=False)
