@@ -9,12 +9,13 @@ from schemas.contracts import OrderingOption, OrderOptionType, OrderingRecommend
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_ordering_reasoning_prompt
+from .seasonality_engine import SeasonalityEngine
 
 logger = init_logger("ordering_service")
 
 
 class OrderingService:
-    def __init__(self, gemini_client: Gemini, historical_order_df: pd.DataFrame = None, product_group_deadlines: dict = None):
+    def __init__(self, gemini_client: Gemini, historical_order_df: pd.DataFrame = None, product_group_deadlines: dict = None, campaign_df: pd.DataFrame = None):
         """
         주문 관리 서비스 초기화
         :param gemini_client: Gemini API 클라이언트
@@ -24,6 +25,7 @@ class OrderingService:
         self.gemini = gemini_client
         self.historical_order_df = historical_order_df if historical_order_df is not None else pd.DataFrame()
         self.product_group_deadlines = product_group_deadlines if product_group_deadlines is not None else {}
+        self.seasonality_engine = SeasonalityEngine(campaign_df if campaign_df is not None else pd.DataFrame())
 
     def set_historical_data(self, df: pd.DataFrame):
         """과거 데이터를 외부(DataLoader 등)에서 로드하여 주입"""
@@ -133,10 +135,17 @@ class OrderingService:
             logger.warning("All historical data are zero. Using simulation fallback.")
             qty_last_week, qty_two_weeks, qty_last_month = 150, 145, 160
 
+        season_weight = self.seasonality_engine.get_weight(target_date, target_product)
+        if season_weight != 1.0:
+            logger.info(f"시즌성 가중치 적용: {season_weight} (date={target_date})")
+            qty_last_week = round(qty_last_week * season_weight)
+            qty_two_weeks = round(qty_two_weeks * season_weight)
+            qty_last_month = round(qty_last_month * season_weight)
+
         return [
-            OrderingOption(option_type=OrderOptionType.LAST_WEEK, recommended_qty=qty_last_week, reasoning="", expected_sales=qty_last_week),
-            OrderingOption(option_type=OrderOptionType.TWO_WEEKS_AGO, recommended_qty=qty_two_weeks, reasoning="", expected_sales=qty_two_weeks),
-            OrderingOption(option_type=OrderOptionType.LAST_MONTH, recommended_qty=qty_last_month, reasoning="", expected_sales=qty_last_month)
+            OrderingOption(option_type=OrderOptionType.LAST_WEEK, recommended_qty=qty_last_week, reasoning="", expected_sales=qty_last_week, seasonality_weight=season_weight if season_weight != 1.0 else None),
+            OrderingOption(option_type=OrderOptionType.TWO_WEEKS_AGO, recommended_qty=qty_two_weeks, reasoning="", expected_sales=qty_two_weeks, seasonality_weight=season_weight if season_weight != 1.0 else None),
+            OrderingOption(option_type=OrderOptionType.LAST_MONTH, recommended_qty=qty_last_month, reasoning="", expected_sales=qty_last_month, seasonality_weight=season_weight if season_weight != 1.0 else None)
         ]
 
     def _append_special_event_option_if_needed(self, store_id: str, target_date: str, target_product: str, context: dict, options: List[OrderingOption]):

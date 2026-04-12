@@ -42,6 +42,7 @@ class SimulationSummary(BaseModel):
     additional_waste_cost: int
     net_profit_change: int
     performance_status: str # "POSITIVE" | "NEGATIVE"
+    chance_loss_reduction: Optional[float] = Field(None, description="AI 예측 생산으로 회복 가능한 찬스로스 금액(원)")
 
 class SimulationReportResponse(BaseModel):
     """최종 시뮬레이션 리포트 응답"""
@@ -96,6 +97,7 @@ class OrderingOption(BaseModel):
     recommended_qty: int
     reasoning: str = Field(..., description="해당 옵션 추천 근거 (이벤트, 날씨, 휴일 등 반영)")
     expected_sales: int = Field(..., description="기대 판매량")
+    seasonality_weight: Optional[float] = Field(None, description="캠페인 마스터 기반 시즌성 가중치 (1.0 초과 시 표시)")
 
 
 class OrderingRecommendationRequest(BaseModel):

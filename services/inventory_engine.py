@@ -96,5 +96,40 @@ class InventoryReversalEngine:
         # 누적 재고 계산
         df_flow['stock_change'] = df_flow['in_qty'] - df_flow['out_qty']
         df_flow['estimated_stock'] = base_stock + df_flow['stock_change'].cumsum()
-        
+
+        return df_flow
+
+    def estimate_inventory_5min(
+        self,
+        initial_stock: float,
+        production_df: pd.DataFrame,
+        sales_df: pd.DataFrame,
+        target_time: datetime,
+    ) -> pd.DataFrame:
+        """
+        기초재고 + 생산량 - 매출량 기반 5분 단위 재고 역산.
+        production_df / sales_df: timestamp(datetime), qty(float) 컬럼을 가진 범용 DataFrame.
+        """
+        logger.info(f"estimate_inventory_5min: initial_stock={initial_stock}, target_time={target_time}")
+
+        day_start = target_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        timeline = pd.date_range(start=day_start, end=target_time, freq='5min', inclusive='both')
+
+        df_flow = pd.DataFrame(index=timeline)
+        df_flow['in_qty'] = 0.0
+        df_flow['out_qty'] = 0.0
+
+        for _, row in production_df.iterrows():
+            slot = pd.Timestamp(row['timestamp']).floor('5min')
+            if slot in df_flow.index:
+                df_flow.at[slot, 'in_qty'] += float(row['qty'])
+
+        for _, row in sales_df.iterrows():
+            slot = pd.Timestamp(row['timestamp']).floor('5min')
+            if slot in df_flow.index:
+                df_flow.at[slot, 'out_qty'] += float(row['qty'])
+
+        df_flow['stock_change'] = df_flow['in_qty'] - df_flow['out_qty']
+        df_flow['estimated_stock'] = initial_stock + df_flow['stock_change'].cumsum()
+
         return df_flow

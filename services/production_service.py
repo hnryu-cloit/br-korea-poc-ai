@@ -107,6 +107,12 @@ class ProductionService:
                 ai_guided_stock=round(float(flow_sim.at[flow_sim.index.asof(t), 'estimated_stock']), 1)
             ))
 
+        chance_loss_reduction = self.calculate_chance_loss_reduction(
+            predicted_stock=flow_sim['estimated_stock'],
+            actual_sales=flow_actual['out_qty'],
+            unit_margin=unit_price * payload.margin_rate,
+        )
+
         return SimulationReportResponse(
             metadata={
                 "store_id": store_id, "item_id": item_id, "item_name": item_nm,
@@ -118,8 +124,22 @@ class ProductionService:
                 additional_waste_qty=round(sim_waste - act_waste, 1),
                 additional_waste_cost=added_waste_loss,
                 net_profit_change=added_margin - added_waste_loss,
-                performance_status="POSITIVE" if (added_margin - added_waste_loss) > 0 else "NEGATIVE"
+                performance_status="POSITIVE" if (added_margin - added_waste_loss) > 0 else "NEGATIVE",
+                chance_loss_reduction=chance_loss_reduction,
             ),
             chart_data=chart_data,
             action_timeline=ai_actions_log
         )
+
+    def calculate_chance_loss_reduction(
+        self,
+        predicted_stock: pd.Series,
+        actual_sales: pd.Series,
+        unit_margin: float,
+    ) -> float:
+        """AI 예측 생산으로 회복 가능한 찬스로스 금액 계산."""
+        shortage_mask = predicted_stock < actual_sales
+        chance_loss_qty = float((actual_sales[shortage_mask] - predicted_stock[shortage_mask]).sum())
+        chance_loss_amount = round(chance_loss_qty * unit_margin, 2)
+        logger.info(f"chance_loss_reduction: qty={chance_loss_qty:.1f}, margin={unit_margin}, amount={chance_loss_amount:.0f}")
+        return chance_loss_amount
