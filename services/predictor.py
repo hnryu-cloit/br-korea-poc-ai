@@ -179,7 +179,8 @@ class InventoryPredictor:
     ) -> Dict[str, Any]:
         """
         예측값과 신뢰구간을 함께 반환한다.
-        confidence_level: 최근 데이터 충분도 기반 0~1 값.
+        - confidence_level: 최근 데이터 충분도 기반 0~1 값
+        - 신뢰구간: 과거 잔차(residual) 표준편차 기반 ±1σ 구간 (데이터 부족 시 비율 기반 fallback)
         """
         predicted = self.predict_next_hour_sales(store_cd, item_cd, current_time, history_df)
 
@@ -190,13 +191,32 @@ class InventoryPredictor:
         data_points = len(recent)
         confidence_level = min(1.0, data_points / 50)  # 50행 이상이면 신뢰도 1.0
 
-        spread = 0.2 + (1.0 - confidence_level) * 0.2  # 데이터 부족할수록 범위 넓게
-        lower_bound = round(max(0.0, predicted * (1 - spread)), 2)
-        upper_bound = round(predicted * (1 + spread), 2)
+        # 과거 잔차 기반 표준편차 계산 (데이터 10개 이상일 때)
+        std_dev = None
+        if self.model is not None and data_points >= 10:
+            try:
+                X_hist, y_hist = self._prepare_training_data(recent.copy(), is_training=False)
+                if len(X_hist) >= 5:
+                    y_hat = self.model.predict(X_hist)
+                    residuals = np.array(y_hist) - y_hat
+                    std_dev = float(np.std(residuals))
+            except Exception:
+                std_dev = None
+
+        if std_dev is not None and std_dev > 0:
+            # ±1σ 구간 (약 68% 신뢰구간)
+            lower_bound = round(max(0.0, predicted - std_dev), 2)
+            upper_bound = round(predicted + std_dev, 2)
+        else:
+            # Fallback: 데이터 부족 시 비율 기반 구간
+            spread = 0.2 + (1.0 - confidence_level) * 0.2
+            lower_bound = round(max(0.0, predicted * (1 - spread)), 2)
+            upper_bound = round(predicted * (1 + spread), 2)
 
         logger.info(
-            "predict_with_confidence: store=%s, item=%s, pred=%.2f [%.2f~%.2f] confidence=%.2f",
+            "predict_with_confidence: store=%s, item=%s, pred=%.2f [%.2f~%.2f] confidence=%.2f std=%.3f",
             store_cd, item_cd, predicted, lower_bound, upper_bound, confidence_level,
+            std_dev if std_dev is not None else -1.0,
         )
 
         return {

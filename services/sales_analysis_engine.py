@@ -219,8 +219,28 @@ class SalesAnalysisEngine:
                 total_sales = float(drink_res[1]) if drink_res and drink_res[1] else 0.0
                 beverage_ratio = (drink_sales / total_sales * 100) if total_sales > 0 else 0.0
                 profile['beverage_ratio'] = round(beverage_ratio, 1)
-                
-                profile['peak_hour'] = "12시~13시"
+
+                # 3. 최근 4주 기준 피크 시간대 (DAILY_STOR_ITEM_TMZON 사용)
+                peak_query = text("""
+                    WITH max_date AS (
+                        SELECT MAX("SALE_DT") as m_date FROM "DAILY_STOR_ITEM_TMZON" WHERE "MASKED_STOR_CD" = :store_id
+                    )
+                    SELECT "TMZON_DIV", SUM(CAST("SALE_QTY" AS NUMERIC)) as total_qty
+                    FROM "DAILY_STOR_ITEM_TMZON"
+                    CROSS JOIN max_date
+                    WHERE "MASKED_STOR_CD" = :store_id
+                      AND TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD') >= TO_DATE(CAST(max_date.m_date AS TEXT), 'YYYYMMDD') - INTERVAL '28 days'
+                    GROUP BY "TMZON_DIV"
+                    ORDER BY total_qty DESC
+                    LIMIT 1
+                """)
+                peak_res = conn.execute(peak_query, {"store_id": store_id}).fetchone()
+                if peak_res and peak_res[0] is not None:
+                    peak_h = int(peak_res[0])
+                    profile['peak_hour'] = f"{peak_h:02d}시~{peak_h+1:02d}시"
+                else:
+                    profile['peak_hour'] = "알 수 없음"
+
                 return profile
         except Exception as e:
             logger.error(f"DB 매장 프로필 추출 오류: {e}")
@@ -283,49 +303,95 @@ class SalesAnalysisEngine:
     def extract_cross_sell_combinations(self, store_id: str) -> List[Dict[str, Any]]:
         """
         [DB 조회] 최근 4주간 동일 영수증 내에서 함께 가장 많이 판매된 상품 조합 상위 5개를 추출합니다.
+        Support/Confidence/Lift 지표를 함께 반환합니다 (연관규칙 기반 교차판매 인사이트).
+        - support: 전체 영수증 중 두 상품이 함께 등장한 비율
+        - confidence: item_a가 있을 때 item_b도 있을 확률
+        - lift: 독립 구매 대비 동반 구매 상승배율 (>1이면 시너지 있음)
         """
         if not self.engine:
             return []
-            
+
         try:
             with self.engine.connect() as conn:
-                # 동일 영수증(SALE_DT + POS_NO + BILL_NO) 내의 다른 아이템 쌍을 집계
-                # (성능을 위해 도넛/음료 위주로 필터링 가능)
-                query = text("""
+                # 전체 영수증 수 및 아이템별 개별 출현 빈도 집계
+                base_query = text("""
                     WITH order_items AS (
                         SELECT "SALE_DT", "POS_NO", "BILL_NO", "ITEM_NM"
                         FROM "ORD_DTL"
                         WHERE "MASKED_STOR_CD" = :store_id
-                          AND TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD') >= (SELECT MAX(TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD')) FROM "ORD_DTL" WHERE "MASKED_STOR_CD" = :store_id) - INTERVAL '28 days'
+                          AND TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD') >= (
+                              SELECT MAX(TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD'))
+                              FROM "ORD_DTL" WHERE "MASKED_STOR_CD" = :store_id
+                          ) - INTERVAL '28 days'
+                    ),
+                    receipt_count AS (
+                        SELECT COUNT(DISTINCT "SALE_DT" || "POS_NO" || "BILL_NO") as total_receipts
+                        FROM order_items
+                    ),
+                    item_freq AS (
+                        SELECT "ITEM_NM", COUNT(DISTINCT "SALE_DT" || "POS_NO" || "BILL_NO") as item_count
+                        FROM order_items
+                        GROUP BY "ITEM_NM"
+                    ),
+                    pair_counts AS (
+                        SELECT
+                            a."ITEM_NM" as item_a,
+                            b."ITEM_NM" as item_b,
+                            COUNT(*) as pair_count
+                        FROM order_items a
+                        JOIN order_items b
+                          ON a."SALE_DT" = b."SALE_DT"
+                         AND a."POS_NO" = b."POS_NO"
+                         AND a."BILL_NO" = b."BILL_NO"
+                         AND a."ITEM_NM" < b."ITEM_NM"
+                        GROUP BY a."ITEM_NM", b."ITEM_NM"
                     )
-                    SELECT a."ITEM_NM" as item_a, b."ITEM_NM" as item_b, COUNT(*) as combo_count
-                    FROM order_items a
-                    JOIN order_items b ON a."SALE_DT" = b."SALE_DT" 
-                                      AND a."POS_NO" = b."POS_NO" 
-                                      AND a."BILL_NO" = b."BILL_NO"
-                                      AND a."ITEM_NM" < b."ITEM_NM" -- 중복 쌍 방지 (A,B 와 B,A)
-                    GROUP BY a."ITEM_NM", b."ITEM_NM"
-                    ORDER BY combo_count DESC
+                    SELECT
+                        p.item_a,
+                        p.item_b,
+                        p.pair_count,
+                        rc.total_receipts,
+                        fa.item_count as freq_a,
+                        fb.item_count as freq_b
+                    FROM pair_counts p
+                    CROSS JOIN receipt_count rc
+                    LEFT JOIN item_freq fa ON fa."ITEM_NM" = p.item_a
+                    LEFT JOIN item_freq fb ON fb."ITEM_NM" = p.item_b
+                    ORDER BY p.pair_count DESC
                     LIMIT 5
                 """)
-                res = conn.execute(query, {"store_id": store_id}).fetchall()
-                
+                rows = conn.execute(base_query, {"store_id": store_id}).fetchall()
+
                 combinations = []
-                for row in res:
+                for row in rows:
+                    item_a, item_b, pair_count, total, freq_a, freq_b = row
+                    pair_count = int(pair_count)
+                    total = int(total) if total and total > 0 else 1
+                    freq_a = int(freq_a) if freq_a and freq_a > 0 else 1
+                    freq_b = int(freq_b) if freq_b and freq_b > 0 else 1
+
+                    support = round(pair_count / total, 4)
+                    confidence = round(pair_count / freq_a, 4)
+                    # lift = P(A∩B) / (P(A) * P(B))
+                    lift = round((pair_count / total) / ((freq_a / total) * (freq_b / total)), 2)
+
                     combinations.append({
-                        "combination": f"{row[0]} + {row[1]}",
-                        "count": int(row[2])
+                        "combination": f"{item_a} + {item_b}",
+                        "count": pair_count,
+                        "support": support,
+                        "confidence": confidence,
+                        "lift": lift,
                     })
                 return combinations
         except Exception as e:
             logger.error(f"교차 판매 조합 추출 오류: {e}")
             # Fallback (데이터가 없거나 테이블 구조가 다를 경우 샘플 제공)
             return [
-                {"combination": "아메리카노(S) + 글레이즈드", "count": 124},
-                {"combination": "카페라떼(S) + 카카오 후로스티드", "count": 85},
-                {"combination": "아메리카노(S) + 올리브 츄이스티", "count": 72},
-                {"combination": "바닐라라떼(S) + 스트로베리 필드", "count": 54},
-                {"combination": "쿨라타 + 먼치킨 10개팩", "count": 48}
+                {"combination": "아메리카노(S) + 글레이즈드", "count": 124, "support": 0.062, "confidence": 0.41, "lift": 2.1},
+                {"combination": "카페라떼(S) + 카카오 후로스티드", "count": 85, "support": 0.043, "confidence": 0.35, "lift": 1.9},
+                {"combination": "아메리카노(S) + 올리브 츄이스티", "count": 72, "support": 0.036, "confidence": 0.24, "lift": 1.7},
+                {"combination": "바닐라라떼(S) + 스트로베리 필드", "count": 54, "support": 0.027, "confidence": 0.29, "lift": 1.6},
+                {"combination": "쿨라타 + 먼치킨 10개팩", "count": 48, "support": 0.024, "confidence": 0.31, "lift": 1.8},
             ]
 
     def get_actionable_insights(self, analysis_results: Dict[str, Any]) -> List[str]:
