@@ -11,7 +11,10 @@ from schemas.contracts import (
     SimulationRequest,
     SimulationReportResponse,
     SimulationSummary,
-    ChartDataPoint
+    ChartDataPoint,
+    ProductionDashboardResponse,
+    ProductionDashboardSummary,
+    SKUProductionStatus
 )
 from common.gemini import Gemini
 from common.logger import init_logger
@@ -26,10 +29,73 @@ class ProductionService:
         # 데이터프레임들을 실제 서비스 시에는 전역 캐시나 DB에서 로드해와야 함
         self._agent_cache: Dict[str, ProductionManagementAgent] = {}
 
-    def _get_agent(self, inventory_df: pd.DataFrame, production_df: pd.DataFrame, sales_df: pd.DataFrame) -> ProductionManagementAgent:
+    def _get_agent(self, inventory_df: pd.DataFrame, production_df: pd.DataFrame, sales_df: pd.DataFrame, store_prod_df: pd.DataFrame) -> ProductionManagementAgent:
         """에이전트 인스턴스 생성 및 캐싱 (성능 최적화)"""
         # 간단한 구현을 위해 매번 생성하거나 필요시 캐싱 로직 추가
-        return ProductionManagementAgent(inventory_df, production_df, sales_df)
+        return ProductionManagementAgent(inventory_df, production_df, sales_df, production_list_df=store_prod_df)
+
+    def get_dashboard_summary(self, 
+                              store_id: str, 
+                              target_date: str,
+                              inventory_df: pd.DataFrame, 
+                              production_df: pd.DataFrame, 
+                              sales_df: pd.DataFrame,
+                              store_prod_df: pd.DataFrame) -> ProductionDashboardResponse:
+        """
+        [FE 연동] 매장 메인 대시보드 화면을 위한 전체 품목 상태 요약 데이터를 반환합니다.
+        """
+        agent = self._get_agent(inventory_df, production_df, sales_df, store_prod_df)
+        
+        # 현재고 테이블에 존재하는 해당 점포의 모든 유니크 품목 추출
+        store_inventory = inventory_df[
+            (inventory_df['MASKED_STOR_CD'] == store_id) & 
+            (inventory_df['STOCK_DT'] == target_date.replace("-", ""))
+        ]
+        
+        unique_items = store_inventory['ITEM_CD'].unique()
+        
+        sku_list = []
+        critical_c = 0
+        warning_c = 0
+        safe_c = 0
+        total_reduction = 0
+        
+        now = datetime.datetime.now()
+        
+        for item_cd in unique_items:
+            # 상품명 매핑 (마스터 데이터가 없으므로 임시로 ITEM_NM 사용 시도)
+            # 운영 환경에서는 상품 마스터 조인 필수
+            try:
+                item_nm = str(store_inventory[store_inventory['ITEM_CD'] == item_cd]['ITEM_NM'].iloc[0])
+            except:
+                item_nm = f"상품 {item_cd}"
+                
+            status_data = agent.get_sku_status(store_id, item_cd, item_nm, now)
+            
+            status_kor = status_data["status"]
+            if status_kor == "위험": critical_c += 1
+            elif status_kor == "주의": warning_c += 1
+            else: safe_c += 1
+            
+            total_reduction += status_data["chance_loss_reduction_pct"]
+            
+            sku_list.append(SKUProductionStatus(**status_data))
+            
+        # 퍼센트 평균 계산
+        avg_reduction = round(total_reduction / len(sku_list), 1) if len(sku_list) > 0 else 0.0
+
+        summary = ProductionDashboardSummary(
+            critical_count=critical_c,
+            warning_count=warning_c,
+            safe_count=safe_c,
+            avg_chance_loss_reduction=avg_reduction
+        )
+
+        return ProductionDashboardResponse(
+            store_id=store_id,
+            summary=summary,
+            sku_list=sku_list
+        )
 
     def get_simulation_report(self, 
                               payload: SimulationRequest, 

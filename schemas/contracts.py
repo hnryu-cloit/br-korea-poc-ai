@@ -48,6 +48,38 @@ class SimulationReportResponse(BaseModel):
     """최종 시뮬레이션 리포트 응답"""
     metadata: Dict[str, Any]
     summary_metrics: SimulationSummary
+    time_series_data: List[ChartDataPoint]
+    actions_timeline: List[str]
+
+class ProductionPattern(BaseModel):
+    time: str
+    qty: int
+
+class SKUProductionStatus(BaseModel):
+    item_cd: str
+    item_nm: str
+    status: str
+    current_qty: int
+    predict_1h_qty: int
+    avg_4w_prod_1st: Optional[ProductionPattern]
+    avg_4w_prod_2nd: Optional[ProductionPattern]
+    chance_loss_reduction_pct: int
+    sales_velocity: float
+    tags: List[str]
+    alert_message: str
+    can_produce: bool
+
+class ProductionDashboardSummary(BaseModel):
+    critical_count: int
+    warning_count: int
+    safe_count: int
+    avg_chance_loss_reduction: float
+
+class ProductionDashboardResponse(BaseModel):
+    store_id: str
+    summary: ProductionDashboardSummary
+    sku_list: List[SKUProductionStatus]
+
     chart_data: List[ChartDataPoint]
     action_timeline: List[str]
 

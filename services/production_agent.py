@@ -315,6 +315,88 @@ class ProductionManagementAgent:
         self.chance_loss_service = ChanceLossService(sales_df, self.campaign_df)
         self.predictor = InventoryPredictor()
 
+    def calculate_sales_velocity(self, store_cd: str, item_cd: str, target_date: str, current_time: datetime) -> float:
+        """평소 4주 평균 대비 오늘의 판매 속도(배수) 계산"""
+        current_hour = current_time.hour
+        
+        # 1. 오늘 현재 시간까지의 누적 판매량
+        today_sales = self.historical_sales_df[
+            (self.historical_sales_df['MASKED_STOR_CD'] == store_cd) & 
+            (self.historical_sales_df['ITEM_CD'] == item_cd) &
+            (self.historical_sales_df['SALE_DT'] == target_date) &
+            (self.historical_sales_df['TMZON_DIV'].astype(int) <= current_hour)
+        ]['SALE_QTY'].sum()
+
+        # 2. 과거 4주 동요일, 현재 시간까지의 평균 누적 판매량
+        target_dt = datetime.strptime(target_date, '%Y%m%d')
+        start_hist = target_dt - timedelta(weeks=4)
+        target_weekday = target_dt.weekday()
+
+        hist_data = self.historical_sales_df[
+            (self.historical_sales_df['MASKED_STOR_CD'] == store_cd) &
+            (self.historical_sales_df['ITEM_CD'] == item_cd)
+        ].copy()
+        
+        if hist_data.empty: return 1.0
+
+        hist_data['sale_dt_dt'] = pd.to_datetime(hist_data['SALE_DT'], format='%Y%m%d')
+        hist_past = hist_data[
+            (hist_data['sale_dt_dt'] >= start_hist) & 
+            (hist_data['sale_dt_dt'] < target_dt) &
+            (hist_data['sale_dt_dt'].dt.weekday == target_weekday) &
+            (hist_data['TMZON_DIV'].astype(int) <= current_hour)
+        ]
+        
+        if hist_past.empty: return 1.0
+        
+        # 4주치 일자별 누적합의 평균 계산
+        avg_past_sales = hist_past.groupby('SALE_DT')['SALE_QTY'].sum().mean()
+        
+        if avg_past_sales <= 0: return 1.0
+        
+        # 오늘 판매량 / 4주 평균 판매량 = 판매 속도 배수 (예: 1.5배)
+        velocity = float(today_sales / avg_past_sales)
+        return round(velocity, 2)
+
+    def extract_production_pattern(self, store_cd: str, item_cd: str, target_date: str) -> dict:
+        """과거 4주간의 주력 1차, 2차 생산 시간 및 수량 패턴 분석"""
+        target_dt = datetime.strptime(target_date, '%Y%m%d')
+        start_hist = target_dt - timedelta(weeks=4)
+        
+        hist_prod = self.engine.production_df[
+            (self.engine.production_df['MASKED_STOR_CD'] == store_cd) &
+            (self.engine.production_df['ITEM_CD'] == item_cd)
+        ].copy()
+        
+        if hist_prod.empty:
+            return {"1st": None, "2nd": None}
+            
+        hist_prod['prod_dt_dt'] = pd.to_datetime(hist_prod['PROD_DT'], format='%Y%m%d')
+        hist_4w = hist_prod[(hist_prod['prod_dt_dt'] >= start_hist) & (hist_prod['prod_dt_dt'] < target_dt)]
+        
+        if hist_4w.empty: return {"1st": None, "2nd": None}
+
+        # 시간대(차수)별 평균 생산량 및 빈도 계산
+        pattern = hist_4w.groupby('PROD_DGRE')['PROD_QTY'].agg(['mean', 'count']).reset_index()
+        pattern = pattern.sort_values(by='count', ascending=False) # 자주 굽는 순으로 정렬
+        
+        result = {"1st": None, "2nd": None}
+        
+        # 차수(PROD_DGRE)를 시간(HH:MM)으로 변환하는 내부 함수
+        def dgre_to_time(dgre):
+            try:
+                hour = 8 + (int(dgre) - 1) * 2
+                return f"{hour:02d}:00"
+            except:
+                return "08:00"
+
+        if len(pattern) > 0:
+            result["1st"] = {"time": dgre_to_time(pattern.iloc[0]['PROD_DGRE']), "qty": int(pattern.iloc[0]['mean'])}
+        if len(pattern) > 1:
+            result["2nd"] = {"time": dgre_to_time(pattern.iloc[1]['PROD_DGRE']), "qty": int(pattern.iloc[1]['mean'])}
+            
+        return result
+
     def get_realtime_status(self, store_cd: str, item_cd: str, item_nm: str, current_time: Optional[datetime] = None) -> Dict[str, Any]:
         """실시간 재고 상태 및 1시간/2시간 후 예측 정보 조회"""
         now = current_time if current_time else datetime.now()
@@ -388,4 +470,67 @@ class ProductionManagementAgent:
                 "expected_profit_gain": expected_gain,
                 "past_chance_loss_qty": past_qty
             }
+        }
+
+    def get_sku_status(self, store_cd: str, item_cd: str, item_nm: str, current_time: Optional[datetime] = None) -> Dict[str, Any]:
+        """대시보드 표출을 위한 개별 SKU의 종합 상태 정보 생성"""
+        now = current_time if current_time else datetime.now()
+        target_date = now.strftime('%Y%m%d')
+
+        # 1. 기본 상태 및 수량 
+        rec = self.generate_recommendation(store_cd, item_cd, item_nm, now)
+        current_qty = rec['inventory']['current_qty']
+        predict_1h_qty = rec['prediction']['predicted_sales_1h']
+        
+        # 2. 4주 평균 생산 패턴 (1차, 2차)
+        pattern = self.extract_production_pattern(store_cd, item_cd, target_date)
+        
+        # 3. 완제품 판별 (버튼 비활성화용)
+        can_produce = True
+        if not self.production_list_df.empty:
+            can_produce = not self.production_list_df[
+                (self.production_list_df['MASKED_STOR_CD'] == store_cd) & 
+                (self.production_list_df['ITEM_CD'] == item_cd)
+            ].empty
+
+        # 4. 판매 속도(배수) 및 알림 메시지, 태그 로직
+        velocity = self.calculate_sales_velocity(store_cd, item_cd, target_date, now)
+        tags = []
+        alert_msg = "정상적인 판매 추이입니다."
+
+        if not can_produce:
+            tags.append("완제품")
+            alert_msg = "본사 납품 완제품으로 매장 자체 생산이 불가능합니다."
+        elif velocity >= 1.3:
+            tags.append("속도↑")
+            alert_msg = f"오늘 판매 속도가 평소 대비 {velocity}배 빠릅니다. 조기 품절 및 추가 생산 검토를 권장합니다."
+        elif current_qty <= predict_1h_qty and current_qty > 0:
+            tags.append("품절임박")
+            alert_msg = f"1시간 내 재고 소진이 예상됩니다."
+
+        # Risk Level 한글 매핑
+        risk_map = {"CRITICAL": "위험", "WARNING": "주의", "SAFE": "안전"}
+        status_kor = risk_map.get(rec['inventory']['status'], "안전")
+
+        # 찬스로스 절감 효과 (과거 대비)
+        past_loss = rec['recommendation']['past_chance_loss_qty']
+        reduction_pct = 0
+        if past_loss > 0 and rec['recommendation']['need_production']:
+            # 임의 로직: 생산 권장 시 과거 손실의 80%를 방어한다고 가정
+            reduction_pct = int((past_loss * 0.8 / past_loss) * 100) if past_loss else 0
+            if status_kor != "위험" and reduction_pct == 100: reduction_pct = 15 # UI 표현을 위한 보정
+
+        return {
+            "item_cd": item_cd,
+            "item_nm": item_nm,
+            "status": status_kor,
+            "current_qty": int(current_qty),
+            "predict_1h_qty": int(predict_1h_qty),
+            "avg_4w_prod_1st": pattern.get("1st"),
+            "avg_4w_prod_2nd": pattern.get("2nd"),
+            "chance_loss_reduction_pct": reduction_pct,
+            "sales_velocity": velocity,
+            "tags": tags,
+            "alert_message": alert_msg,
+            "can_produce": can_produce
         }
