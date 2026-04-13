@@ -9,7 +9,7 @@ import pandas as pd
 from schemas.contracts import (
     ProductionStatusRequest, ProductionAlarmResponse,
     OrderingRecommendationRequest, OrderingRecommendationResponse,
-    SimulationRequest, SimulationReportResponse
+    SimulationFullRequest, SimulationReportResponse
 )
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
@@ -20,27 +20,22 @@ logger = logging.getLogger(__name__)
 
 @router.post("/production/simulation", response_model=SimulationReportResponse, dependencies=[Depends(verify_token)])
 async def get_production_simulation(
-    payload: SimulationRequest,
-    # 실제 연동 시에는 백엔드가 DB에서 조회한 데이터를 JSON 리스트 형태로 전달한다고 가정
-    inventory_data: List[Dict[str, Any]],
-    production_data: List[Dict[str, Any]],
-    sales_data: List[Dict[str, Any]],
+    payload: SimulationFullRequest,
     service: ProductionService = Depends(get_production_service)
 ) -> SimulationReportResponse:
     """
     [FE/BE 연동] 과거 데이터를 기반으로 AI 생산 가이드 시뮬레이션 리포트를 생성합니다.
+    백엔드가 DB에서 조회한 inventory/production/sales 데이터를 포함해 전달합니다.
     """
     try:
         logger.info(f"시뮬레이션 요청: 매장 {payload.store_id}, 상품 {payload.item_id}")
-        
-        # 1. 수신된 데이터를 DataFrame으로 변환
-        inv_df = pd.DataFrame(inventory_data)
-        prod_df = pd.DataFrame(production_data)
-        sales_df = pd.DataFrame(sales_data)
-        
-        # 2. 서비스 호출
+
+        inv_df = pd.DataFrame(payload.inventory_data)
+        prod_df = pd.DataFrame(payload.production_data)
+        sales_df = pd.DataFrame(payload.sales_data)
+
         result = await asyncio.to_thread(
-            service.get_simulation_report, 
+            service.get_simulation_report,
             payload, inv_df, prod_df, sales_df
         )
         return result

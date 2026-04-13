@@ -28,6 +28,13 @@ class SimulationRequest(BaseModel):
     lead_time_hour: int = 1
     margin_rate: float = 0.3
 
+
+class SimulationFullRequest(SimulationRequest):
+    """백엔드에서 DB 데이터를 포함해 전달하는 시뮬레이션 요청"""
+    inventory_data: List[Dict[str, Any]] = Field(default_factory=list)
+    production_data: List[Dict[str, Any]] = Field(default_factory=list)
+    sales_data: List[Dict[str, Any]] = Field(default_factory=list)
+
 class ChartDataPoint(BaseModel):
     """시계열 차트 데이터 포인트"""
     time: str
