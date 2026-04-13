@@ -52,7 +52,7 @@ br-korea-poc-ai/
 │   └── routers/
 │       ├── generation.py       # POST /generation — 파이프라인 실행
 │       ├── sales.py            # POST /sales/query, /sales/query/channel-payment
-│       └── management.py       # POST /production/simulation, /ordering/recommend
+│       └── management.py       # POST /api/production/simulation, /ordering/recommend, /management/* legacy aliases
 ├── common/                     # 공통 유틸리티
 │   ├── gemini.py               # Gemini 클라이언트 (텍스트/이미지/임베딩, CSV 과금 로깅)
 │   ├── logger.py               # 구조화 로깅 및 timefn 데코레이터
@@ -151,10 +151,22 @@ pytest tests/
 | POST | `/generation` | 자연어 프롬프트 기반 파이프라인 실행 |
 | POST | `/sales/query` | 매출 자연어 질의 (종합 분석) |
 | POST | `/sales/query/channel-payment` | 채널·결제수단 특화 분석 |
-| POST | `/production/simulation` | 생산 가이드 시뮬레이션 리포트 |
-| POST | `/ordering/recommend` | 주문 추천 (3가지 옵션 반환) |
+| POST | `/api/production/simulation` | 생산 가이드 시뮬레이션 리포트 |
+| POST | `/ordering/recommend` | 계약 기반 주문 추천 |
+
+레거시 호환용 엔드포인트도 함께 유지합니다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/management/production/predict` | 백엔드 호환용 생산 예측 |
+| POST | `/management/ordering/recommend` | 백엔드 호환용 주문 추천 |
 
 `AI_SERVICE_TOKEN` 설정 시 모든 엔드포인트에 `Authorization: Bearer <token>` 헤더가 필요합니다.
+
+## 계약 스키마
+
+- 생산 시뮬레이션 요청/응답 계약은 [`schemas/contracts.py`](/Users/hanna/Documents/br-korea-poc/br-korea-poc-ai/schemas/contracts.py:1)의 `SimulationRequest`, `SimulationReportResponse`를 기준으로 관리합니다.
+- 백엔드가 AI 서비스를 프록시하거나 매핑할 때는 위 계약과 정합성을 유지해야 합니다.
 
 ## 서비스 구조 흐름
 
