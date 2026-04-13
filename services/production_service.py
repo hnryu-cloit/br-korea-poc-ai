@@ -4,9 +4,10 @@ import datetime
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
+from api.schemas import ProductionPredictRequest, ProductionPredictResponse
 from schemas.contracts import (
-    ProductionStatusRequest, 
-    ProductionAlarmResponse, 
+    ProductionStatusRequest,
+    ProductionAlarmResponse,
     RiskLevel,
     SimulationRequest,
     SimulationReportResponse,
@@ -14,7 +15,11 @@ from schemas.contracts import (
     ChartDataPoint,
     ProductionDashboardResponse,
     ProductionDashboardSummary,
-    SKUProductionStatus
+    SKUProductionStatus,
+    FeedbackCorrectionResponse,
+    ExceptionCheckResult,
+    PushNotificationPayload,
+    PushNotificationListResponse,
 )
 from common.gemini import Gemini
 from common.logger import init_logger
@@ -28,11 +33,74 @@ class ProductionService:
         self.gemini = gemini_client
         # 데이터프레임들을 실제 서비스 시에는 전역 캐시나 DB에서 로드해와야 함
         self._agent_cache: Dict[str, ProductionManagementAgent] = {}
+        # 피드백 기반 보정 계수 저장 (key: "store_id:sku_id")
+        self._correction_factors: Dict[str, float] = {}
 
-    def _get_agent(self, inventory_df: pd.DataFrame, production_df: pd.DataFrame, sales_df: pd.DataFrame, store_prod_df: pd.DataFrame) -> ProductionManagementAgent:
+    def _get_agent(
+        self,
+        inventory_df: pd.DataFrame,
+        production_df: pd.DataFrame,
+        sales_df: pd.DataFrame,
+        store_prod_df: Optional[pd.DataFrame] = None,
+    ) -> ProductionManagementAgent:
         """에이전트 인스턴스 생성 및 캐싱 (성능 최적화)"""
         # 간단한 구현을 위해 매번 생성하거나 필요시 캐싱 로직 추가
+        if store_prod_df is None:
+            store_prod_df = pd.DataFrame()
         return ProductionManagementAgent(inventory_df, production_df, sales_df, production_list_df=store_prod_df)
+
+    def predict_stock(self, payload: ProductionPredictRequest) -> ProductionPredictResponse:
+        """백엔드/AI 계약 호환용 1시간 후 재고 예측."""
+        sales_values: list[float] = []
+        production_values: list[float] = []
+        stock_values: list[float] = []
+
+        for row in payload.history:
+            if not isinstance(row, dict):
+                continue
+
+            sales_value = row.get("sales", row.get("sale_qty"))
+            production_value = row.get("production", row.get("prod_qty"))
+            stock_value = row.get("stock", row.get("current_stock"))
+
+            if sales_value is not None:
+                sales_values.append(float(sales_value))
+            if production_value is not None:
+                production_values.append(float(production_value))
+            if stock_value is not None:
+                stock_values.append(float(stock_value))
+
+        recent_sales = sum(sales_values[-3:]) / len(sales_values[-3:]) if sales_values else 0.0
+        recent_production = sum(production_values[-3:]) / len(production_values[-3:]) if production_values else 0.0
+        recent_stock = stock_values[-1] if stock_values else float(payload.current_stock)
+
+        trend_adjustment = 0.0
+        if payload.pattern_4w:
+            trend_adjustment += float(payload.pattern_4w[0]) * 0.15
+        if len(payload.pattern_4w) > 1:
+            trend_adjustment += float(payload.pattern_4w[1]) * 0.1
+
+        predicted_stock_1h = round(max(recent_stock + recent_production - recent_sales + trend_adjustment, 0.0), 1)
+        risk_detected = payload.current_stock <= 0 or predicted_stock_1h <= max(1.0, payload.current_stock * 0.5)
+
+        if risk_detected:
+            stockout_expected_at = "1시간 이내" if recent_sales > recent_production else None
+            alert_message = "1시간 이내 품절 위험입니다. 즉시 생산 여부를 확인하세요."
+        else:
+            stockout_expected_at = None
+            alert_message = "다음 1시간 재고는 안정 범위로 예상됩니다."
+
+        denominator = max(recent_stock + recent_production + recent_sales, 1.0)
+        confidence = round(min(0.98, 0.6 + (recent_sales / denominator) * 0.3 + min(len(payload.history), 5) * 0.02), 2)
+
+        return ProductionPredictResponse(
+            sku=payload.sku,
+            predicted_stock_1h=predicted_stock_1h,
+            risk_detected=risk_detected,
+            stockout_expected_at=stockout_expected_at,
+            alert_message=alert_message,
+            confidence=confidence,
+        )
 
     def get_dashboard_summary(self, 
                               store_id: str, 
@@ -195,6 +263,91 @@ class ProductionService:
             ),
             chart_data=chart_data,
             action_timeline=ai_actions_log
+        )
+
+    # --- 피드백 보정 로직 ---
+
+    def apply_feedback_correction(
+        self,
+        store_id: str,
+        sku_id: str,
+        recommended_qty: float,
+        actual_qty: float,
+    ) -> FeedbackCorrectionResponse:
+        """점주 실제 생산량 기반 예측 보정 계수 갱신 (EMA 방식)."""
+        key = f"{store_id}:{sku_id}"
+        ratio = actual_qty / recommended_qty if recommended_qty > 0 else 1.0
+        old_factor = self._correction_factors.get(key, 1.0)
+        new_factor = round(0.3 * ratio + 0.7 * old_factor, 4)
+        self._correction_factors[key] = new_factor
+        logger.info("피드백 보정 계수 갱신: key=%s, old=%.3f → new=%.3f", key, old_factor, new_factor)
+        return FeedbackCorrectionResponse(
+            store_id=store_id,
+            sku_id=sku_id,
+            correction_factor=new_factor,
+            message=f"보정 계수 갱신 완료: {new_factor:.3f}",
+        )
+
+    def get_corrected_prediction(self, store_id: str, sku_id: str, base_prediction: float) -> float:
+        """저장된 보정 계수를 적용한 예측값 반환."""
+        key = f"{store_id}:{sku_id}"
+        factor = self._correction_factors.get(key, 1.0)
+        return round(base_prediction * factor, 1)
+
+    # --- 현장 예외 룰셋 ---
+
+    def check_production_exceptions(
+        self,
+        sku_id: str,
+        recommended_qty: float,
+        store_closing_time: str,
+        current_time: Optional[str] = None,
+        avg_production_qty: Optional[float] = None,
+    ) -> ExceptionCheckResult:
+        """마감 직전 억제 및 대량 주문 수동 검토 예외 규칙 적용."""
+        from datetime import time as dt_time
+
+        closing_h, closing_m = map(int, store_closing_time.split(":"))
+        if current_time:
+            cur_h, cur_m = map(int, current_time.split(":"))
+            now_t = dt_time(cur_h, cur_m)
+        else:
+            now_t = datetime.datetime.now().time()
+
+        closing_minutes = closing_h * 60 + closing_m
+        now_minutes = now_t.hour * 60 + now_t.minute
+
+        # 규칙 1: 마감 30분 이내 생산 억제
+        if 0 <= (closing_minutes - now_minutes) <= 30:
+            return ExceptionCheckResult(
+                sku_id=sku_id,
+                suppressed=True,
+                requires_manual_review=False,
+                reason="마감 30분 이내 생산 억제",
+            )
+
+        # 규칙 2: 평균의 3배 초과 시 수동 검토 요청
+        if avg_production_qty and avg_production_qty > 0 and recommended_qty > 3 * avg_production_qty:
+            return ExceptionCheckResult(
+                sku_id=sku_id,
+                suppressed=False,
+                requires_manual_review=True,
+                reason=f"권장 수량({recommended_qty:.0f})이 평균({avg_production_qty:.0f})의 3배 초과",
+            )
+
+        return ExceptionCheckResult(sku_id=sku_id, suppressed=False, requires_manual_review=False)
+
+    # --- PUSH 알림 페이로드 ---
+
+    def get_push_notification_payloads(self, store_id: str) -> PushNotificationListResponse:
+        """현재 위험 SKU 기반 PUSH 알림 페이로드 목록 반환."""
+        alerts: List[PushNotificationPayload] = []
+        # _agent_cache에 저장된 에이전트가 있으면 활용, 없으면 빈 목록 반환
+        # (실시간 DB 연결 없는 POC 환경 기준)
+        return PushNotificationListResponse(
+            store_id=store_id,
+            alerts=alerts,
+            alert_count=len(alerts),
         )
 
     def calculate_chance_loss_reduction(

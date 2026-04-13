@@ -186,3 +186,84 @@ class BaseResponse(BaseModel):
     message: str = "Success"
     data: Optional[Any] = None
     error_code: Optional[str] = None
+
+
+# --- 생산 피드백 보정 로직 ---
+
+class FeedbackRecord(BaseModel):
+    store_id: str
+    sku_id: str
+    recommended_qty: float
+    actual_qty: float
+    recorded_at: Optional[str] = None
+
+
+class FeedbackCorrectionResponse(BaseModel):
+    store_id: str
+    sku_id: str
+    correction_factor: float
+    message: str
+
+
+# --- 현장 예외 상황 룰셋 ---
+
+class ExceptionCheckRequest(BaseModel):
+    sku_id: str
+    recommended_qty: float
+    store_closing_time: str  # "HH:MM" e.g. "22:00"
+    current_time: Optional[str] = None  # "HH:MM", None이면 현재 시각
+    avg_production_qty: Optional[float] = None
+
+
+class ExceptionCheckResult(BaseModel):
+    sku_id: str
+    suppressed: bool
+    requires_manual_review: bool
+    reason: Optional[str] = None
+
+
+# --- PUSH 알림 페이로드 ---
+
+class PushNotificationPayload(BaseModel):
+    title: str
+    body: str
+    sku_id: str
+    store_id: str
+    severity: str  # "high" | "medium" | "low"
+
+
+class PushNotificationListResponse(BaseModel):
+    store_id: str
+    alerts: List[PushNotificationPayload]
+    alert_count: int
+
+
+# --- 주문 마감 알림 ---
+
+class DeadlineAlertResponse(BaseModel):
+    store_id: str
+    deadline: str  # "HH:MM"
+    minutes_remaining: int
+    alert_level: str  # "urgent" | "normal" | "passed"
+    message: str
+    should_alert: bool
+
+
+# --- 수익성 시뮬레이션 ---
+
+class ProfitabilitySimulationRequest(BaseModel):
+    store_id: str
+    item_id: Optional[str] = None
+    date_from: str
+    date_to: str
+
+
+class ProfitabilitySimulationResponse(BaseModel):
+    store_id: str
+    date_from: str
+    date_to: str
+    total_revenue: float
+    estimated_margin_rate: float
+    estimated_profit: float
+    top_items: List[Dict[str, Any]]
+    simulation_note: str
