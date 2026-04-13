@@ -5,7 +5,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Any, List, Dict
 
-from schemas.contracts import OrderingOption, OrderOptionType, OrderingRecommendationRequest, OrderingRecommendationResponse
+from schemas.contracts import (
+    OrderingOption,
+    OrderOptionType,
+    OrderingRecommendationRequest,
+    OrderingRecommendationResponse,
+    DeadlineAlertResponse,
+)
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_ordering_reasoning_prompt
@@ -192,6 +198,50 @@ class OrderingService:
             for opt in options: opt.reasoning = f"{opt.option_type.value} 데이터 기반"
 
         return options, full_summary
+
+    def get_deadline_alerts(self, store_id: str, deadline_hour: int = 14, deadline_minute: int = 0) -> DeadlineAlertResponse:
+        """주문 마감까지 남은 시간 계산 및 20분 이내 알림 반환."""
+        try:
+            import pytz
+            KST = pytz.timezone("Asia/Seoul")
+            now_kst = datetime.now(KST)
+        except ImportError:
+            from datetime import timezone, timedelta as _td
+            KST_OFFSET = _td(hours=9)
+            now_kst = datetime.now(timezone.utc).astimezone(timezone(KST_OFFSET))
+
+        deadline_today = now_kst.replace(hour=deadline_hour, minute=deadline_minute, second=0, microsecond=0)
+        delta_seconds = (deadline_today - now_kst).total_seconds()
+        delta_minutes = int(delta_seconds / 60)
+
+        deadline_str = f"{deadline_hour:02d}:{deadline_minute:02d}"
+
+        if delta_minutes < 0:
+            return DeadlineAlertResponse(
+                store_id=store_id,
+                deadline=deadline_str,
+                minutes_remaining=0,
+                alert_level="passed",
+                message="오늘 주문 마감이 지났습니다.",
+                should_alert=False,
+            )
+        if delta_minutes <= 20:
+            return DeadlineAlertResponse(
+                store_id=store_id,
+                deadline=deadline_str,
+                minutes_remaining=delta_minutes,
+                alert_level="urgent",
+                message=f"주문 마감 {delta_minutes}분 전입니다. 서둘러 주문하세요!",
+                should_alert=True,
+            )
+        return DeadlineAlertResponse(
+            store_id=store_id,
+            deadline=deadline_str,
+            minutes_remaining=delta_minutes,
+            alert_level="normal",
+            message=f"주문 마감까지 {delta_minutes}분 남았습니다.",
+            should_alert=False,
+        )
 
     def recommend_ordering(self, payload: OrderingRecommendationRequest) -> OrderingRecommendationResponse:
         """API Endpoint 용 STEP 3 & 4 통합 실행"""
