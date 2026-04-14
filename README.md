@@ -56,37 +56,41 @@ br-korea-poc-ai/
 ├── common/                     # 공통 유틸리티
 │   ├── gemini.py               # Gemini 클라이언트 (텍스트/이미지/임베딩, CSV 과금 로깅)
 │   ├── logger.py               # 구조화 로깅 및 timefn 데코레이터
+│   ├── llm_logger.py           # LLM 호출 감사 로그 (전화번호/이메일/주민번호 마스킹)
+│   ├── rate_limiter.py         # 슬라이딩 윈도우 Rate Limiter (분당 60회)
+│   ├── evaluator.py            # QualityEvaluator (LLM-as-a-Judge, 신뢰도 0~1 점수)
 │   └── prompt.py               # 프롬프트 템플릿 함수
 ├── services/                   # 핵심 비즈니스 로직
 │   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → RAG → 도메인 에이전트)
 │   ├── sales_analyzer.py       # 매출 분석 에이전트 (시맨틱 캐시, 가드레일, Gemini 호출)
 │   ├── sales_agent.py          # PostgreSQL 직접 조회 엔진 (채널믹스, 수익성, 교차판매 Lift 포함)
 │   ├── query_classifier.py     # 규칙 기반 질의 분류기 (SENSITIVE/CHANNEL/COMPARISON/...)
+│   ├── query_routing.py        # 질의 유형 기반 라우팅 보조 로직
 │   ├── channel_payment_analyzer.py # 채널·결제수단 특화 분석 에이전트
+│   ├── grounded_analyzer.py    # Text-to-SQL 파이프라인 기반 근거 데이터 포함 응답 생성
+│   ├── sql_pipeline.py         # SQLGenerator + QueryExecutor (스키마 레지스트리 포함)
 │   ├── chance_loss_engine.py   # 찬스로스 정량 추정 엔진 (매출 0구간 탐지 + 인접 평균 손실 추정)
 │   ├── seasonality_engine.py   # 시즌성 가중치 엔진 (캠페인 1순위, 요일별 역사 가중치 2순위)
 │   ├── rag_service.py          # pgvector 벡터 검색 + QA 캐시 + Excel 데이터 RAG
 │   ├── semantic_layer.py       # 자연어 → 비즈니스 KPI 매핑
-│   ├── predictor.py            # InventoryPredictor (GBDT 기반 시계열 예측 + 잔차 신뢰구간)
+│   ├── inventory_predictor.py  # InventoryPredictor (LightGBM 기반 시계열 예측)
+│   ├── inventory_reversal_engine.py # 재고 역산 엔진 (기초재고+생산-매출, 5분 단위 추정)
 │   ├── production_service.py   # 생산 알람 및 시뮬레이션 리포트 (찬스로스 감소 효과 포함)
 │   ├── production_agent.py     # 생산 관리 에이전트 보조 로직
 │   ├── ordering_service.py     # 주문 추천 (3가지 옵션, 시즌성 가중치 적용)
-│   ├── inventory_engine.py     # 재고 역산 엔진 (5분 단위 추정)
-│   ├── generator.py            # 생성 응답 보조 로직
-│   ├── data_loader.py          # 분석용 데이터 로더
-│   └── weather_service.py      # 외부 조건(날씨) 보조 서비스
+│   ├── dashboard_service.py    # 홈 대시보드 집계 서비스
+│   └── data_extraction_engine.py # intent 분류(7종) + SQL/API 우선 데이터 추출 엔진
 ├── pipeline/
 │   ├── run.py                  # 파이프라인 진입점 (프롬프트 → AgentOrchestrator)
 │   └── train_model.py          # InventoryPredictor 배치 학습 스크립트
 ├── schemas/
 │   └── contracts.py            # 도메인 계약 모델 (생산·주문·매출 Pydantic 스키마)
-├── evaluators/
-│   └── basic.py                # QualityEvaluator (LLM-as-a-Judge, 신뢰도 0~1 점수)
 ├── tests/
 │   ├── conftest.py
 │   ├── test_api_integration.py
 │   ├── test_ai_agents.py
-│   └── test_pipeline.py
+│   ├── test_pipeline.py
+│   └── test_quality_scenarios.py # 16개 품질 시나리오 테스트
 └── eval-data/
     └── sample.json
 ```
@@ -207,12 +211,13 @@ pytest tests/
                     │       └── ChanceLossEngine (매출 0구간 기반 기회손실 정량 추정)
                     ├── OrderingService        (주문 추천)
                     │       └── SeasonalityEngine (캠페인 + 요일별 역사 가중치)
-                    └── InventoryPredictor     (LightGBM 기반 시계열 예측 + 잔차 신뢰구간)
+                    ├── InventoryPredictor     (LightGBM 기반 시계열 예측 + 캠페인 승수 보정)
+                    └── InventoryReversalEngine (기초재고+생산-매출 역산, 5분 단위 추정)
 ```
 
 ## ML / 분석 모델 상세
 
-### InventoryPredictor (`services/predictor.py`)
+### InventoryPredictor (`services/inventory_predictor.py`)
 - **모델**: LightGBM GBDT (`objective=regression`, `metric=mae`)
 - **피처**: `hour`, `weekday`, `is_weekend`, `lag_1h`, `lag_2h`, `rolling_mean_3h`, `store_avg`, `item_avg`
 - **학습**: 판매 0 데이터를 비율 1.5:1로 다운샘플, 상위 1% 이상치 제거, 판매량 기반 샘플 가중치 적용
