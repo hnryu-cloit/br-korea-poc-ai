@@ -60,7 +60,7 @@ br-korea-poc-ai/
 ├── services/                   # 핵심 비즈니스 로직
 │   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → RAG → 도메인 에이전트)
 │   ├── sales_analyzer.py       # 매출 분석 에이전트 (시맨틱 캐시, 가드레일, Gemini 호출)
-│   ├── sales_analysis_engine.py# PostgreSQL 직접 조회 엔진 (채널믹스, 수익성, 교차판매 Lift 포함)
+│   ├── sales_agent.py          # PostgreSQL 직접 조회 엔진 (채널믹스, 수익성, 교차판매 Lift 포함)
 │   ├── query_classifier.py     # 규칙 기반 질의 분류기 (SENSITIVE/CHANNEL/COMPARISON/...)
 │   ├── channel_payment_analyzer.py # 채널·결제수단 특화 분석 에이전트
 │   ├── chance_loss_engine.py   # 찬스로스 정량 추정 엔진 (매출 0구간 탐지 + 인접 평균 손실 추정)
@@ -179,7 +179,7 @@ pytest tests/
                     ├── RAGService             (pgvector 벡터 검색 + 시맨틱 QA 캐시)
                     ├── QualityEvaluator       (응답 신뢰도 평가, LLM-as-a-Judge)
                     ├── SalesAnalyzer          (매출 분석 + DB 직접 조회)
-                    │       ├── SalesAnalysisEngine
+                    │       ├── SalesAnalysisAgent
                     │       │       ├── analyze_real_channel_mix()      (채널믹스)
                     │       │       ├── simulate_real_profitability()   (수익성)
                     │       │       ├── extract_cross_sell_combinations() (교차판매 Lift)
@@ -212,7 +212,7 @@ pytest tests/
 - 인접 ±2시간 평균으로 손실 수량 추정
 - 데이터 커버리지와 생산 기록 유무 기반 신뢰도(`high` / `medium` / `low`) 산출
 
-### 교차판매 연관규칙 (`SalesAnalysisEngine.extract_cross_sell_combinations`)
+### 교차판매 연관규칙 (`SalesAnalysisAgent.extract_cross_sell_combinations`)
 - 동일 영수증 내 아이템 쌍을 DB CTE 쿼리로 집계
 - **Support**: 전체 영수증 중 두 상품 동반 등장 비율
 - **Confidence**: item_a 구매 시 item_b 구매 확률
@@ -220,7 +220,7 @@ pytest tests/
 
 ## 현재 상태 메모
 
-- `SalesAnalysisEngine`은 PostgreSQL에 직접 연결해 실제 데이터를 조회합니다. DB 연결 실패 시 하드코딩된 fallback 값을 반환합니다.
+- `SalesAnalysisAgent`은 PostgreSQL에 직접 연결해 실제 데이터를 조회합니다. DB 연결 실패 시 하드코딩된 fallback 값을 반환합니다.
 - `InventoryPredictor`의 학습 데이터 경로(`resources/04_poc_data/`)는 실제 환경에 맞게 조정이 필요합니다.
 - 사용자 피드백 반영 온라인 학습 루프는 미구현 상태입니다 (P2).
 - Gemini API 호출 내역은 `results/billing.csv`에 자동 기록됩니다.
