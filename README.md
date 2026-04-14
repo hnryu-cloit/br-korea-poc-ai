@@ -25,7 +25,7 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 | ASGI 서버 | uvicorn[standard] | 0.30.6 |
 | 데이터 검증 | pydantic | 2.9.2 |
 | 설정 관리 | pydantic-settings | 2.5.2 |
-| AI 모델 | google-generativeai (Gemini 2.5 Flash) | — |
+| AI 모델 | google-genai (Gemini 3 Flash Preview) | — |
 | 임베딩 | gemini-embedding-001 (3072차원) | — |
 | 벡터 DB | pgvector + SQLAlchemy | — |
 | DB 드라이버 | psycopg2-binary | — |

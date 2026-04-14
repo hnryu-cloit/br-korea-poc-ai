@@ -89,7 +89,7 @@ class Gemini:
         # Developer API 클라이언트 (텍스트 및 이미지 생성용)
         self.client = genai.Client(api_key=self.api_key)
 
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-3-flash-preview"
         self.image_model = "gemini-3.1-flash-image-preview"  # 이미지 생성 모델
         self.max_retries = 3
         self.initial_delay = 1
