@@ -255,57 +255,82 @@ class InventoryPredictor:
             
         self.model_path = os.path.join(self.model_dir, "inventory_lgbm_model.pkl")
         self.meta_path = os.path.join(self.model_dir, "model_meta.joblib")
-        self.feature_cols = ['hour', 'weekday', 'is_weekend', 'lag_1h', 'lag_2h', 'rolling_mean_3h', 'store_avg', 'item_avg']
+        # 'hist_4w_avg' 피처 추가 (과거 4주 동 요일 동 시간 평균)
+        self.feature_cols = ['hour', 'weekday', 'is_weekend', 'lag_1h', 'lag_2h', 'rolling_mean_3h', 'store_avg', 'item_avg', 'hist_4w_avg']
         self.stats = {}
         self.load_model()
 
     def _prepare_training_data(self, history_df: pd.DataFrame, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
         df = history_df.copy()
+        
+        # SALE_QTY 타입 보정
+        df['SALE_QTY'] = pd.to_numeric(df['SALE_QTY'], errors='coerce').fillna(0)
+        df['TMZON_DIV'] = pd.to_numeric(df['TMZON_DIV'], errors='coerce').fillna(0).astype(int)
+
         if is_training:
+            # 학습 데이터 밸런싱 (판매가 0인 구간과 있는 구간의 비율 조정)
             zero_sales = df[df['SALE_QTY'] == 0]
             non_zero_sales = df[df['SALE_QTY'] > 0]
             sample_size = min(len(zero_sales), int(len(non_zero_sales) * 1.5))
-            zero_sales_sampled = zero_sales.sample(n=sample_size, random_state=42)
+            zero_sales_sampled = zero_sales.sample(n=sample_size, random_state=42) if not zero_sales.empty else zero_sales
             df = pd.concat([non_zero_sales, zero_sales_sampled]).sort_values(['SALE_DT', 'TMZON_DIV'])
 
         df['sale_dt_dt'] = pd.to_datetime(df['SALE_DT'], format='%Y%m%d')
-        df['hour'] = df['TMZON_DIV'].astype(int)
+        df['hour'] = df['TMZON_DIV']
         df['weekday'] = df['sale_dt_dt'].dt.weekday
         df['is_weekend'] = (df['weekday'] >= 5).astype(int)
         
         df = df.sort_values(['MASKED_STOR_CD', 'ITEM_CD', 'SALE_DT', 'hour'])
-        group = df.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['SALE_QTY']
         
+        # --- [초고도화] 역사적 중앙값 피처 계산 (이상치에 강한 Median 활용) ---
+        # MAE를 낮추는 데는 평균(Mean)보다 중앙값(Median)이 훨씬 효과적입니다.
+        hist_stats = df.groupby(['MASKED_STOR_CD', 'ITEM_CD', 'weekday', 'hour'])['SALE_QTY'].median().reset_index()
+        hist_stats.rename(columns={'SALE_QTY': 'hist_4w_avg'}, inplace=True)
+        
+        # 통계 정보 저장
+        if is_training:
+            self.stats['hist'] = hist_stats
+            self.stats['store'] = df.groupby('MASKED_STOR_CD')['SALE_QTY'].median().to_dict()
+            self.stats['item'] = df.groupby('ITEM_CD')['SALE_QTY'].median().to_dict()
+
+        df = pd.merge(df, hist_stats, on=['MASKED_STOR_CD', 'ITEM_CD', 'weekday', 'hour'], how='left')
+        
+        group = df.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['SALE_QTY']
         df['lag_1h'] = group.shift(1).fillna(0)
         df['lag_2h'] = group.shift(2).fillna(0)
-        df['rolling_mean_3h'] = group.transform(lambda x: x.shift(1).rolling(3, min_periods=1).mean()).fillna(0)
+        df['rolling_mean_3h'] = group.transform(lambda x: x.shift(1).rolling(3, min_periods=1).median()).fillna(0)
         
-        if is_training:
-            q_limit = df['SALE_QTY'].quantile(0.99)
-            df = df[df['SALE_QTY'] <= q_limit]
-            self.stats['store'] = df.groupby('MASKED_STOR_CD')['SALE_QTY'].mean().to_dict()
-            self.stats['item'] = df.groupby('ITEM_CD')['SALE_QTY'].mean().to_dict()
-            
         df['store_avg'] = df['MASKED_STOR_CD'].map(self.stats.get('store', {})).fillna(0)
         df['item_avg'] = df['ITEM_CD'].map(self.stats.get('item', {})).fillna(0)
+        
+        if is_training:
+            # 상위 5% 극단적 이상치 제거하여 학습 안정성 확보
+            q_limit = df['SALE_QTY'].quantile(0.95)
+            df = df[df['SALE_QTY'] <= q_limit]
+            
         return df[self.feature_cols], df['SALE_QTY']
 
     def train(self, history_df: pd.DataFrame):
         X, y = self._prepare_training_data(history_df, is_training=True)
+        if X.empty:
+            logger.warning("학습할 데이터가 부족합니다.")
+            return
+
         if HAS_LGB:
-            sample_weight = np.log1p(y) + 1.0
+            # MAE 최적화 파라미터 (Objective: regression_l1)
             params = {
-                'objective': 'regression', 'metric': 'mae', 'verbosity': -1, 'boosting_type': 'gbdt',
-                'learning_rate': 0.05, 'num_leaves': 63, 'max_depth': -1, 'min_child_samples': 10,
-                'feature_fraction': 0.8, 'lambda_l1': 0.05, 'n_jobs': -1
+                'objective': 'regression_l1', 'metric': 'mae', 'verbosity': -1, 'boosting_type': 'gbdt',
+                'learning_rate': 0.01, 'num_leaves': 31, 'max_depth': 8, 'min_child_samples': 20,
+                'feature_fraction': 0.7, 'n_jobs': -1
             }
-            train_data = lgb.Dataset(X, label=y, weight=sample_weight)
-            self.model = lgb.train(params, train_data, num_boost_round=500)
+            train_data = lgb.Dataset(X, label=y)
+            self.model = lgb.train(params, train_data, num_boost_round=2000)
         else:
-            self.model = RandomForestRegressor(n_estimators=100)
+            self.model = RandomForestRegressor(n_estimators=200, max_depth=10, n_jobs=-1)
             self.model.fit(X, y)
+            
         self.save_model()
-        logger.info("데이터 밸런싱이 적용된 최적화 모델 재학습 완료.")
+        logger.info("중앙값 기반 MAE 최소화 모델 학습 완료.")
 
     def save_model(self):
         if not os.path.exists(self.model_dir): os.makedirs(self.model_dir)
@@ -322,64 +347,142 @@ class InventoryPredictor:
             except: pass
         return False
 
-    def predict_next_hour_sales(self, store_cd: str, item_cd: str, current_time: datetime, history_df: pd.DataFrame) -> float:
-        if self.model is None: return 0.0 # 기본값을 0으로 낮춤 (과대 예측 방지)
+    def evaluate(self, test_df: pd.DataFrame) -> Dict[str, float]:
+        """다양한 지표를 활용한 모델 성능 평가 (MAE, MAPE, RMSE, R2)"""
+        if self.model is None:
+            return {}
+        X_test, y_test = self._prepare_training_data(test_df, is_training=False)
+        if X_test.empty:
+            return {}
+        
+        preds = self.model.predict(X_test)
+        y_test_vals = y_test.values
+        
+        # 1. MAE
+        mae = np.mean(np.abs(preds - y_test_vals))
+        
+        # 2. RMSE
+        rmse = np.sqrt(np.mean((preds - y_test_vals)**2))
+        
+        # 3. MAPE (실제값이 0인 경우 제외하고 계산)
+        mask = y_test_vals > 0
+        if np.any(mask):
+            mape = np.mean(np.abs((y_test_vals[mask] - preds[mask]) / y_test_vals[mask])) * 100
+        else:
+            mape = 0.0
+            
+        # 4. R2 Score
+        ss_res = np.sum((y_test_vals - preds)**2)
+        ss_tot = np.sum((y_test_vals - np.mean(y_test_vals))**2)
+        r2 = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+        
+        return {
+            "MAE": float(mae),
+            "MAPE": float(mape),
+            "RMSE": float(rmse),
+            "R2": float(r2)
+        }
+
+    def predict_next_hour_sales(self, store_cd: str, item_cd: str, current_time: datetime, history_df: pd.DataFrame, campaign_df: Optional[pd.DataFrame] = None) -> float:
+        if self.model is None: return 0.0
             
         target_time = current_time + timedelta(hours=1)
+        target_hour = target_time.hour
         weekday = target_time.weekday()
+        target_date_str = target_time.strftime('%Y%m%d')
         
-        # 최근 3시간 이내의 실시간 판매 속도 계산 (엄격한 시간 필터 적용)
-        recent_cutoff = current_time - timedelta(hours=3)
-        has_tmzon = 'TMZON_DIV' in history_df.columns
-        
-        if has_tmzon:
-            # 안전하게 Datetime으로 변환 가능한 데이터만 필터링
-            df_recent = history_df[
-                (history_df['MASKED_STOR_CD'] == store_cd) & 
-                (history_df['ITEM_CD'] == item_cd)
-            ].copy()
+        # 1. 역사적 중앙값 추출 (동 요일, 동 시간) - 가장 믿을 수 있는 베이스라인
+        hist_df = self.stats.get('hist', pd.DataFrame())
+        hist_4w_median = 0.0
+        if not hist_df.empty:
+            match = hist_df[
+                (hist_df['MASKED_STOR_CD'] == store_cd) & 
+                (hist_df['ITEM_CD'] == item_cd) & 
+                (hist_df['weekday'] == weekday) & 
+                (hist_df['hour'] == target_hour)
+            ]
+            if not match.empty:
+                hist_4w_median = float(match['hist_4w_avg'].iloc[0])
+
+        # [프로모션 Uplift 로직 추가]
+        promo_multiplier = 1.0
+        if campaign_df is not None and not campaign_df.empty:
+            # 현재 아이템이 오늘 날짜에 진행 중인 프로모션 목록 찾기
+            active_promos = campaign_df[
+                (campaign_df['item_cd'] == item_cd) & 
+                (campaign_df['start_dt'] <= target_date_str) & 
+                (campaign_df['fnsh_dt'] >= target_date_str)
+            ]
             
-            if not df_recent.empty:
-                df_recent['sale_datetime'] = pd.to_datetime(df_recent['SALE_DT'], format='%Y%m%d', errors='coerce') + \
-                                             pd.to_timedelta(df_recent['TMZON_DIV'].astype(int), unit='h')
-                
-                # 정확히 최근 3시간 이내에 발생한 '오늘'의 판매만 가져옴
-                recent = df_recent[
-                    (df_recent['sale_datetime'] > recent_cutoff) & 
-                    (df_recent['sale_datetime'] <= current_time)
-                ].sort_values('sale_datetime')
-            else:
-                recent = pd.DataFrame()
+            if not active_promos.empty:
+                # 과거 유사 프로모션 기간의 평균 판매 상승률 계산 (간소화된 경험적 접근)
+                # 실제 환경에서는 과거 해당 프로모션 기간의 판매량 / 비프로모션 기간 판매량을 집계하여 사용
+                # 여기서는 할인율(dc_rate_amt) 또는 프로모션 종류에 따라 20% ~ 50% 상승률 차등 적용
+                max_dc_rate = pd.to_numeric(active_promos['dc_rate_amt'], errors='coerce').max()
+                if pd.notna(max_dc_rate) and max_dc_rate > 0:
+                    if max_dc_rate <= 100: # 100% 미만은 할인율로 간주 (예: 20%)
+                        promo_multiplier = 1.0 + (max_dc_rate / 100) * 1.5
+                    else: # 100 이상의 금액 할인이면 기본 1.3배
+                        promo_multiplier = 1.3
+                else:
+                    promo_multiplier = 1.4 # 기본 프로모션 상승률 40%
+
+        # 2. 최근 실시간 판매 트렌드 추출
+        recent_cutoff = current_time - timedelta(hours=3)
+        df_recent = history_df[
+            (history_df['MASKED_STOR_CD'] == store_cd) & 
+            (history_df['ITEM_CD'] == item_cd)
+        ].copy()
+        
+        if not df_recent.empty:
+            df_recent['sale_datetime'] = pd.to_datetime(df_recent['SALE_DT'], format='%Y%m%d', errors='coerce') + \
+                                         pd.to_timedelta(pd.to_numeric(df_recent['TMZON_DIV'], errors='coerce').fillna(0).astype(int), unit='h')
+            
+            recent = df_recent[
+                (df_recent['sale_datetime'] > recent_cutoff) & 
+                (df_recent['sale_datetime'] <= current_time)
+            ].sort_values('sale_datetime')
         else:
-            recent = pd.DataFrame() # 시간대 데이터가 없으면 실시간 속도는 0으로 간주
+            recent = pd.DataFrame()
         
         lag_1h = recent['SALE_QTY'].iloc[-1] if len(recent) >= 1 else 0
         lag_2h = recent['SALE_QTY'].iloc[-2] if len(recent) >= 2 else 0
-        current_velocity = recent['SALE_QTY'].mean() if not recent.empty else 0
+        current_median_velocity = recent['SALE_QTY'].median() if not recent.empty else 0
         
+        # 3. 모델 입력 및 예측
         X_pred = pd.DataFrame([[
-            target_time.hour, weekday, 1 if weekday >= 5 else 0,
-            lag_1h, lag_2h, current_velocity,
+            target_hour, weekday, 1 if weekday >= 5 else 0,
+            lag_1h, lag_2h, current_median_velocity,
             self.stats.get('store', {}).get(store_cd, 0),
-            self.stats.get('item', {}).get(item_cd, 0)
+            self.stats.get('item', {}).get(item_cd, 0),
+            hist_4w_median
         ]], columns=self.feature_cols)
         
         ml_pred = float(self.model.predict(X_pred)[0]) if self.model else 0.0
         
-        # [하이퍼파라미터 튜닝] (제로 인플레이션 및 과대 적합 완벽 차단 로직)
-        # 과거(ml_pred)에 아무리 많이 팔렸던 시간대여도, 
-        # 당일 최근 3시간 동안 단 한 개도 팔리지 않았다면 예측 수량을 0으로 강제 수렴시킵니다.
-        if pd.isna(current_velocity) or current_velocity <= 0.1:
-            final_pred = 0.0
+        # 4. [보정 로직 최종 고도화: Volume-Aware Anchor Strategy] 
+        if hist_4w_median > 5:
+            base_pred = (hist_4w_median * 0.95) + (ml_pred * 0.05)
+            trend_ratio = np.clip(current_median_velocity / hist_4w_median if hist_4w_median > 0 else 1.0, 0.95, 1.05)
+            final_pred = base_pred * trend_ratio
         else:
-            # 판매가 일어나는 중일 때만 ML 모델의 예측값을 신뢰 (ML 30% + 현재 속도 70%)
-            final_pred = (ml_pred * 0.3) + (current_velocity * 0.7)
+            base_pred = (hist_4w_median * 0.8) + (ml_pred * 0.2)
+            trend_ratio = np.clip(current_median_velocity / hist_4w_median if hist_4w_median > 0 else 1.0, 0.8, 1.2)
+            final_pred = base_pred * trend_ratio
             
-        # 점심 피크타임(12~14시) 가중치
-        if 12 <= target_time.hour <= 14 and final_pred > 0:
-            final_pred *= 1.2
-            
-        return max(0.0, round(final_pred, 1))
+        # [프로모션 Uplift 적용]
+        if promo_multiplier > 1.0:
+            # 프로모션 중일 경우 상승률을 곱하고, 최대치 제한(clip)을 완화함
+            final_pred = final_pred * promo_multiplier
+            if hist_4w_median > 0:
+                final_pred = np.clip(final_pred, hist_4w_median * 0.7, hist_4w_median * promo_multiplier * 1.5)
+        else:
+            if hist_4w_median > 0:
+                final_pred = np.clip(final_pred, hist_4w_median * 0.7, hist_4w_median * 1.3)
+                
+        final_pred = round(final_pred, 0)
+        return float(max(0, final_pred))
+
 
 
 # ==========================================
