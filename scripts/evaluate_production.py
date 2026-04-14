@@ -66,7 +66,13 @@ def evaluate_inventory_reversal(agent: ProductionManagementAgent, store_id: str,
                 out_qty = period_flow['out_qty'].sum() if not period_flow.empty else 0
                 est_stock = row['estimated_stock']
                 
-                print(f"{t.strftime('%H:%M'):^10} | {est_stock - in_qty + out_qty:^10.1f} | {in_qty:^10.1f} | {out_qty:^10.1f} | {est_stock:^10.1f}")
+                # 정수로 표시 (반올림)
+                in_q = int(round(in_qty))
+                out_q = int(round(out_qty))
+                est_q = int(round(est_stock))
+                prev_q = est_q - in_q + out_q # 화면상 계산이 딱 맞도록 역산
+                
+                print(f"{t.strftime('%H:%M'):^10} | {prev_q:^10} | {in_q:^10} | {out_q:^10} | {est_q:^10}")
         
         # 3. 정합성 검증 (추정 재고가 마이너스(-)로 떨어지는 비정상 구간 확인)
         negative_stock = stock_flow[stock_flow['estimated_stock'] < 0]
@@ -163,7 +169,7 @@ if __name__ == "__main__":
             FROM raw_daily_store_item_tmzon 
             WHERE masked_stor_cd = :store
         ''')
-        store_prod_query = text('SELECT * FROM "STOR_PROD_ITEM" WHERE "MASKED_STOR_CD" = :store')
+        store_prod_query = text('SELECT masked_stor_cd AS "MASKED_STOR_CD", item_cd AS "ITEM_CD", item_nm AS "ITEM_NM" FROM raw_stor_prod_item WHERE masked_stor_cd = :store')
 
         inv_df = pd.read_sql(inv_query, conn, params={"store": TEST_STORE_ID})
         prod_df = pd.read_sql(prod_query, conn, params={"store": TEST_STORE_ID})
