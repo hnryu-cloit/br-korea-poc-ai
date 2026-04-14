@@ -19,9 +19,10 @@ router = APIRouter(prefix="/sales", tags=["sales"])
 
 @router.post("/query", response_model=SalesQueryResponse, dependencies=[Depends(verify_token)])
 async def query_sales(
-    payload: SalesQueryRequest, 
+    payload: SalesQueryRequest,
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer)
 ) -> SalesQueryResponse:
+    """자연어 매출 질의를 SalesAnalyzer에 위임해 분석 응답을 반환합니다."""
     try:
         logger.info("매출 분석 요청: %s", payload.query[:50])
         result = await asyncio.to_thread(analyzer.analyze, payload)
@@ -76,9 +77,10 @@ async def get_profitability_simulation(
 
 @router.post("/query/channel-payment", response_model=SalesQueryResponse, dependencies=[Depends(verify_token)])
 async def query_channel_payment(
-    payload: SalesQueryRequest, 
+    payload: SalesQueryRequest,
     analyzer: ChannelPaymentAnalyzer = Depends(get_channel_payment_analyzer)
 ) -> SalesQueryResponse:
+    """채널·결제수단 특화 분석 질의를 ChannelPaymentAnalyzer에 위임해 응답을 반환합니다."""
     try:
         logger.info("채널 및 결제수단 분석 요청: %s", payload.query[:50])
         result = await asyncio.to_thread(analyzer.analyze, payload)

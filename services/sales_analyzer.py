@@ -21,14 +21,15 @@ class SalesAnalyzer:
 
     def analyze(self, payload: SalesQueryRequest) -> SalesQueryResponse:
         """
-        Production-level Sales Analysis Service (formerly SalesService):
-        1. Semantic Cache Check
-        2. Guardrail Check
-        3. SQL vs RAG Routing
-        4. Core Analysis (via Agent) & Generation
+        매출 분석 서비스 메인 진입점:
+        1. 시맨틱 캐시 확인
+        2. 민감 질의 가드레일 적용
+        3. SQL vs RAG 라우팅 결정
+        4. 에이전트 기반 핵심 분석 및 Gemini 응답 생성
         """
-        logger.info(f"Analyzing sales query: {payload.query[:50]}")
+        logger.info(f"매출 분석 질의 처리: {payload.query[:50]}")
 
+        # 시맨틱 캐시 조회 — 동일 의도의 이전 분석 결과 재활용
         cached_result = self.rag_service.lookup_qa_cache(store_id=payload.store_id, query=payload.query)
         if cached_result:
             intent_keywords = ["조합", "같이", "함께", "세트", "교차", "배달", "채널", "비교", "성장", "수익", "이익"]
@@ -43,7 +44,8 @@ class SalesAnalyzer:
             cached_channel = cached_result.get("channel_analysis", {})
             cached_profit = cached_result.get("profit_simulation", {})
             cached_evidence = cached_result.get("answer", {}).get("evidence", [])
-            
+
+            # 캐시 수치를 현재 질문에 맞게 재조합한 프롬프트 구성
             cache_prompt = f"""
             사용자 질문: {payload.query}
             
@@ -86,8 +88,9 @@ class SalesAnalyzer:
                 logger.error(f"캐시 재생성 실패, 원본 캐시 반환: {e}")
                 return SalesQueryResponse(**cached_result)
 
+        # 캐시 미적중 — 직접 분석 수행
         query_type = self.classifier.classify(payload.query)
-        
+
         if query_type == "SENSITIVE":
             logger.warning("Sensitive query detected. Blocking response.")
             insight = SalesInsight(
@@ -97,6 +100,7 @@ class SalesAnalyzer:
             )
             return SalesQueryResponse(answer=insight, source_data_period="N/A")
 
+        # 의도 파악 및 RAG 매장 프로필 조회
         target_data_type, applied_logic = self.semantic_layer.parse_query_intent(payload.query)
         store_rag_profile = self.rag_service.retrieve_store_profile(payload.store_id)
 
@@ -107,9 +111,10 @@ class SalesAnalyzer:
         comparison_res = self.agent.calculate_comparison_metrics(store_id=payload.store_id)
         cross_sell_res = self.agent.extract_cross_sell_combinations(store_id=payload.store_id)
 
+        # 질문 키워드에 따라 분석 포커스 및 우선 데이터 결정
         focus_area = "종합 분석"
         priority_data = ""
-        
+
         if any(w in payload.query for w in ["배달", "채널", "해피오더", "배민", "쿠팡"]):
             focus_area = "채널 및 결제수단 최적화"
             priority_data = f"특히 [채널 분석 결과]의 배달 비중({channel_res.get('delivery_rate', 0)}%)과 트렌드를 중심으로 분석하세요."
@@ -190,9 +195,9 @@ class SalesAnalyzer:
                 profit_simulation=data.get("profit_simulation")
             )
             
+            # 분석 결과 캐시 저장 (원본 질의 포함)
             cache_data = final_response.model_dump(mode='json')
             cache_data["_original_query"] = payload.query
-            
             self.rag_service.save_qa_cache(payload.store_id, payload.query, cache_data)
             
             return final_response

@@ -984,6 +984,9 @@ SALES_ANALYSIS_PROMPT_TEMPLATE = """
         """
 
 def create_production_alarm_prompt(sku: str, current_stock: int, predicted_stock: float, risk_status: str, stockout_at: str, pattern_4w: list) -> str:
+    """
+    생산 알람 프롬프트 생성
+    """
     return PRODUCTION_ALARM_PROMPT_TEMPLATE.format(
         sku=sku,
         current_stock=current_stock,
@@ -994,6 +997,9 @@ def create_production_alarm_prompt(sku: str, current_stock: int, predicted_stock
     )
 
 def create_ordering_reasoning_prompt(store_id: str, current_date: str, campaign_status: str, holiday_status: str, options_summary: str) -> str:
+    """
+    주문 추천 근거 설명 프롬프트 생성
+    """
     return ORDERING_REASONING_PROMPT_TEMPLATE.format(
         store_id=store_id,
         current_date=current_date,
@@ -1003,4 +1009,7 @@ def create_ordering_reasoning_prompt(store_id: str, current_date: str, campaign_
     )
 
 def create_sales_analysis_prompt(prompt: str) -> str:
+    """
+    매출 분석 Gemini 호출용 최종 프롬프트 생성
+    """
     return SALES_ANALYSIS_PROMPT_TEMPLATE.format(prompt=prompt)

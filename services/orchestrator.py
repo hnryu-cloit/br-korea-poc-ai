@@ -12,7 +12,7 @@ from services.rag_service import RAGService
 from services.query_classifier import QueryClassifier
 from services.semantic_layer import SemanticLayer
 from schemas.contracts import SalesQueryRequest
-from evaluators.basic import QualityEvaluator
+from common.evaluator import QualityEvaluator
 
 logger = init_logger("orchestrator")
 

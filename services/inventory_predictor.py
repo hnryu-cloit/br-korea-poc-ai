@@ -44,12 +44,14 @@ class InventoryPredictor:
         df['TMZON_DIV'] = pd.to_numeric(df['TMZON_DIV'], errors='coerce').fillna(0).astype(int)
 
         if is_training:
+            # 0 판매 데이터 다운샘플링으로 클래스 불균형 보정 (비율 1:1.5)
             zero_sales = df[df['SALE_QTY'] == 0]
             non_zero_sales = df[df['SALE_QTY'] > 0]
             sample_size = min(len(zero_sales), int(len(non_zero_sales) * 1.5))
             zero_sales_sampled = zero_sales.sample(n=sample_size, random_state=42) if not zero_sales.empty else zero_sales
             df = pd.concat([non_zero_sales, zero_sales_sampled]).sort_values(['SALE_DT', 'TMZON_DIV'])
 
+        # 날짜·시간 피처 생성
         df['sale_dt_dt'] = pd.to_datetime(df['SALE_DT'], format='%Y%m%d')
         df['hour'] = df['TMZON_DIV']
         df['weekday'] = df['sale_dt_dt'].dt.weekday
@@ -57,6 +59,7 @@ class InventoryPredictor:
 
         df = df.sort_values(['MASKED_STOR_CD', 'ITEM_CD', 'SALE_DT', 'hour'])
 
+        # 요일·시간대별 과거 판매 중앙값 통계 (hist_4w_avg 피처)
         hist_stats = df.groupby(['MASKED_STOR_CD', 'ITEM_CD', 'weekday', 'hour'])['SALE_QTY'].median().reset_index()
         hist_stats.rename(columns={'SALE_QTY': 'hist_4w_avg'}, inplace=True)
 
@@ -67,6 +70,7 @@ class InventoryPredictor:
 
         df = pd.merge(df, hist_stats, on=['MASKED_STOR_CD', 'ITEM_CD', 'weekday', 'hour'], how='left')
 
+        # 시간 지연(lag) 피처 및 이동 중앙값
         group = df.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['SALE_QTY']
         df['lag_1h'] = group.shift(1).fillna(0)
         df['lag_2h'] = group.shift(2).fillna(0)
@@ -76,12 +80,14 @@ class InventoryPredictor:
         df['item_avg'] = df['ITEM_CD'].map(self.stats.get('item', {})).fillna(0)
 
         if is_training:
+            # 이상값 제거: 상위 5% 판매량 클리핑
             q_limit = df['SALE_QTY'].quantile(0.95)
             df = df[df['SALE_QTY'] <= q_limit]
 
         return df[self.feature_cols], df['SALE_QTY']
 
     def train(self, history_df: pd.DataFrame):
+        """과거 판매 이력을 학습 데이터로 변환해 LightGBM(또는 RandomForest) 모델 학습"""
         X, y = self._prepare_training_data(history_df, is_training=True)
         if X.empty:
             logger.warning("학습할 데이터가 부족합니다.")
@@ -150,6 +156,7 @@ class InventoryPredictor:
         history_df: pd.DataFrame,
         campaign_df: Optional[pd.DataFrame] = None,
     ) -> float:
+        """1시간 후 판매 수량 예측 (ML 예측값과 실시간 판매 속도 하이브리드 보정)"""
         if self.model is None:
             return 0.0
 
@@ -158,6 +165,7 @@ class InventoryPredictor:
         weekday = target_time.weekday()
         target_date_str = target_time.strftime('%Y%m%d')
 
+        # 4주 과거 중앙값 기준 조회 (요일·시간대 일치 행)
         hist_df = self.stats.get('hist', pd.DataFrame())
         hist_4w_median = 0.0
         if not hist_df.empty:
@@ -170,6 +178,7 @@ class InventoryPredictor:
             if not match.empty:
                 hist_4w_median = float(match['hist_4w_avg'].iloc[0])
 
+        # 캠페인·프로모션 적용 시 판매 증가 승수 산정
         promo_multiplier = 1.0
         if campaign_df is not None and not campaign_df.empty:
             active_promos = campaign_df[
@@ -184,6 +193,7 @@ class InventoryPredictor:
                 else:
                     promo_multiplier = 1.4
 
+        # 최근 3시간 실시간 판매 속도 추출 (lag 피처 계산용)
         recent_cutoff = current_time - timedelta(hours=3)
         df_recent = history_df[
             (history_df['MASKED_STOR_CD'] == store_cd) &
@@ -216,6 +226,8 @@ class InventoryPredictor:
 
         ml_pred = float(self.model.predict(X_pred)[0]) if self.model else 0.0
 
+        # 예측 혼합: 과거 이력 비중 높게 유지, 실시간 속도로 소폭 보정
+        # 과거 데이터 충분(>5)이면 안정 우선(0.95/0.05), 부족하면 유연(0.8/0.2)
         if hist_4w_median > 5:
             base_pred = (hist_4w_median * 0.95) + (ml_pred * 0.05)
             trend_ratio = np.clip(current_median_velocity / hist_4w_median if hist_4w_median > 0 else 1.0, 0.95, 1.05)
@@ -225,6 +237,7 @@ class InventoryPredictor:
             trend_ratio = np.clip(current_median_velocity / hist_4w_median if hist_4w_median > 0 else 1.0, 0.8, 1.2)
             final_pred = base_pred * trend_ratio
 
+        # 프로모션 승수 적용 및 과거 범위 기반 클리핑
         if promo_multiplier > 1.0:
             final_pred = final_pred * promo_multiplier
             if hist_4w_median > 0:

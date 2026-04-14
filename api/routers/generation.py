@@ -14,6 +14,7 @@ router = APIRouter(prefix="/generation", tags=["generation"])
 
 @router.post("", response_model=GenerationResponse, dependencies=[Depends(verify_token)])
 async def generate(payload: SalesQueryRequest) -> GenerationResponse:
+    """에이전트 파이프라인을 실행하고 구조화된 생성 결과를 반환합니다."""
     try:
         logger.info("파이프라인 실행 시작 (프롬프트: %s)", payload.prompt[:30])
         result = await run_pipeline(payload.prompt)

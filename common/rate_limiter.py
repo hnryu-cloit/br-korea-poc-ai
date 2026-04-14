@@ -1,4 +1,4 @@
-"""In-memory sliding window rate limiter for LLM API calls."""
+"""LLM API 호출용 인메모리 슬라이딩 윈도우 Rate Limiter."""
 from __future__ import annotations
 
 import logging
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class InMemoryRateLimiter:
-    """Thread-safe sliding window rate limiter.
+    """스레드 안전한 슬라이딩 윈도우 Rate Limiter.
 
     기본값: 분당 최대 60회 호출 허용.
     """
@@ -54,4 +54,5 @@ _default_limiter = InMemoryRateLimiter(max_calls=60, window_seconds=60)
 
 
 def get_rate_limiter() -> InMemoryRateLimiter:
+    """싱글턴 Rate Limiter 인스턴스를 반환합니다."""
     return _default_limiter
