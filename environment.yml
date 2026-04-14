@@ -10,11 +10,13 @@ dependencies:
       - uvicorn[standard]==0.30.6
       - pydantic==2.9.2
       - pydantic-settings==2.5.2
-      - google-generativeai
+      - google-genai
       - pandas
       - numpy
       - scikit-learn
       - python-dotenv
+      - Pillow
+      - colorlog
       - faiss-cpu
       - pgvector
       - sqlalchemy

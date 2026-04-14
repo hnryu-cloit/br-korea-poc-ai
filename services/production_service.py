@@ -261,8 +261,8 @@ class ProductionService:
                 performance_status="POSITIVE" if (added_margin - added_waste_loss) > 0 else "NEGATIVE",
                 chance_loss_reduction=chance_loss_reduction,
             ),
-            chart_data=chart_data,
-            action_timeline=ai_actions_log
+            time_series_data=chart_data,
+            actions_timeline=ai_actions_log
         )
 
     # --- 피드백 보정 로직 ---
