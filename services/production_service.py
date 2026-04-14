@@ -114,13 +114,20 @@ class ProductionService:
         """
         agent = self._get_agent(inventory_df, production_df, sales_df, store_prod_df)
         
-        # 현재고 테이블에 존재하는 해당 점포의 모든 유니크 품목 추출
-        store_inventory = inventory_df[
-            (inventory_df['MASKED_STOR_CD'] == store_id) & 
-            (inventory_df['STOCK_DT'] == target_date.replace("-", ""))
-        ]
+        # [수정] 해당 점포에서 취급하는 '모든 판매 가능 품목' 추출
+        # store_prod_df (raw_stor_prod_item 뷰)에는 매장의 전체 취급 품목이 정의되어 있습니다.
+        store_all_items = store_prod_df[store_prod_df['MASKED_STOR_CD'] == store_id]
         
-        unique_items = store_inventory['ITEM_CD'].unique()
+        if not store_all_items.empty:
+            unique_items = store_all_items['ITEM_CD'].unique()
+            # 상품명 매핑 딕셔너리 생성
+            item_nm_dict = dict(zip(store_all_items['ITEM_CD'], store_all_items['ITEM_NM']))
+        else:
+            # 만약 마스터 뷰가 누락되었다면, 과거 판매 이력과 재고 이력 전체에서 유니크 품목을 모두 긁어옵니다.
+            store_inventory = inventory_df[inventory_df['MASKED_STOR_CD'] == store_id]
+            store_sales = sales_df[sales_df['MASKED_STOR_CD'] == store_id]
+            unique_items = list(set(store_inventory['ITEM_CD'].unique()) | set(store_sales['ITEM_CD'].unique()))
+            item_nm_dict = {}
         
         sku_list = []
         critical_c = 0
@@ -131,12 +138,8 @@ class ProductionService:
         now = datetime.datetime.now()
         
         for item_cd in unique_items:
-            # 상품명 매핑 (마스터 데이터가 없으므로 임시로 ITEM_NM 사용 시도)
-            # 운영 환경에서는 상품 마스터 조인 필수
-            try:
-                item_nm = str(store_inventory[store_inventory['ITEM_CD'] == item_cd]['ITEM_NM'].iloc[0])
-            except:
-                item_nm = f"상품 {item_cd}"
+            # 상품명 안전 매핑
+            item_nm = str(item_nm_dict.get(item_cd, f"상품 {item_cd}"))
                 
             status_data = agent.get_sku_status(store_id, item_cd, item_nm, now)
             
