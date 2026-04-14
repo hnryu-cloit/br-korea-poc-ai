@@ -5,11 +5,13 @@ from typing import Any, Dict, Optional
 from common.logger import init_logger
 from common.gemini import Gemini
 from services.sales_analyzer import SalesAnalyzer
+from services.channel_payment_analyzer import ChannelPaymentAnalyzer
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
 from services.rag_service import RAGService
 from services.query_classifier import QueryClassifier
 from services.semantic_layer import SemanticLayer
+from schemas.contracts import SalesQueryRequest
 from evaluators.basic import QualityEvaluator
 
 logger = init_logger("orchestrator")
@@ -29,6 +31,7 @@ class AgentOrchestrator:
         
         self.rag_service = RAGService(gemini_client)
         self.sales_agent = SalesAnalyzer(gemini_client)
+        self.channel_agent = ChannelPaymentAnalyzer(gemini_client)
         self.prod_agent = ProductionService(gemini_client)
         self.order_agent = OrderingService(gemini_client)
 
@@ -45,7 +48,7 @@ class AgentOrchestrator:
         # 2. 의도 분류 및 가드레일 (Predictor Layer)
         intent = self.classifier.classify(prompt)
         if intent == "SENSITIVE":
-             return self.sales_agent.analyze(prompt)
+             return self.sales_agent.analyze(SalesQueryRequest(store_id="default_store", query=prompt))
 
         # 3. RAG(지식 검색) 시도 및 품질 평가
         rag_result = self.rag_service.generate_with_rag(prompt)
@@ -69,10 +72,15 @@ class AgentOrchestrator:
                 logger.warning(f"신뢰도 저하 ({confidence_score:.2f}). 데이터 분석 에이전트로 전환.")
 
         # 4. 도메인 에이전트 분석 수행
+        # 채널 및 결제수단 특화 의도인 경우 전용 분석 에이전트 호출
+        if intent == "CHANNEL":
+            logger.info("Channel/Payment 전용 분석 에이전트 호출")
+            return self.channel_agent.analyze(payload=SalesQueryRequest(store_id="default_store", query=prompt))
+
         # (생략: 생산/주문 에이전트 호출 로직 유지)
         
         # 5. 최종 매출 분석 및 가드레일 적용
-        analysis_result = self.sales_agent.analyze(payload=SalesQueryRequest(store_id="default_store", query=prompt, raw_data_context=None))
+        analysis_result = self.sales_agent.analyze(payload=SalesQueryRequest(store_id="default_store", query=prompt))
         
         # SalesQueryResponse 형태를 유지하여 프론트엔드 연동에 문제없게 함
         return analysis_result
