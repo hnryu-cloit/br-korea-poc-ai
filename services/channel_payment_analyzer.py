@@ -6,7 +6,7 @@ import logging
 from common.gemini import Gemini
 from common.logger import init_logger
 from schemas.contracts import SalesInsight, SalesQueryRequest, SalesQueryResponse
-from services.sales_analysis_engine import SalesAnalysisEngine
+from services.sales_agent import SalesAnalysisAgent
 
 logger = init_logger("channel_payment_analyzer")
 
@@ -14,18 +14,19 @@ logger = init_logger("channel_payment_analyzer")
 class ChannelPaymentAnalyzer:
     """
     채널(온라인/오프라인/배달)별 및 결제수단별 매출 트렌드 분석 에이전트.
-    SalesAnalysisEngine의 채널 분석 로직을 위임받아 Gemini 인사이트를 생성한다.
+    SalesAnalysisAgent의 채널 및 결제 분석 로직을 활용하여 Gemini 인사이트를 생성한다.
     """
 
     def __init__(self, gemini_client: Gemini):
         self.gemini = gemini_client
-        self.analysis_engine = SalesAnalysisEngine()
+        self.agent = SalesAnalysisAgent()
 
     def analyze(self, payload: SalesQueryRequest) -> SalesQueryResponse:
         logger.info("채널/결제 분석 요청: store=%s, query=%s", payload.store_id, payload.query[:50])
 
-        channel_res = self.analysis_engine.analyze_real_channel_mix(store_id=payload.store_id)
-        profit_res = self.analysis_engine.simulate_real_profitability(store_id=payload.store_id)
+        channel_res = self.agent.analyze_real_channel_mix(store_id=payload.store_id)
+        profit_res = self.agent.simulate_real_profitability(store_id=payload.store_id)
+        payment_res = self.agent.analyze_payment_methods(store_id=payload.store_id)
 
         prompt = f"""
 당신은 편의점·베이커리 프랜차이즈 매장의 채널 및 결제수단 분석 전문가입니다.
@@ -38,12 +39,15 @@ class ChannelPaymentAnalyzer:
 - 온라인 매출액: {channel_res.get('online_amt', 0):,.0f}원
 - 오프라인 매출액: {channel_res.get('offline_amt', 0):,.0f}원
 
+[결제수단 분석 결과]
+{json.dumps(payment_res, ensure_ascii=False, indent=2)}
+
 [수익성 분석]
-- 추정 마진율: {profit_res.get('estimated_margin_rate', 0.3) * 100:.1f}%
+- 추정 마진율: {profit_res.get('estimated_margin_rate', 0) * 100:.1f}%
 - 추정 영업이익: {profit_res.get('estimated_profit', 0):,.0f}원
 
 **지시사항:**
-1. 채널별·결제수단별 트렌드와 개선 포인트를 분석하세요.
+1. 채널별·결제수단별 트렌드와 개선 포인트를 분석하세요. 특히 간편결제 비중이나 배달 비중이 높을 때의 전략을 제안하세요.
 2. 점주가 즉시 실행 가능한 액션 3가지를 제시하세요.
 3. 프랜차이즈 가맹점 규정 내에서 제안하세요 (임의 할인·가격변경 금지).
 
