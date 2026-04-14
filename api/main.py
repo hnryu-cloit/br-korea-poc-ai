@@ -1,12 +1,13 @@
 import logging
 import warnings
 from contextlib import asynccontextmanager
+from importlib import import_module
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
 from api.config import get_settings
-from api.routers import generation, management, sales, home
+from api.routers import management
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,10 +34,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(generation.router)
-app.include_router(sales.router)
 app.include_router(management.router)
-app.include_router(home.router)
+
+for router_module in ("api.routers.sales", "api.routers.home", "api.routers.generation"):
+    try:
+        module = import_module(router_module)
+    except ModuleNotFoundError as exc:
+        logger.warning("%s 라우터를 불러오지 못해 제외합니다: %s", router_module, exc)
+        continue
+    app.include_router(module.router)
 
 
 @app.get("/health")
