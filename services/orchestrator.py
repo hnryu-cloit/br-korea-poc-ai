@@ -10,7 +10,7 @@ from services.production_service import ProductionService
 from services.ordering_service import OrderingService
 from services.rag_service import RAGService
 from services.query_classifier import QueryClassifier
-from utils.semantic_util import SemanticLayer
+from services.semantic_layer import SemanticLayer
 from schemas.contracts import SalesQueryRequest
 from evaluators.basic import QualityEvaluator
 

@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import verify_token
-from api.schemas import GenerationResponse, SalesQueryRequest
+from schemas.generation import GenerationResponse, SalesQueryRequest
 from pipeline.run import run_pipeline
 
 logger = logging.getLogger(__name__)

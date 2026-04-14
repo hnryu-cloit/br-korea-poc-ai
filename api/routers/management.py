@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies import get_ordering_service, get_production_service, verify_token
-from api.schemas import (
+from schemas.management import (
     OrderingRecommendRequest,
     OrderingRecommendResponse,
     OrderingOption,

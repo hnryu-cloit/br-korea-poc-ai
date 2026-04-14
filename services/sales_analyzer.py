@@ -4,9 +4,9 @@ from schemas.contracts import SalesQueryRequest, SalesQueryResponse, SalesInsigh
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_sales_analysis_prompt
-from utils.classifier_util import QueryClassifier
-from utils.semantic_util import SemanticLayer
-from utils.rag_util import RAGService
+from services.query_classifier import QueryClassifier
+from services.semantic_layer import SemanticLayer
+from services.rag_service import RAGService
 from services.sales_agent import SalesAnalysisAgent
 
 logger = init_logger("sales_analyzer")

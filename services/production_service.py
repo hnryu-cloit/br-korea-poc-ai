@@ -4,7 +4,7 @@ import datetime
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
-from api.schemas import ProductionPredictRequest, ProductionPredictResponse
+from schemas.management import ProductionPredictRequest, ProductionPredictResponse
 from schemas.contracts import (
     ProductionStatusRequest,
     ProductionAlarmResponse,

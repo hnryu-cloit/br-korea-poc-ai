@@ -14,7 +14,6 @@ from services.sales_analyzer import SalesAnalyzer
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/sales", tags=["sales"])
 
 

@@ -1,6 +1,6 @@
 # br-korea-poc-ai
 
-BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로 실행되며, Google Gemini를 활용한 매출 분석, 생산/주문 가이드, 지식 검색(RAG) 기능을 제공합니다.
+BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로 실행되며, Google Gemini를 활용한 매출 분석, 생산/주문 가이드, 지식 검색(RAG) 기능을 제공합니다. 현재 백엔드가 프론트 계약을 기준으로 AI 응답을 어댑팅합니다.
 
 ## 개요
 
@@ -46,7 +46,7 @@ br-korea-poc-ai/
 ├── Dockerfile
 ├── api/                        # FastAPI 앱
 │   ├── main.py                 # 앱 초기화, 라우터 등록, lifespan 훅
-│   ├── config.py               # 환경 변수 설정 (Settings, port: 8001)
+│   ├── config.py               # 환경 변수 설정 (Settings, default port: 8001)
 │   ├── dependencies.py         # 서비스 DI 팩토리, Bearer 토큰 검증
 │   ├── schemas.py              # API 전용 Pydantic 모델
 │   └── routers/
@@ -102,7 +102,7 @@ br-korea-poc-ai/
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5435/br_korea_poc` | PostgreSQL 연결 |
 | `APP_ENV` | `local` | 실행 환경 |
 | `APP_HOST` | `0.0.0.0` | 바인딩 호스트 |
-| `APP_PORT` | `8001` | 개발 서버 포트 |
+| `APP_PORT` | `8001` | 개발 서버 기본 포트 |
 
 ## 실행 방법
 
@@ -118,10 +118,10 @@ pip install -r requirements.txt
 python run.py
 ```
 
-`APP_ENV=local`이면 uvicorn reload가 자동 활성화됩니다. 기본 포트는 **8001**입니다.
+`APP_ENV=local`이면 uvicorn reload가 자동 활성화됩니다. `run.py` 단독 실행 기본 포트는 **8001**이고, 루트 `docker-compose.yml`에서는 **6001**로 노출합니다.
 
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
+- 단독 실행 Swagger UI: `http://localhost:8001/docs`
+- 단독 실행 ReDoc: `http://localhost:8001/redoc`
 
 ### 3. 지식 베이스 초기화 (최초 1회)
 
@@ -167,6 +167,23 @@ pytest tests/
 
 - 생산 시뮬레이션 요청/응답 계약은 [`schemas/contracts.py`](/Users/hanna/Documents/br-korea-poc/br-korea-poc-ai/schemas/contracts.py:1)의 `SimulationRequest`, `SimulationReportResponse`를 기준으로 관리합니다.
 - 백엔드가 AI 서비스를 프록시하거나 매핑할 때는 위 계약과 정합성을 유지해야 합니다.
+
+## Backend 연동 메모
+
+백엔드는 프론트 계약을 유지하기 위해 AI 요청/응답을 어댑팅합니다.
+
+### Sales Query 입력 계약
+
+- AI 원본 계약:
+  - `POST /sales/query`
+  - body: `{"store_id": "...", "query": "..."}`
+- 백엔드는 프론트의 `prompt`를 받아 위 형태로 변환해 호출합니다.
+
+### Sales Query 응답 계약
+
+- AI 원본 응답은 `answer`, `source_data_period`, `channel_analysis`, `profit_simulation` 중심입니다.
+- 백엔드는 이를 프론트 표시용 `text`, `evidence`, `actions`, `visual_data` 중심 구조로 변환합니다.
+- AI 서비스 자체는 도메인 분석 계약을 유지하고, 프론트 고정 계약은 백엔드에서 보장합니다.
 
 ## 서비스 구조 흐름
 

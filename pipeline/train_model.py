@@ -8,7 +8,7 @@ ai_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if ai_dir not in sys.path:
     sys.path.insert(0, ai_dir)
 
-from services.production_agent import InventoryPredictor
+from services.inventory_predictor import InventoryPredictor
 
 from sqlalchemy import create_engine, text
 

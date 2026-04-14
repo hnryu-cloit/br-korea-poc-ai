@@ -122,7 +122,7 @@ for module_name, class_name in [
 from api.config import get_settings, Settings
 from api.dependencies import get_sales_analyzer, get_production_service, get_ordering_service
 from api.main import app
-from api.schemas import ProductionPredictResponse
+from schemas.management import ProductionPredictResponse
 from schemas.contracts import (
     ChartDataPoint,
     OrderOptionType,
