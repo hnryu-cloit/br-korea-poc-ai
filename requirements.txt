@@ -3,7 +3,7 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
 pytest==8.3.3
-google-genai
+google-generativeai
 pandas
 numpy
 scikit-learn

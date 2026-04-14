@@ -31,20 +31,20 @@ class InventoryReversalEngine:
         self.sales_df = sales_df
 
     def get_estimated_stock(self, store_cd: str, item_cd: str, target_date: str):
-        """5분 단위 추정 재고 테이블 생성"""
+        """5분 단위 추정 재고 테이블 생성 (영업 시간 동적 추정 및 음수 보정)"""
         logger.info(f"Calculating stock flow for Store: {store_cd}, Item: {item_cd}, Date: {target_date}")
 
         base_stock_row = self.inventory_df[
-            (self.inventory_df['MASKED_STOR_CD'] == store_cd) & 
-            (self.inventory_df['ITEM_CD'] == item_cd) &
-            (self.inventory_df['STOCK_DT'] == target_date)
+            (self.inventory_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) & 
+            (self.inventory_df['ITEM_CD'].astype(str) == str(item_cd)) &
+            (self.inventory_df['STOCK_DT'].astype(str) == str(target_date))
         ]
-        base_stock = base_stock_row['STOCK_QTY'].sum() if not base_stock_row.empty else 0
+        base_stock = pd.to_numeric(base_stock_row['STOCK_QTY'], errors='coerce').fillna(0).sum() if not base_stock_row.empty else 0
 
         prod_data = self.production_df[
-            (self.production_df['MASKED_STOR_CD'] == store_cd) & 
-            (self.production_df['ITEM_CD'] == item_cd) &
-            (self.production_df['PROD_DT'] == target_date)
+            (self.production_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) & 
+            (self.production_df['ITEM_CD'].astype(str) == str(item_cd)) &
+            (self.production_df['PROD_DT'].astype(str) == str(target_date))
         ].copy()
         
         def map_prod_time(dgre):
@@ -57,11 +57,31 @@ class InventoryReversalEngine:
         if not prod_data.empty:
             prod_data['timestamp'] = prod_data['PROD_DGRE'].apply(map_prod_time)
 
-        sales_data = self.sales_df[
-            (self.sales_df['MASKED_STOR_CD'] == store_cd) & 
-            (self.sales_df['ITEM_CD'] == item_cd) &
-            (self.sales_df['SALE_DT'] == target_date)
+        # 해당 지점의 당일 전체 판매 데이터를 가져와 영업 시간 추정
+        store_all_sales = self.sales_df[
+            (self.sales_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) & 
+            (self.sales_df['SALE_DT'].astype(str) == str(target_date))
         ].copy()
+        
+        # 영업 시간 파악 (판매 기록이 있는 최소~최대 시간대)
+        if not store_all_sales.empty and 'TMZON_DIV' in store_all_sales.columns:
+            store_all_sales['TMZON_DIV'] = pd.to_numeric(store_all_sales['TMZON_DIV'], errors='coerce').fillna(-1).astype(int)
+            valid_sales = store_all_sales[store_all_sales['TMZON_DIV'] >= 0]
+            
+            if not valid_sales.empty:
+                min_hour = valid_sales['TMZON_DIV'].min()
+                max_hour = valid_sales['TMZON_DIV'].max() + 1 # 마감 시간 여유 1시간
+            else:
+                min_hour, max_hour = 8, 23
+        else:
+            min_hour, max_hour = 8, 23 # 기본 영업시간
+
+        # 너무 좁은 범위 방지 (최소 6시간 영업 보장)
+        if max_hour - min_hour < 6:
+            min_hour = max(0, min_hour - 2)
+            max_hour = min(24, max_hour + 2)
+
+        sales_data = store_all_sales[store_all_sales['ITEM_CD'].astype(str) == str(item_cd)].copy()
         
         def map_sale_time(tmzon):
             try:
@@ -73,8 +93,14 @@ class InventoryReversalEngine:
         if not sales_data.empty:
             sales_data['timestamp'] = sales_data['TMZON_DIV'].apply(map_sale_time)
 
-        start_time = datetime.strptime(target_date, '%Y%m%d')
-        end_time = start_time + timedelta(days=1)
+        # 동적으로 계산된 영업 시간에 맞게 타임라인 생성
+        start_time = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=int(min_hour))
+        end_time = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=int(max_hour))
+        
+        # 만약 시작/종료 시간이 자정을 넘기거나 비정상일 경우 보정
+        if end_time <= start_time:
+            end_time = start_time + timedelta(hours=12)
+
         timeline = pd.date_range(start=start_time, end=end_time, freq='5min', inclusive='left')
         
         df_flow = pd.DataFrame(index=timeline)
@@ -84,17 +110,53 @@ class InventoryReversalEngine:
         for _, row in prod_data.iterrows():
             ts = row['timestamp']
             if ts in df_flow.index:
-                df_flow.at[ts, 'in_qty'] += row['PROD_QTY']
+                qty = pd.to_numeric(row['PROD_QTY'], errors='coerce')
+                if pd.notna(qty):
+                    df_flow.at[ts, 'in_qty'] += qty
 
         for _, row in sales_data.iterrows():
             ts = row['timestamp']
-            for i in range(12):
-                slot = ts + timedelta(minutes=i*5)
-                if slot in df_flow.index:
-                    df_flow.at[slot, 'out_qty'] += (row['SALE_QTY'] / 12)
+            qty = pd.to_numeric(row['SALE_QTY'], errors='coerce')
+            if pd.notna(qty):
+                for i in range(12):
+                    slot = ts + timedelta(minutes=i*5)
+                    if slot in df_flow.index:
+                        df_flow.at[slot, 'out_qty'] += (qty / 12)
 
         df_flow['stock_change'] = df_flow['in_qty'] - df_flow['out_qty']
-        df_flow['estimated_stock'] = base_stock + df_flow['stock_change'].cumsum()
+        
+        # [핵심] 누적 재고 계산 및 '생산 기록 역추적(Back-tracking)' 로직
+        # 생산 데이터(PROD_DTL)가 누락되어 판매량(out_qty) 때문에 재고가 마이너스로 뚫릴 위기에 처하면,
+        # AI가 "이 시점에 최소 이만큼은 생산(in_qty)했을 것이다"라고 가상의 생산 기록을 복원해 냅니다.
+        current_stock = base_stock
+        estimated_stocks = []
+        
+        for ts, row in df_flow.iterrows():
+            change = row['stock_change']
+            # 현재 스텝의 재고 변화 적용
+            next_stock = current_stock + change
+            
+            # 만약 재고가 0 미만으로 떨어진다면? -> 생산 데이터가 누락된 것임!
+            if next_stock < 0:
+                # 부족한 수량 + 여유 버퍼(안전재고 20%)만큼 가상의 생산(Virtual Production)이 일어났다고 추론
+                # 정수 단위 생산을 위해 올림(ceil) 처리
+                shortage = abs(next_stock)
+                virtual_prod_qty = int(np.ceil(shortage * 1.2)) 
+                
+                # 가상 생산량을 현재 시간대의 입고(in_qty)에 강제 주입
+                df_flow.at[ts, 'in_qty'] += virtual_prod_qty
+                # stock_change 다시 계산
+                change = df_flow.at[ts, 'in_qty'] - df_flow.at[ts, 'out_qty']
+                
+                logger.debug(f"[역추적 감지] {ts.strftime('%H:%M')} 재고 부족({next_stock:.1f}). 가상 생산량 {virtual_prod_qty}개 복원 주입.")
+                
+                current_stock += change # 보정된 변화량으로 재고 재계산
+            else:
+                current_stock = next_stock
+                
+            estimated_stocks.append(current_stock)
+            
+        df_flow['estimated_stock'] = estimated_stocks
         
         return df_flow
 
@@ -261,15 +323,35 @@ class InventoryPredictor:
         return False
 
     def predict_next_hour_sales(self, store_cd: str, item_cd: str, current_time: datetime, history_df: pd.DataFrame) -> float:
-        if self.model is None: return 3.0
+        if self.model is None: return 0.0 # 기본값을 0으로 낮춤 (과대 예측 방지)
             
         target_time = current_time + timedelta(hours=1)
         weekday = target_time.weekday()
         
-        recent = history_df[
-            (history_df['MASKED_STOR_CD'] == store_cd) & 
-            (history_df['ITEM_CD'] == item_cd)
-        ].sort_values(['SALE_DT', 'TMZON_DIV']).tail(3)
+        # 최근 3시간 이내의 실시간 판매 속도 계산 (엄격한 시간 필터 적용)
+        recent_cutoff = current_time - timedelta(hours=3)
+        has_tmzon = 'TMZON_DIV' in history_df.columns
+        
+        if has_tmzon:
+            # 안전하게 Datetime으로 변환 가능한 데이터만 필터링
+            df_recent = history_df[
+                (history_df['MASKED_STOR_CD'] == store_cd) & 
+                (history_df['ITEM_CD'] == item_cd)
+            ].copy()
+            
+            if not df_recent.empty:
+                df_recent['sale_datetime'] = pd.to_datetime(df_recent['SALE_DT'], format='%Y%m%d', errors='coerce') + \
+                                             pd.to_timedelta(df_recent['TMZON_DIV'].astype(int), unit='h')
+                
+                # 정확히 최근 3시간 이내에 발생한 '오늘'의 판매만 가져옴
+                recent = df_recent[
+                    (df_recent['sale_datetime'] > recent_cutoff) & 
+                    (df_recent['sale_datetime'] <= current_time)
+                ].sort_values('sale_datetime')
+            else:
+                recent = pd.DataFrame()
+        else:
+            recent = pd.DataFrame() # 시간대 데이터가 없으면 실시간 속도는 0으로 간주
         
         lag_1h = recent['SALE_QTY'].iloc[-1] if len(recent) >= 1 else 0
         lag_2h = recent['SALE_QTY'].iloc[-2] if len(recent) >= 2 else 0
@@ -282,12 +364,22 @@ class InventoryPredictor:
             self.stats.get('item', {}).get(item_cd, 0)
         ]], columns=self.feature_cols)
         
-        ml_pred = float(self.model.predict(X_pred)[0])
-        final_pred = (ml_pred * 0.7) + (current_velocity * 0.3)
-        item_avg = self.stats.get('item', {}).get(item_cd, 1.0)
-        final_pred = max(final_pred, item_avg * 0.5) 
+        ml_pred = float(self.model.predict(X_pred)[0]) if self.model else 0.0
         
-        return max(0.0, round(final_pred, 2))
+        # [하이퍼파라미터 튜닝] (제로 인플레이션 및 과대 적합 완벽 차단 로직)
+        # 과거(ml_pred)에 아무리 많이 팔렸던 시간대여도, 
+        # 당일 최근 3시간 동안 단 한 개도 팔리지 않았다면 예측 수량을 0으로 강제 수렴시킵니다.
+        if pd.isna(current_velocity) or current_velocity <= 0.1:
+            final_pred = 0.0
+        else:
+            # 판매가 일어나는 중일 때만 ML 모델의 예측값을 신뢰 (ML 30% + 현재 속도 70%)
+            final_pred = (ml_pred * 0.3) + (current_velocity * 0.7)
+            
+        # 점심 피크타임(12~14시) 가중치
+        if 12 <= target_time.hour <= 14 and final_pred > 0:
+            final_pred *= 1.2
+            
+        return max(0.0, round(final_pred, 1))
 
 
 # ==========================================
@@ -420,15 +512,18 @@ class ProductionManagementAgent:
         }
 
     def generate_recommendation(self, store_cd: str, item_cd: str, item_nm: str, current_time: Optional[datetime] = None) -> Dict[str, Any]:
-        """생산 필요 여부 판단 및 추천 수량 산출"""
+        """생산 필요 여부 판단 및 패턴+예측 혼합형 추천 수량 산출"""
         now = current_time if current_time else datetime.now()
+        target_date = now.strftime('%Y%m%d')
         status = self.get_realtime_status(store_cd, item_cd, item_nm, now)
         
         curr_stock = status["current_stock"]
         pred_2h = status["predicted_sales_2h_total"]
         
+        # 1. 생산 필요 판단 (현재고 < 2시간 예상 수요)
         need_production = bool(curr_stock < pred_2h)
         
+        # [NEW] 점포 생산 품목 여부 확인 (완제품 납품 품목은 생산 추천 제외)
         is_production_item = True
         if not self.production_list_df.empty:
             is_production_item = not self.production_list_df[
@@ -438,22 +533,45 @@ class ProductionManagementAgent:
         
         if not is_production_item:
             need_production = False
-            logger.info(f"Item {item_cd} is a finished good for store {store_cd}. Skipping production recommendation.")
+
+        # 2. 추천 수량 산출 (패턴 + 예측 혼합 알고리즘)
+        recommend_qty = 0
+        reason_text = "현재고가 충분합니다."
+        
+        if need_production:
+            # A. 순수 부족분 (ML 예측 기반)
+            ml_deficit = max(0, pred_2h - curr_stock)
+            
+            # B. 과거 4주 생산 패턴 (역추적 및 기록 기반)
+            pattern = self.extract_production_pattern(store_cd, item_cd, target_date)
+            # 현재 시간과 가장 가까운 차수의 패턴 수량 가져오기
+            pattern_qty = 0
+            if pattern.get("1st"):
+                pattern_qty = pattern["1st"]["qty"]
+            
+            # C. 최종 블렌딩 (부족분 70% + 평소 생산량 30%)
+            # 만약 평소 생산 패턴이 전혀 없다면(신규 상품 등) ML 예측에만 의존
+            if pattern_qty > 0:
+                blended_qty = (ml_deficit * 0.7) + (pattern_qty * 0.3)
+                recommend_qty = int(np.ceil(blended_qty))
+                reason_text = f"평소 생산량({pattern_qty}개)과 향후 예상 수요({int(pred_2h)}개)를 종합 고려하여 {recommend_qty}개 생산을 추천합니다."
+            else:
+                recommend_qty = int(np.ceil(ml_deficit))
+                reason_text = f"향후 2시간 예상 수요 {int(pred_2h)}개에 맞춰 {recommend_qty}개 생산을 추천합니다."
 
         risk_level = "SAFE"
         if curr_stock <= 0: risk_level = "CRITICAL"
         elif need_production: risk_level = "WARNING"
+        
+        if not is_production_item:
+            reason_text = "점포 생산 제외 품목(완제품)입니다. 생산 권고를 수행하지 않습니다."
 
-        recommend_qty = 0
-        if need_production:
-            deficit = pred_2h - curr_stock
-            recommend_qty = int(np.ceil(max(1, deficit)))
-
+        # 수익성 계산
         unit_price = 1500
         margin_rate = 0.3
-        expected_gain = int(pred_2h * unit_price * margin_rate) if need_production else 0
+        expected_gain = int(recommend_qty * unit_price * margin_rate) if need_production else 0
 
-        past_loss = self.chance_loss_service.calculate_chance_loss(store_cd, item_cd, now.strftime('%Y%m%d'), self.historical_sales_df)
+        past_loss = self.chance_loss_service.calculate_chance_loss(store_cd, item_cd, target_date, self.historical_sales_df)
         past_qty = past_loss.get("total_chance_loss_qty", 0)
 
         return {
@@ -467,6 +585,7 @@ class ProductionManagementAgent:
             "recommendation": {
                 "need_production": need_production,
                 "recommend_qty": recommend_qty,
+                "reason": reason_text,
                 "expected_profit_gain": expected_gain,
                 "past_chance_loss_qty": past_qty
             }
