@@ -11,21 +11,15 @@ from schemas.dashboard import (
 )
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
-
-try:
-    from services.sales_service import SalesService
-except ImportError:  # pragma: no cover - trimmed POC snapshot fallback
-    class SalesService:  # type: ignore[too-many-ancestors]
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
+from services.sales_analyzer import SalesAnalyzer
 
 logger = init_logger("dashboard_service")
 
 class DashboardService:
-    def __init__(self, prod_service: ProductionService, order_service: OrderingService, sales_service: SalesService):
+    def __init__(self, prod_service: ProductionService, order_service: OrderingService, sales_analyzer: SalesAnalyzer):
         self.prod_service = prod_service
         self.order_service = order_service
-        self.sales_service = sales_service
+        self.sales_service = sales_analyzer
 
     def get_home_overview(self, mock_payload: dict, raw_data: dict) -> HomeDashboardResponse:
         """

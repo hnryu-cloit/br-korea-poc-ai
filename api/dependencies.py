@@ -9,48 +9,12 @@ from api.config import Settings, get_settings
 
 from common.gemini import Gemini
 
-try:
-    from services.sales_analyzer import SalesAnalyzer
-except ImportError:  # pragma: no cover - fallback for trimmed POC snapshot
-    class SalesAnalyzer:  # type: ignore[too-many-ancestors]
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def analyze(self, *args: object, **kwargs: object) -> object:
-            raise NotImplementedError
-
-try:
-    from services.channel_payment_analyzer import ChannelPaymentAnalyzer
-except ImportError:  # pragma: no cover - fallback for trimmed POC snapshot
-    class ChannelPaymentAnalyzer:  # type: ignore[too-many-ancestors]
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def analyze(self, *args: object, **kwargs: object) -> object:
-            raise NotImplementedError
-
+from services.sales_analyzer import SalesAnalyzer
+from services.channel_payment_analyzer import ChannelPaymentAnalyzer
 from services.production_service import ProductionService
 from services.ordering_service import OrderingService
-
-try:
-    from services.rag_service import RAGService
-except ImportError:  # pragma: no cover - fallback for trimmed POC snapshot
-    class RAGService:  # type: ignore[too-many-ancestors]
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def generate_with_rag(self, *args: object, **kwargs: object) -> object:
-            raise NotImplementedError
-
-try:
-    from services.orchestrator import AgentOrchestrator
-except ImportError:  # pragma: no cover - fallback for trimmed POC snapshot
-    class AgentOrchestrator:  # type: ignore[too-many-ancestors]
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        async def handle_request(self, *args: object, **kwargs: object) -> object:
-            raise NotImplementedError
+from services.rag_service import RAGService
+from services.orchestrator import AgentOrchestrator
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
