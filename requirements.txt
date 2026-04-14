@@ -3,13 +3,15 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
 pytest==8.3.3
-google-generativeai
+google-genai
 pandas
 numpy
 scikit-learn
 joblib
 lightgbm
 python-dotenv
+Pillow
+colorlog
 # 고도화 라이브러리 추가
 pgvector
 sqlalchemy
