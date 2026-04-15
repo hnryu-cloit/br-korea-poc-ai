@@ -1,6 +1,11 @@
 from __future__ import annotations
 import json
-from schemas.contracts import SalesQueryRequest, SalesQueryResponse, SalesInsight
+from schemas.contracts import (
+    SalesQueryRequest,
+    SalesQueryResponse,
+    SalesInsight,
+    ProfitabilitySimulationResponse,
+)
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_sales_analysis_prompt
@@ -213,3 +218,31 @@ class SalesAnalyzer:
     def extract_store_profile(self, store_id: str, date_from: str, date_to: str) -> dict:
         """API Router에서 요구하는 매장 프로필 추출 메서드 구현"""
         return self.agent.extract_store_profile(store_id)
+
+    def simulate_profitability(
+        self, store_id: str, date_from: str, date_to: str
+    ) -> ProfitabilitySimulationResponse:
+        """표준 마진 기반 수익성 시뮬레이션 (원가 데이터 부재 환경)"""
+        _STANDARD_MARGIN = 0.65
+        _FALLBACK_REVENUE = 5_000_000.0
+
+        total_revenue = _FALLBACK_REVENUE
+        top_items: list = []
+        try:
+            profile = self.extract_store_profile(store_id, date_from, date_to)
+            if profile and isinstance(profile, dict):
+                total_revenue = float(profile.get("total_revenue", total_revenue))
+                top_items = profile.get("top_items", [])
+        except Exception:
+            pass
+
+        return ProfitabilitySimulationResponse(
+            store_id=store_id,
+            date_from=date_from,
+            date_to=date_to,
+            total_revenue=total_revenue,
+            estimated_margin_rate=_STANDARD_MARGIN,
+            estimated_profit=round(total_revenue * _STANDARD_MARGIN),
+            top_items=top_items,
+            simulation_note="표준 마진 65% 적용 (원가 데이터 부재로 추정값 사용)",
+        )

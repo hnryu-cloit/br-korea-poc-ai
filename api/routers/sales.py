@@ -40,32 +40,12 @@ async def get_profitability_simulation(
     payload: ProfitabilitySimulationRequest,
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> ProfitabilitySimulationResponse:
-    """표준 마진 65% 기반 수익성 시뮬레이션 (원가 데이터 부재 환경)."""
+    """수익성 시뮬레이션 요청을 SalesAnalyzer에 위임해 결과를 반환합니다."""
     try:
         logger.info("수익성 시뮬레이션 요청: 매장 %s (%s ~ %s)", payload.store_id, payload.date_from, payload.date_to)
-        STANDARD_MARGIN = 0.65
-        # SalesAnalyzer에서 매출 데이터 조회 시도, 실패 시 stub
-        total_revenue = 5_000_000.0
-        top_items: list = []
-        try:
-            profile = await asyncio.to_thread(
-                analyzer.extract_store_profile, payload.store_id, payload.date_from, payload.date_to
-            )
-            if profile and isinstance(profile, dict):
-                total_revenue = float(profile.get("total_revenue", total_revenue))
-                top_items = profile.get("top_items", [])
-        except Exception:
-            pass
-
-        return ProfitabilitySimulationResponse(
-            store_id=payload.store_id,
-            date_from=payload.date_from,
-            date_to=payload.date_to,
-            total_revenue=total_revenue,
-            estimated_margin_rate=STANDARD_MARGIN,
-            estimated_profit=round(total_revenue * STANDARD_MARGIN),
-            top_items=top_items,
-            simulation_note="표준 마진 65% 적용 (원가 데이터 부재로 추정값 사용)",
+        return await asyncio.to_thread(
+            analyzer.simulate_profitability,
+            payload.store_id, payload.date_from, payload.date_to,
         )
     except Exception as exc:
         logger.exception("수익성 시뮬레이션 오류")

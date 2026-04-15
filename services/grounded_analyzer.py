@@ -6,7 +6,8 @@ from typing import Any
 
 from common.gemini import Gemini
 from schemas.contracts import SalesInsight, SalesQueryRequest, SalesQueryResponse
-from services.query_routing import QueryClassifier, SemanticLayer
+from services.query_classifier import QueryClassifier
+from services.semantic_layer import SemanticLayer
 from services.sql_pipeline import QueryExecutionError, QueryExecutor, SQLGenerator
 
 logger = logging.getLogger(__name__)
