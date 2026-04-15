@@ -233,10 +233,13 @@ class InventoryPredictor:
 
         # 최근 3시간 실시간 판매 속도 추출 (lag 피처 계산용)
         recent_cutoff = current_time - timedelta(hours=3)
-        df_recent = history_df[
-            (history_df['MASKED_STOR_CD'] == store_cd) &
-            (history_df['ITEM_CD'] == item_cd)
-        ].copy()
+        if history_df.empty or 'MASKED_STOR_CD' not in history_df.columns:
+            df_recent = pd.DataFrame()
+        else:
+            df_recent = history_df[
+                (history_df['MASKED_STOR_CD'] == store_cd) &
+                (history_df['ITEM_CD'] == item_cd)
+            ].copy()
 
         if not df_recent.empty:
             df_recent['sale_datetime'] = (

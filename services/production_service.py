@@ -204,11 +204,19 @@ class ProductionService:
         
         # 1. 마스터 정보 추출
         try:
-            item_master = production_df[production_df['ITEM_CD'] == item_id].iloc[0]
-            item_nm = str(item_master['ITEM_NM'])
-            unit_price = int(item_master['SALE_PRC'])
-            item_cost = int(item_master['ITEM_COST'])
-        except:
+            if not production_df.empty and 'ITEM_CD' in production_df.columns:
+                matches = production_df[production_df['ITEM_CD'] == item_id]
+                item_master = matches.iloc[0] if not matches.empty else None
+            else:
+                item_master = None
+            if item_master is not None:
+                item_nm = str(item_master.get('ITEM_NM', '알 수 없는 상품'))
+                unit_price = int(item_master.get('SALE_PRC', 1500))
+                item_cost = int(item_master.get('ITEM_COST', 700))
+            else:
+                item_nm = "알 수 없는 상품"
+                unit_price, item_cost = 1500, 700
+        except Exception:
             item_nm = "알 수 없는 상품"
             unit_price, item_cost = 1500, 700
 
@@ -216,9 +224,18 @@ class ProductionService:
         sim_prod_df = production_df.copy()
         sim_sales_df = sales_df.copy()
         ai_actions_log = []
-        
+
         # 요약 데이터 수집을 위한 변수
-        actual_total_sales = float(sales_df[(sales_df['MASKED_STOR_CD'] == store_id) & (sales_df['ITEM_CD'] == item_id) & (sales_df['SALE_DT'] == target_date)]['SALE_QTY'].sum())
+        if not sales_df.empty and 'MASKED_STOR_CD' in sales_df.columns:
+            actual_total_sales = float(
+                sales_df[
+                    (sales_df['MASKED_STOR_CD'] == store_id) &
+                    (sales_df['ITEM_CD'] == item_id) &
+                    (sales_df['SALE_DT'] == target_date)
+                ]['SALE_QTY'].sum()
+            )
+        else:
+            actual_total_sales = 0.0
         
         for hour in range(8, 23):
             sim_time = datetime.datetime.strptime(target_date, "%Y%m%d").replace(hour=hour)
@@ -234,7 +251,15 @@ class ProductionService:
                 ai_actions_log.append(f"[{hour:02d}:00] AI 추천으로 {added_qty}개 추가 생산")
 
             # 판매 회수 시뮬레이션
-            actual_hr_qty = sales_df[(sales_df['MASKED_STOR_CD'] == store_id) & (sales_df['ITEM_CD'] == item_id) & (sales_df['SALE_DT'] == target_date) & (sales_df['TMZON_DIV'].astype(int) == hour)]['SALE_QTY'].sum()
+            if not sales_df.empty and 'MASKED_STOR_CD' in sales_df.columns:
+                actual_hr_qty = sales_df[
+                    (sales_df['MASKED_STOR_CD'] == store_id) &
+                    (sales_df['ITEM_CD'] == item_id) &
+                    (sales_df['SALE_DT'] == target_date) &
+                    (sales_df['TMZON_DIV'].astype(str).str.lstrip('0').replace('', '0').astype(int) == hour)
+                ]['SALE_QTY'].sum()
+            else:
+                actual_hr_qty = 0
             if actual_hr_qty == 0:
                 potential = temp_agent.predictor.predict_next_hour_sales(store_id, item_id, sim_time, sales_df)
                 if potential > 1.0:
@@ -246,7 +271,10 @@ class ProductionService:
         flow_actual = final_engine.get_estimated_stock(store_id, item_id, target_date)
         flow_sim = ProductionManagementAgent(inventory_df, sim_prod_df, sim_sales_df).engine.get_estimated_stock(store_id, item_id, target_date)
         
-        sim_total_sales = float(sim_sales_df[(sim_sales_df['MASKED_STOR_CD'] == store_id) & (sim_sales_df['ITEM_CD'] == item_id) & (sim_sales_df['SALE_DT'] == target_date)]['SALE_QTY'].sum())
+        if not sim_sales_df.empty and 'MASKED_STOR_CD' in sim_sales_df.columns:
+            sim_total_sales = float(sim_sales_df[(sim_sales_df['MASKED_STOR_CD'] == store_id) & (sim_sales_df['ITEM_CD'] == item_id) & (sim_sales_df['SALE_DT'] == target_date)]['SALE_QTY'].sum())
+        else:
+            sim_total_sales = 0.0
         closing_time = datetime.datetime.strptime(target_date, "%Y%m%d").replace(hour=23, minute=55)
         sim_waste = float(max(0, flow_sim.at[flow_sim.index.asof(closing_time), 'estimated_stock']))
         act_waste = float(max(0, flow_actual.at[flow_actual.index.asof(closing_time), 'estimated_stock']))

@@ -25,18 +25,24 @@ class InventoryReversalEngine:
         """5분 단위 추정 재고 테이블 생성 (영업 시간 동적 추정 및 음수 보정)"""
         logger.info(f"Calculating stock flow for Store: {store_cd}, Item: {item_cd}, Date: {target_date}")
 
-        base_stock_row = self.inventory_df[
-            (self.inventory_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
-            (self.inventory_df['ITEM_CD'].astype(str) == str(item_cd)) &
-            (self.inventory_df['STOCK_DT'].astype(str) == str(target_date))
-        ]
-        base_stock = pd.to_numeric(base_stock_row['STOCK_QTY'], errors='coerce').fillna(0).sum() if not base_stock_row.empty else 0
+        if not self.inventory_df.empty and 'MASKED_STOR_CD' in self.inventory_df.columns:
+            base_stock_row = self.inventory_df[
+                (self.inventory_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
+                (self.inventory_df['ITEM_CD'].astype(str) == str(item_cd)) &
+                (self.inventory_df['STOCK_DT'].astype(str) == str(target_date))
+            ]
+            base_stock = pd.to_numeric(base_stock_row['STOCK_QTY'], errors='coerce').fillna(0).sum() if not base_stock_row.empty else 0
+        else:
+            base_stock = 0
 
-        prod_data = self.production_df[
-            (self.production_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
-            (self.production_df['ITEM_CD'].astype(str) == str(item_cd)) &
-            (self.production_df['PROD_DT'].astype(str) == str(target_date))
-        ].copy()
+        if not self.production_df.empty and 'MASKED_STOR_CD' in self.production_df.columns:
+            prod_data = self.production_df[
+                (self.production_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
+                (self.production_df['ITEM_CD'].astype(str) == str(item_cd)) &
+                (self.production_df['PROD_DT'].astype(str) == str(target_date))
+            ].copy()
+        else:
+            prod_data = pd.DataFrame()
 
         def map_prod_time(dgre):
             try:
@@ -48,10 +54,13 @@ class InventoryReversalEngine:
         if not prod_data.empty:
             prod_data['timestamp'] = prod_data['PROD_DGRE'].apply(map_prod_time)
 
-        store_all_sales = self.sales_df[
-            (self.sales_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
-            (self.sales_df['SALE_DT'].astype(str) == str(target_date))
-        ].copy()
+        if not self.sales_df.empty and 'MASKED_STOR_CD' in self.sales_df.columns:
+            store_all_sales = self.sales_df[
+                (self.sales_df['MASKED_STOR_CD'].astype(str) == str(store_cd)) &
+                (self.sales_df['SALE_DT'].astype(str) == str(target_date))
+            ].copy()
+        else:
+            store_all_sales = pd.DataFrame()
 
         if not store_all_sales.empty and 'TMZON_DIV' in store_all_sales.columns:
             store_all_sales['TMZON_DIV'] = pd.to_numeric(store_all_sales['TMZON_DIV'], errors='coerce').fillna(-1).astype(int)
@@ -69,7 +78,10 @@ class InventoryReversalEngine:
             min_hour = max(0, min_hour - 2)
             max_hour = min(24, max_hour + 2)
 
-        sales_data = store_all_sales[store_all_sales['ITEM_CD'].astype(str) == str(item_cd)].copy()
+        if not store_all_sales.empty and 'ITEM_CD' in store_all_sales.columns:
+            sales_data = store_all_sales[store_all_sales['ITEM_CD'].astype(str) == str(item_cd)].copy()
+        else:
+            sales_data = pd.DataFrame()
 
         def map_sale_time(tmzon):
             try:
