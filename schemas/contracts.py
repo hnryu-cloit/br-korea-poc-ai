@@ -137,6 +137,15 @@ class OrderingOption(BaseModel):
     reasoning: str = Field(..., description="해당 옵션 추천 근거 (이벤트, 날씨, 휴일 등 반영)")
     expected_sales: int = Field(..., description="기대 판매량")
     seasonality_weight: Optional[float] = Field(None, description="캠페인 마스터 기반 시즌성 가중치 (1.0 초과 시 표시)")
+    option_id: Optional[str] = Field(None, description="프론트/백엔드 연동용 옵션 식별자")
+    title: Optional[str] = Field(None, description="옵션 카드 제목")
+    basis: Optional[str] = Field(None, description="산정 기준 요약")
+    description: Optional[str] = Field(None, description="옵션 카드 설명")
+    recommended: Optional[bool] = Field(None, description="AI 추천 우선 옵션 여부")
+    reasoning_text: Optional[str] = Field(None, description="프론트 계약용 추천 근거 문장")
+    reasoning_metrics: List[Dict[str, str]] = Field(default_factory=list, description="프론트 계약용 근거 지표")
+    special_factors: List[str] = Field(default_factory=list, description="프론트 계약용 특이사항")
+    items: List[Dict[str, Any]] = Field(default_factory=list, description="프론트 계약용 품목별 주문 라인")
 
 
 class OrderingRecommendationRequest(BaseModel):
@@ -152,6 +161,13 @@ class OrderingRecommendationResponse(BaseModel):
     store_id: str
     recommendations: List[OrderingOption] = Field(..., max_items=4, min_items=3)
     summary_insight: str = Field(..., description="전체적인 주문 전략 제언")
+    deadline_minutes: Optional[int] = Field(None, description="주문 마감까지 남은 시간(분)")
+    deadline_at: Optional[str] = Field(None, description="주문 마감 시각(HH:MM)")
+    purpose_text: Optional[str] = Field(None, description="주문 화면 목적 안내 문구")
+    caution_text: Optional[str] = Field(None, description="최종 결정 안내 문구")
+    weather_summary: Optional[str] = Field(None, description="날씨 요약")
+    trend_summary: Optional[str] = Field(None, description="최근 주문/재고 추세 요약")
+    business_date: Optional[str] = Field(None, description="기준 영업일")
 
 
 # --- 3. 매출 분석 Agent (Sales Analysis) ---
@@ -247,6 +263,12 @@ class DeadlineAlertResponse(BaseModel):
     alert_level: str  # "urgent" | "normal" | "passed"
     message: str
     should_alert: bool
+    notification_id: Optional[int] = None
+    title: Optional[str] = None
+    deadline_minutes: Optional[int] = None
+    target_path: Optional[str] = None
+    focus_option_id: Optional[str] = None
+    target_roles: List[str] = Field(default_factory=list)
 
 
 # --- 수익성 시뮬레이션 ---

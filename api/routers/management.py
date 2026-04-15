@@ -153,10 +153,30 @@ async def recommend_ordering_compat(
                 name=option.option_type.value,
                 recommended_quantity=option.recommended_qty,
                 priority=index,
+                option_id=option.option_id,
+                title=option.title,
+                basis=option.basis,
+                description=option.description,
+                recommended=bool(option.recommended),
+                reasoning_text=option.reasoning_text or option.reasoning,
+                reasoning_metrics=option.reasoning_metrics,
+                special_factors=option.special_factors,
+                items=option.items,
             )
             for index, option in enumerate(result.recommendations, start=1)
         ]
-        return OrderingRecommendResponse(options=options, reasoning=result.summary_insight)
+        return OrderingRecommendResponse(
+            options=options,
+            reasoning=result.summary_insight,
+            deadline_minutes=result.deadline_minutes,
+            deadline_at=result.deadline_at,
+            purpose_text=result.purpose_text,
+            caution_text=result.caution_text,
+            weather_summary=result.weather_summary,
+            trend_summary=result.trend_summary,
+            business_date=result.business_date,
+            guardrail_note=result.caution_text or OrderingRecommendResponse.model_fields["guardrail_note"].default,
+        )
     except Exception as exc:
         logger.exception("주문 추천 중 오류 발생")
         raise HTTPException(

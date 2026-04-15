@@ -161,6 +161,15 @@ def test_health(client: TestClient) -> None:
     assert res.json()["status"] == "ok"
 
 
+def test_core_routes_are_exposed(client: TestClient) -> None:
+    openapi = client.get("/openapi.json")
+    assert openapi.status_code == 200
+    paths = openapi.json()["paths"]
+    assert "/generation" in paths
+    assert "/sales/query" in paths
+    assert "/sales/query/channel-payment" in paths
+
+
 # ── Sales Query ───────────────────────────────────────────────────────────────
 
 def test_sales_query_requires_token(client: TestClient) -> None:
@@ -294,6 +303,12 @@ def test_ordering_recommend_success(client: TestClient) -> None:
     body = res.json()
     assert len(body["options"]) == 3
     assert body["options"][0]["priority"] == 1
+    assert "deadline_minutes" in body
+    assert "deadline_at" in body
+    assert "business_date" in body
+    assert "reasoning_text" in body["options"][0]
+    assert "reasoning_metrics" in body["options"][0]
+    assert "special_factors" in body["options"][0]
     assert "reasoning" in body
     assert "guardrail_note" in body
 

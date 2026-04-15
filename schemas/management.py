@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProductionPredictRequest(BaseModel):
@@ -35,9 +35,25 @@ class OrderingOption(BaseModel):
     name: str
     recommended_quantity: int
     priority: int
+    option_id: str | None = None
+    title: str | None = None
+    basis: str | None = None
+    description: str | None = None
+    recommended: bool = False
+    reasoning_text: str | None = None
+    reasoning_metrics: list[dict[str, str]] = Field(default_factory=list)
+    special_factors: list[str] = Field(default_factory=list)
+    items: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class OrderingRecommendResponse(BaseModel):
     options: list[OrderingOption]
     reasoning: str
+    deadline_minutes: int | None = None
+    deadline_at: str | None = None
+    purpose_text: str | None = None
+    caution_text: str | None = None
+    weather_summary: str | None = None
+    trend_summary: str | None = None
+    business_date: str | None = None
     guardrail_note: str = "최종 주문 결정은 점주의 권한입니다. 추천 옵션은 보조 자료로만 활용해주세요."

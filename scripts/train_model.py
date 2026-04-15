@@ -9,7 +9,6 @@ if ai_dir not in sys.path:
     sys.path.insert(0, ai_dir)
 
 from services.inventory_predictor import InventoryPredictor
-
 from sqlalchemy import create_engine, text
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

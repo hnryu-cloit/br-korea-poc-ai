@@ -179,6 +179,119 @@ class OrderingService:
             "product_group": product_group
         }
 
+    @staticmethod
+    def _build_option_id(option_type: OrderOptionType) -> str:
+        return option_type.name.lower()
+
+    @staticmethod
+    def _build_option_title(option_type: OrderOptionType) -> str:
+        return option_type.value
+
+    @staticmethod
+    def _extract_weather_summary(context: dict[str, Any]) -> str | None:
+        weather = context.get("weather_summary") or context.get("weather")
+        if weather:
+            return str(weather)
+        if context.get("is_rainy"):
+            return "우천 가능성이 있어 배달/포장 수요 변화를 함께 확인했습니다."
+        return None
+
+    @staticmethod
+    def _extract_trend_summary(context: dict[str, Any], options: list[OrderingOption]) -> str | None:
+        explicit = context.get("trend_summary")
+        if explicit:
+            return str(explicit)
+        if not options:
+            return None
+        top_qty = max(option.recommended_qty for option in options)
+        low_qty = min(option.recommended_qty for option in options)
+        return f"추천 옵션 간 수량 편차는 {top_qty - low_qty}건이며 최근 패턴 변동성을 함께 반영했습니다."
+
+    @staticmethod
+    def _build_purpose_text(notification_entry: bool) -> str:
+        if notification_entry:
+            return "알림 기준으로 주문 추천안을 확인하고 누락 없이 최종 수량을 결정하세요."
+        return "주문 누락을 방지하고 최적 수량을 선택하세요."
+
+    @staticmethod
+    def _build_caution_text() -> str:
+        return "최종 주문 결정은 점주의 권한입니다. 추천 옵션은 보조 자료로만 활용해주세요."
+
+    def _resolve_deadline(self, target_date: str, context: dict[str, Any]) -> tuple[int, int]:
+        deadline_text = context.get("deadline_at") or context.get("deadline")
+        if isinstance(deadline_text, str):
+            try:
+                hour_str, minute_str = deadline_text.split(":", 1)
+                return int(hour_str), int(minute_str)
+            except ValueError:
+                logger.warning("deadline 문자열 파싱 실패: %s", deadline_text)
+
+        if self.product_group_deadlines:
+            first_deadline = sorted(self.product_group_deadlines.values())[0]
+            try:
+                hour_str, minute_str = first_deadline.split(":", 1)
+                return int(hour_str), int(minute_str)
+            except ValueError:
+                logger.warning("product_group_deadlines 파싱 실패: %s", first_deadline)
+
+        return 14, 0
+
+    def _build_reasoning_metrics(self, option: OrderingOption, options: list[OrderingOption]) -> list[dict[str, str]]:
+        quantities = [candidate.recommended_qty for candidate in options]
+        top_qty = max(quantities) if quantities else option.recommended_qty
+        metrics: list[dict[str, str]] = [
+            {"key": "recommended_qty", "value": f"{option.recommended_qty}건"},
+            {"key": "expected_sales", "value": f"{option.expected_sales}건"},
+        ]
+        if option.seasonality_weight is not None:
+            metrics.append(
+                {"key": "seasonality_weight", "value": f"{option.seasonality_weight:.2f}x"}
+            )
+        if top_qty:
+            ratio = round((option.recommended_qty / top_qty) * 100)
+            metrics.append({"key": "relative_level", "value": f"상위안 대비 {ratio}%"})
+        return metrics
+
+    def _build_special_factors(self, context: dict[str, Any], option: OrderingOption) -> list[str]:
+        factors: list[str] = []
+        if context.get("is_campaign"):
+            factors.append("캠페인 가중치 반영")
+        if context.get("is_holiday"):
+            factors.append("휴일 수요 변동 반영")
+        if context.get("special_event"):
+            factors.append(f"특수 이벤트 반영: {context['special_event']}")
+        if option.seasonality_weight is not None and option.seasonality_weight != 1.0:
+            factors.append(f"시즌성 보정 {option.seasonality_weight:.2f}x")
+        weather_summary = self._extract_weather_summary(context)
+        if weather_summary:
+            factors.append("날씨 변수 반영")
+        return factors
+
+    def _build_items(self, context: dict[str, Any], option: OrderingOption) -> list[dict[str, Any]]:
+        target_product = context.get("target_product")
+        if target_product:
+            return [
+                {
+                    "sku_id": None,
+                    "sku_name": str(target_product),
+                    "quantity": option.recommended_qty,
+                    "note": "대표 타깃 품목 기준 권장 수량",
+                }
+            ]
+        return []
+
+    def _enrich_option_contract_fields(self, options: list[OrderingOption], context: dict[str, Any]) -> None:
+        for index, option in enumerate(options, start=1):
+            option.option_id = self._build_option_id(option.option_type)
+            option.title = self._build_option_title(option.option_type)
+            option.basis = f"{option.option_type.value} 기준"
+            option.description = f"예상 판매 {option.expected_sales}건을 기준으로 산출한 주문안입니다."
+            option.recommended = index == 1
+            option.reasoning_text = option.reasoning
+            option.reasoning_metrics = self._build_reasoning_metrics(option, options)
+            option.special_factors = self._build_special_factors(context, option)
+            option.items = self._build_items(context, option)
+
     def calculate_base_ordering_options(self, store_id: str, target_date: str, target_product: str = None) -> List[OrderingOption]:
         """STEP 3: 3가지 바로 주문 옵션(전주, 전전주, 전월 동요일) 수량 계산"""
         qty_last_week = self._get_historical_qty(store_id, target_date, 7, target_product)
@@ -277,6 +390,12 @@ class OrderingService:
                 alert_level="passed",
                 message="오늘 주문 마감이 지났습니다.",
                 should_alert=False,
+                notification_id=2001,
+                title="오늘 주문 마감이 지났습니다",
+                deadline_minutes=0,
+                target_path="/ordering",
+                focus_option_id=None,
+                target_roles=["store_owner"],
             )
         if delta_minutes <= 20:
             return DeadlineAlertResponse(
@@ -286,6 +405,12 @@ class OrderingService:
                 alert_level="urgent",
                 message=f"주문 마감 {delta_minutes}분 전입니다. 서둘러 주문하세요!",
                 should_alert=True,
+                notification_id=2001,
+                title=f"주문 마감 {delta_minutes}분 전입니다",
+                deadline_minutes=delta_minutes,
+                target_path="/ordering",
+                focus_option_id="last_week",
+                target_roles=["store_owner"],
             )
         return DeadlineAlertResponse(
             store_id=store_id,
@@ -294,6 +419,12 @@ class OrderingService:
             alert_level="normal",
             message=f"주문 마감까지 {delta_minutes}분 남았습니다.",
             should_alert=False,
+            notification_id=2001,
+            title=f"주문 마감까지 {delta_minutes}분 남았습니다",
+            deadline_minutes=delta_minutes,
+            target_path="/ordering",
+            focus_option_id="last_week",
+            target_roles=["store_owner"],
         )
 
     def recommend_ordering(self, payload: OrderingRecommendationRequest) -> OrderingRecommendationResponse:
@@ -323,8 +454,23 @@ class OrderingService:
         if not summary_insight:
             summary_insight = "과거 주문 패턴과 시즌성 가중치를 반영한 주문 추천입니다."
 
+        self._enrich_option_contract_fields(enriched_options, current_context)
+        deadline_hour, deadline_minute = self._resolve_deadline(payload.target_date, current_context)
+        deadline_info = self.get_deadline_alerts(
+            payload.store_id,
+            deadline_hour=deadline_hour,
+            deadline_minute=deadline_minute,
+        )
+
         return OrderingRecommendationResponse(
             store_id=payload.store_id,
             recommendations=enriched_options,
-            summary_insight=summary_insight
+            summary_insight=summary_insight,
+            deadline_minutes=deadline_info.minutes_remaining,
+            deadline_at=deadline_info.deadline,
+            purpose_text=self._build_purpose_text(bool(current_context.get("notification_entry"))),
+            caution_text=self._build_caution_text(),
+            weather_summary=self._extract_weather_summary(current_context),
+            trend_summary=self._extract_trend_summary(current_context, enriched_options),
+            business_date=payload.target_date,
         )

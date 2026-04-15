@@ -225,6 +225,8 @@ def test_ordering_deadline_alert_passed():
     result = service.get_deadline_alerts("gangnam", deadline_hour=0, deadline_minute=0)
     assert result.alert_level == "passed"
     assert result.should_alert is False
+    assert result.notification_id == 2001
+    assert result.target_path == "/ordering"
 
 
 # ── Scenario 16: 주문 마감 알림 - 마감 전 상태 ───────────────────────────
@@ -235,3 +237,5 @@ def test_ordering_deadline_alert_future():
     result = service.get_deadline_alerts("gangnam", deadline_hour=23, deadline_minute=59)
     assert result.alert_level in ("urgent", "normal")
     assert result.minutes_remaining >= 0
+    assert result.title is not None
+    assert result.target_roles == ["store_owner"]
