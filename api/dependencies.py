@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import warnings
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from api.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 from common.gemini import Gemini
 

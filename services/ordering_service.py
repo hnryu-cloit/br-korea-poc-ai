@@ -330,10 +330,13 @@ class OrderingService:
         options_summary = "\n".join([f"- {o.option_type.name}: {o.recommended_qty}건" for o in options])
         context_str = ", ".join([f"{k}: {v}" for k, v in context.items()])
         
+        campaign_status = "캠페인 적용 중" if context.get("is_campaign") else "캠페인 없음"
+        holiday_status = "휴일" if context.get("is_holiday") else "평일"
         prompt = create_ordering_reasoning_prompt(
             store_id=store_id,
             current_date=target_date,
-            current_context=context_str,
+            campaign_status=campaign_status,
+            holiday_status=holiday_status,
             options_summary=options_summary
         )
         

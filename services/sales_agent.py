@@ -95,24 +95,25 @@ class SalesAnalysisAgent:
     def analyze_real_channel_mix(self, store_id: str) -> Dict[str, Any]:
         """채널별(배달 vs 오프라인) 매출 비중 분석"""
         sql = """
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN m.pay_dc_nm LIKE '%%배달%%' OR m.pay_dc_nm IN ('요기요', '배달의민족', '쿠팡이츠', '해피오더') THEN 'Delivery'
                     ELSE 'Offline'
                 END as channel,
                 SUM(CAST(p.pay_amt AS NUMERIC)) as total_amt
-            FROM daily_stor_pay_way p
-            LEFT JOIN pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
+            FROM raw_daily_store_pay_way p
+            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
             WHERE p.masked_stor_cd = :store_id
             GROUP BY 1
         """
-        data = self.execute_dynamic_sql(store_id, sql, ["daily_stor_pay_way", "pay_cd"])
-        
-        delivery_amt = sum(row['total_amt'] for row in data if row['channel'] == 'Delivery')
-        total_amt = sum(row['total_amt'] for row in data)
-        
-        delivery_rate = round((delivery_amt / total_amt * 100), 1) if total_amt > 0 else 0
-        
+        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_pay_way", "raw_pay_cd"])
+        valid = [row for row in data if "error" not in row and "channel" in row]
+
+        delivery_amt = sum(row['total_amt'] for row in valid if row['channel'] == 'Delivery')
+        total_amt = sum(row['total_amt'] for row in valid)
+
+        delivery_rate = float(round((delivery_amt / total_amt * 100), 1)) if total_amt > 0 else 0.0
+
         return {
             "delivery_rate": delivery_rate,
             "online_amt": float(delivery_amt),
@@ -124,15 +125,16 @@ class SalesAnalysisAgent:
         """실제 매출 기반 수익성 추정 (표준 마진 65% 가정)"""
         sql = """
             SELECT SUM(CAST(sale_amt AS NUMERIC)) as total_sales
-            FROM daily_stor_item
+            FROM raw_daily_store_item
             WHERE masked_stor_cd = :store_id
         """
-        data = self.execute_dynamic_sql(store_id, sql, ["daily_stor_item"])
-        total_sales = float(data[0]['total_sales'] or 0)
-        
+        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_item"])
+        first = data[0] if data and "error" not in data[0] else {}
+        total_sales = float(first.get('total_sales') or 0)
+
         margin_rate = 0.65
         estimated_profit = total_sales * margin_rate
-        
+
         return {
             "total_sales": total_sales,
             "estimated_margin_rate": margin_rate,
@@ -143,16 +145,20 @@ class SalesAnalysisAgent:
     def analyze_payment_methods(self, store_id: str) -> List[Dict[str, Any]]:
         """결제 수단별 매출 비중 분석"""
         sql = """
-            SELECT 
+            SELECT
                 m.pay_dc_nm as method,
                 SUM(CAST(p.pay_amt AS NUMERIC)) as amount
-            FROM daily_stor_pay_way p
-            LEFT JOIN pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
+            FROM raw_daily_store_pay_way p
+            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
             WHERE p.masked_stor_cd = :store_id
             GROUP BY 1
             ORDER BY amount DESC
         """
-        return self.execute_dynamic_sql(store_id, sql, ["daily_stor_pay_way", "pay_cd"])
+        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_pay_way", "raw_pay_cd"])
+        return [
+            {**row, "amount": float(row["amount"]) if row.get("amount") is not None else 0.0}
+            for row in data if "error" not in row
+        ]
 
     def extract_store_profile(self, store_id: str) -> Dict[str, Any]:
         """매장 피크 타임 및 인기 메뉴 추출"""
@@ -189,20 +195,16 @@ class SalesAnalysisAgent:
         """전주 대비 매출 비교 등 성장 지표 계산"""
         # 현재 데이터베이스에 적재된 최신 날짜를 기준으로 과거 7일과 그 이전 7일을 비교
         sql = """
-            WITH max_date_cte AS (
-                SELECT MAX(CAST(sale_dt AS BIGINT)) as max_dt
-                FROM daily_stor_item
-                WHERE masked_stor_cd = :store_id
-            )
-            SELECT 
-                SUM(CASE WHEN CAST(sale_dt AS BIGINT) >= (SELECT max_dt FROM max_date_cte) - 7 THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as recent_7d,
-                SUM(CASE WHEN CAST(sale_dt AS BIGINT) < (SELECT max_dt FROM max_date_cte) - 7 AND CAST(sale_dt AS BIGINT) >= (SELECT max_dt FROM max_date_cte) - 14 THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as prev_7d
-            FROM daily_stor_item
+            SELECT
+                SUM(CASE WHEN sale_dt >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYYMMDD') THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as recent_7d,
+                SUM(CASE WHEN sale_dt < TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYYMMDD') AND sale_dt >= TO_CHAR(CURRENT_DATE - INTERVAL '14 days', 'YYYYMMDD') THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as prev_7d
+            FROM raw_daily_store_item
             WHERE masked_stor_cd = :store_id
         """
-        data = self.execute_dynamic_sql(store_id, sql, ["daily_stor_item"])
-        recent = float(data[0]['recent_7d'] or 0)
-        prev = float(data[0]['prev_7d'] or 0)
+        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_item"])
+        first = data[0] if data and "error" not in data[0] else {}
+        recent = float(first.get('recent_7d') or 0)
+        prev = float(first.get('prev_7d') or 0)
         
         growth = ((recent - prev) / prev * 100) if prev > 0 else 0
         

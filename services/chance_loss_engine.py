@@ -34,17 +34,23 @@ class ChanceLossEngine:
             estimated_loss_amount: 추정 찬스로스 금액 (원)
             confidence: "high" | "medium" | "low"
         """
+        if sales_df.empty or 'MASKED_STOR_CD' not in sales_df.columns:
+            return self._empty_result()
+
         store_sales = sales_df[
             (sales_df['MASKED_STOR_CD'] == store_id)
             & (sales_df['ITEM_CD'] == item_id)
             & (sales_df['SALE_DT'] == target_date)
         ].copy()
 
-        store_prod = production_df[
-            (production_df['MASKED_STOR_CD'] == store_id)
-            & (production_df['ITEM_CD'] == item_id)
-            & (production_df['PROD_DT'] == target_date)
-        ]
+        if production_df.empty or 'MASKED_STOR_CD' not in production_df.columns:
+            store_prod = pd.DataFrame()
+        else:
+            store_prod = production_df[
+                (production_df['MASKED_STOR_CD'] == store_id)
+                & (production_df['ITEM_CD'] == item_id)
+                & (production_df['PROD_DT'] == target_date)
+            ]
 
         if store_sales.empty:
             logger.info("찬스로스 산출: 매출 데이터 없음 (store=%s, item=%s, date=%s)", store_id, item_id, target_date)
