@@ -106,6 +106,9 @@ def test_query_classifier_masks_pii_and_marks_sensitive():
 
 # ── Scenario 5-2: RAG 서비스 - 기본 지식 베이스 fallback ─────────────────────
 def test_rag_service_returns_text_and_sources_without_external_docs():
+    # test_api_integration.py가 stub을 sys.modules에 등록할 수 있으므로 제거 후 실제 모듈 로드
+    import sys as _sys
+    _sys.modules.pop("services.rag_service", None)
     from services.rag_service import RAGService
 
     class _FakeGemini:
@@ -239,3 +242,70 @@ def test_ordering_deadline_alert_future():
     assert result.minutes_remaining >= 0
     assert result.title is not None
     assert result.target_roles == ["store_owner"]
+
+
+# ── Scenario 17: InventoryPredictor 메타 미로드 시 예측 차단 ────────────────
+def test_inventory_predictor_meta_not_loaded_blocks_prediction():
+    """model_meta.joblib 없이 로드된 predictor는 predict_next_hour_sales에서 RuntimeError를 발생시킨다."""
+    import types
+    import pandas as pd
+    from unittest.mock import patch
+
+    # joblib.load 스텁 — 모델만 반환, 메타 파일은 존재하지 않도록
+    stub_model = MagicMock()
+    stub_model.predict = MagicMock(return_value=[5.0])
+
+    with patch("os.path.exists") as mock_exists, \
+         patch("joblib.load", return_value=stub_model):
+        # model 파일은 존재, meta 파일은 없음
+        mock_exists.side_effect = lambda path: "inventory_lgbm_model" in path
+
+        from services.inventory_predictor import InventoryPredictor
+        predictor = InventoryPredictor.__new__(InventoryPredictor)
+        predictor.model = None
+        predictor.stats = {}
+        predictor.meta_loaded = False
+        predictor.model_dir = "/tmp/fake"
+        predictor.model_path = "/tmp/fake/inventory_lgbm_model.pkl"
+        predictor.meta_path = "/tmp/fake/model_meta.joblib"
+        predictor.feature_cols = []
+
+    # meta_loaded=False 인 상태에서 model이 있어도 예측 차단
+    predictor.model = stub_model
+    predictor.meta_loaded = False
+
+    with pytest.raises(RuntimeError, match="모델 메타"):
+        predictor.predict_next_hour_sales(
+            store_cd="A001",
+            item_cd="ITEM01",
+            current_time=__import__("datetime").datetime(2024, 1, 15, 10, 0),
+            history_df=pd.DataFrame(),
+        )
+
+
+# ── Scenario 18: InventoryPredictor 메타 구조 오류 시 meta_loaded=False ─────
+def test_inventory_predictor_invalid_meta_structure_sets_meta_loaded_false():
+    """meta가 dict이지만 'hist'·'store'·'item' 키가 없으면 meta_loaded가 False로 유지된다."""
+    import pandas as pd
+    from unittest.mock import patch
+
+    stub_model = MagicMock()
+    bad_meta = {"unknown_key": "unexpected_value"}
+
+    with patch("os.path.exists", return_value=True), \
+         patch("joblib.load") as mock_load:
+        mock_load.side_effect = [stub_model, bad_meta]
+
+        from services.inventory_predictor import InventoryPredictor
+        predictor = InventoryPredictor.__new__(InventoryPredictor)
+        predictor.model = None
+        predictor.stats = {}
+        predictor.meta_loaded = False
+        predictor.model_dir = "/tmp/fake"
+        predictor.model_path = "/tmp/fake/inventory_lgbm_model.pkl"
+        predictor.meta_path = "/tmp/fake/model_meta.joblib"
+        predictor.feature_cols = []
+        predictor.load_model()
+
+    assert predictor.meta_loaded is False
+    assert predictor.stats == {}

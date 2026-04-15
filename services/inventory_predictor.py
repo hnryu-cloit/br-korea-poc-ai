@@ -35,6 +35,7 @@ class InventoryPredictor:
         self.meta_path = os.path.join(self.model_dir, "model_meta.joblib")
         self.feature_cols = ['hour', 'weekday', 'is_weekend', 'lag_1h', 'lag_2h', 'rolling_mean_3h', 'store_avg', 'item_avg', 'hist_4w_avg']
         self.stats: Dict[str, Any] = {}
+        self.meta_loaded: bool = False
         self.load_model()
 
     def _prepare_training_data(self, history_df: pd.DataFrame, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
@@ -115,15 +116,47 @@ class InventoryPredictor:
         joblib.dump(self.stats, self.meta_path)
 
     def load_model(self) -> bool:
-        if os.path.exists(self.model_path):
+        if not os.path.exists(self.model_path):
+            logger.warning("예측 모델 파일이 없습니다: %s", self.model_path)
+            return False
+
+        try:
+            self.model = joblib.load(self.model_path)
+        except Exception as exc:
+            logger.exception("예측 모델 로드 실패: %s", exc)
+            self.model = None
+            self.stats = {}
+            return False
+
+        self.stats = {}
+        self.meta_loaded = False
+        if os.path.exists(self.meta_path):
             try:
-                self.model = joblib.load(self.model_path)
-                if os.path.exists(self.meta_path):
-                    self.stats = joblib.load(self.meta_path)
-                return True
-            except:
-                pass
-        return False
+                loaded_stats = joblib.load(self.meta_path)
+                if not isinstance(loaded_stats, dict):
+                    logger.warning(
+                        "모델 메타 형식이 dict가 아닙니다: %s — 예측을 차단합니다.",
+                        type(loaded_stats).__name__,
+                    )
+                elif not any(k in loaded_stats for k in ("hist", "store", "item")):
+                    logger.warning(
+                        "모델 메타 구조가 예상과 다릅니다(keys=%s) — 예측을 차단합니다.",
+                        sorted(loaded_stats.keys()),
+                    )
+                else:
+                    self.stats = loaded_stats
+                    self.meta_loaded = True
+            except Exception as exc:
+                logger.warning("모델 메타 로드 실패 — 예측을 차단합니다: %s", exc)
+        else:
+            logger.warning("모델 메타 파일이 없습니다: %s — 예측을 차단합니다.", self.meta_path)
+
+        logger.info(
+            "예측 모델 로드 완료 (model=%s, meta_keys=%s)",
+            type(self.model).__name__,
+            sorted(self.stats.keys()),
+        )
+        return True
 
     def evaluate(self, test_df: pd.DataFrame) -> Dict[str, float]:
         """다양한 지표를 활용한 모델 성능 평가 (MAE, MAPE, RMSE, R2)"""
@@ -159,6 +192,11 @@ class InventoryPredictor:
         """1시간 후 판매 수량 예측 (ML 예측값과 실시간 판매 속도 하이브리드 보정)"""
         if self.model is None:
             return 0.0
+        if not self.meta_loaded:
+            raise RuntimeError(
+                "모델 메타(model_meta.joblib)가 로드되지 않았습니다. "
+                "python build_knowledge_base.py 또는 train_model.py를 먼저 실행하세요."
+            )
 
         target_time = current_time + timedelta(hours=1)
         target_hour = target_time.hour

@@ -248,6 +248,12 @@ def test_production_predict_success(client: TestClient) -> None:
     assert body["risk_detected"] is True
     assert "alert_message" in body
     assert body["confidence"] == pytest.approx(0.88)
+    # 계약 필드 전체 검증
+    assert "predicted_stock_1h" in body
+    assert "stockout_expected_at" in body
+    assert "lower_bound" in body
+    assert "upper_bound" in body
+    assert "confidence_level" in body
 
 
 def test_production_predict_requires_token(client: TestClient) -> None:
