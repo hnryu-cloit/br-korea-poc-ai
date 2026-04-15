@@ -1,8 +1,45 @@
 import asyncio
 import logging
+from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+# 백엔드가 전송하는 소문자/snake_case 필드명을 DB 컬럼명으로 정규화
+_COL_ALIASES: dict[str, str] = {
+    "stor_cd": "MASKED_STOR_CD",
+    "store_id": "MASKED_STOR_CD",
+    "store_code": "MASKED_STOR_CD",
+    "masked_stor_cd": "MASKED_STOR_CD",
+    "item_cd": "ITEM_CD",
+    "item_code": "ITEM_CD",
+    "item_nm": "ITEM_NM",
+    "item_name": "ITEM_NM",
+    "sale_qty": "SALE_QTY",
+    "qty": "SALE_QTY",
+    "prod_qty": "PROD_QTY",
+    "sale_dt": "SALE_DT",
+    "date": "SALE_DT",
+    "prod_dt": "PROD_DT",
+    "tmzon_div": "TMZON_DIV",
+    "hour": "TMZON_DIV",
+    "inv_qty": "INV_QTY",
+    "inv_dt": "INV_DT",
+    "sale_amt": "SALE_AMT",
+    "sale_prc": "SALE_PRC",
+    "item_cost": "ITEM_COST",
+    "prod_dgre": "PROD_DGRE",
+}
+
+
+def _normalize_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    """JSON 행 목록을 DB 컬럼명 기준 DataFrame으로 변환합니다."""
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        rename_map = {k: v for k, v in _COL_ALIASES.items() if k in df.columns}
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
+    return df
 
 from api.dependencies import get_ordering_service, get_production_service, verify_token
 from schemas.management import (
@@ -47,9 +84,9 @@ async def get_production_simulation(
     try:
         logger.info(f"시뮬레이션 요청: 매장 {payload.store_id}, 상품 {payload.item_id}")
 
-        inv_df = pd.DataFrame(payload.inventory_data)
-        prod_df = pd.DataFrame(payload.production_data)
-        sales_df = pd.DataFrame(payload.sales_data)
+        inv_df = _normalize_df(payload.inventory_data)
+        prod_df = _normalize_df(payload.production_data)
+        sales_df = _normalize_df(payload.sales_data)
 
         result = await asyncio.to_thread(
             service.get_simulation_report,
@@ -75,13 +112,7 @@ async def predict_production(
 ) -> ProductionPredictResponse:
     try:
         logger.info("생산 예측 요청: SKU %s", payload.sku)
-        result = await asyncio.to_thread(
-            service.predict_stock,
-            payload.sku,
-            payload.current_stock,
-            payload.history,
-            payload.pattern_4w,
-        )
+        result = await asyncio.to_thread(service.predict_stock, payload)
         return result
     except Exception as exc:
         logger.exception("생산 예측 중 오류 발생")

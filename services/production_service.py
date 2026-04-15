@@ -93,6 +93,24 @@ class ProductionService:
         denominator = max(recent_stock + recent_production + recent_sales, 1.0)
         confidence = round(min(0.98, 0.6 + (recent_sales / denominator) * 0.3 + min(len(payload.history), 5) * 0.02), 2)
 
+        # 1. ±1σ 신뢰구간 — 이력 부족 시 예측값 15% 적용
+        if len(sales_values) >= 3:
+            import statistics
+            std_dev = statistics.stdev(sales_values[-6:]) if len(sales_values) >= 6 else statistics.stdev(sales_values)
+        else:
+            std_dev = predicted_stock_1h * 0.15
+        std_dev = max(std_dev, 1.0)
+        lower_bound = round(max(0.0, predicted_stock_1h - std_dev), 1)
+        upper_bound = round(predicted_stock_1h + std_dev, 1)
+
+        # 2. 신뢰 수준 문자열
+        if confidence >= 0.85:
+            confidence_level = "high"
+        elif confidence >= 0.70:
+            confidence_level = "medium"
+        else:
+            confidence_level = "low"
+
         return ProductionPredictResponse(
             sku=payload.sku,
             predicted_stock_1h=predicted_stock_1h,
@@ -100,6 +118,9 @@ class ProductionService:
             stockout_expected_at=stockout_expected_at,
             alert_message=alert_message,
             confidence=confidence,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            confidence_level=confidence_level,
         )
 
     def get_dashboard_summary(self, 

@@ -19,6 +19,9 @@ class ProductionPredictResponse(BaseModel):
     stockout_expected_at: str | None
     alert_message: str
     confidence: float
+    lower_bound: float | None = None
+    upper_bound: float | None = None
+    confidence_level: str | None = None
 
 
 class OrderingRecommendRequest(BaseModel):
