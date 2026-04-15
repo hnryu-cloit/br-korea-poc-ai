@@ -62,10 +62,11 @@ class SQLGenerator:
         prompt = f"""
         다음 데이터베이스 스키마와 사용자의 질문을 바탕으로 실행 가능한 PostgreSQL SELECT 쿼리를 작성하세요.
         
-        - [필수] 조회 대상 매장 코드는 파라미터 바인딩을 위해 반드시 `:store_id` 로 작성하세요. (예: WHERE "MASKED_STOR_CD" = :store_id)
+        - [필수] 조회 대상 매장 코드는 파라미터 바인딩을 위해 반드시 `:store_id` 로 작성하세요. (예: WHERE masked_stor_cd = :store_id)
         - [필수] 오직 'SELECT' 쿼리만 작성해야 합니다. (UPDATE, DELETE 등 불가)
-        - [필수] SALE_DT는 bigint(숫자형)입니다. 문자열 비교 함수(LIKE, substring 등)를 사용하지 말고 크기 비교(>=, <=)를 사용하세요. (예: "SALE_DT" >= 20240401)
-        - 테이블명과 컬럼명은 반드시 쌍따옴표(")로 감싸주세요.
+        - [필수] sale_dt는 bigint(숫자형)입니다. 문자열 비교 함수(LIKE, substring 등)를 사용하지 말고 크기 비교(>=, <=)를 사용하세요. (예: sale_dt >= 20240401)
+        - [필수] 테이블명과 컬럼명은 영문 소문자로만 작성하고, 절대 쌍따옴표(")로 감싸지 마세요. (예: SELECT sale_amt FROM daily_stor_item)
+        - [필수] sale_amt, sale_qty 등 계산이 필요한 컬럼은 DB에서 텍스트(text)로 저장되어 있을 수 있으므로 합계를 구할 때 반드시 명시적으로 CAST 함수를 사용해야 합니다. (예: SUM(CAST(sale_amt AS NUMERIC)))
         - 기간 조건이 명시되지 않았다면, 최근 데이터 조회를 가정하고 LIMIT 10 등을 사용해 데이터를 제한하세요.
 
         [사용자 질문]
