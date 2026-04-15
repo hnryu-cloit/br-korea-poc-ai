@@ -52,7 +52,10 @@ class InventoryReversalEngine:
                 return datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=9)
 
         if not prod_data.empty:
-            prod_data['timestamp'] = prod_data['PROD_DGRE'].apply(map_prod_time)
+            if 'PROD_DGRE' in prod_data.columns:
+                prod_data['timestamp'] = prod_data['PROD_DGRE'].apply(map_prod_time)
+            else:
+                prod_data['timestamp'] = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=9)
 
         if not self.sales_df.empty and 'MASKED_STOR_CD' in self.sales_df.columns:
             store_all_sales = self.sales_df[
@@ -91,7 +94,10 @@ class InventoryReversalEngine:
                 return datetime.strptime(target_date, '%Y%m%d')
 
         if not sales_data.empty:
-            sales_data['timestamp'] = sales_data['TMZON_DIV'].apply(map_sale_time)
+            if 'TMZON_DIV' in sales_data.columns:
+                sales_data['timestamp'] = sales_data['TMZON_DIV'].apply(map_sale_time)
+            else:
+                sales_data['timestamp'] = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=12) # Default to noon if no time provided
 
         start_time = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=int(min_hour))
         end_time = datetime.strptime(target_date, '%Y%m%d') + timedelta(hours=int(max_hour))

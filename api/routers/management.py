@@ -24,7 +24,9 @@ _COL_ALIASES: dict[str, str] = {
     "tmzon_div": "TMZON_DIV",
     "hour": "TMZON_DIV",
     "inv_qty": "INV_QTY",
+    "stock_qty": "STOCK_QTY",
     "inv_dt": "INV_DT",
+    "stock_dt": "STOCK_DT",
     "sale_amt": "SALE_AMT",
     "sale_prc": "SALE_PRC",
     "item_cost": "ITEM_COST",
@@ -39,6 +41,12 @@ def _normalize_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
         rename_map = {k: v for k, v in _COL_ALIASES.items() if k in df.columns}
         if rename_map:
             df.rename(columns=rename_map, inplace=True)
+        
+        # 수치형 컬럼 강제 형변환 (매칭되는 별칭 포함)
+        numeric_cols = ["SALE_QTY", "SALE_AMT", "PROD_QTY", "INV_QTY", "STOCK_QTY", "ITEM_COST", "SALE_PRC"]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     return df
 
 from api.dependencies import get_ordering_service, get_production_service, verify_token

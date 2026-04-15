@@ -205,25 +205,30 @@ class ProductionService:
         item_id = payload.item_id
         
         # 1. 마스터 정보 추출
+        item_nm = "알 수 없는 상품"
+        unit_price, item_cost = 1500, 700
         try:
-            if not production_df.empty and 'ITEM_CD' in production_df.columns:
-                matches = production_df[production_df['ITEM_CD'] == item_id]
-                item_master = matches.iloc[0] if not matches.empty else None
-            else:
-                item_master = None
-            if item_master is not None:
-                item_nm = str(item_master.get('ITEM_NM', '알 수 없는 상품'))
-                unit_price = int(item_master.get('SALE_PRC', 1500))
-                item_cost = int(item_master.get('ITEM_COST', 700))
-            else:
-                item_nm = "알 수 없는 상품"
-                unit_price, item_cost = 1500, 700
+            for df in [sales_df, production_df, inventory_df]:
+                if not df.empty and 'ITEM_CD' in df.columns and 'ITEM_NM' in df.columns:
+                    matches = df[df['ITEM_CD'] == item_id]
+                    if not matches.empty:
+                        item_nm = str(matches.iloc[0]['ITEM_NM'])
+                        if 'SALE_PRC' in matches.columns and pd.notna(matches.iloc[0]['SALE_PRC']):
+                            unit_price = int(matches.iloc[0]['SALE_PRC'])
+                        if 'ITEM_COST' in matches.columns and pd.notna(matches.iloc[0]['ITEM_COST']):
+                            item_cost = int(matches.iloc[0]['ITEM_COST'])
+                        break
         except Exception:
-            item_nm = "알 수 없는 상품"
-            unit_price, item_cost = 1500, 700
+            pass
 
         # 2. 시뮬레이션 루프 (Actual vs AI-Guided)
-        sim_prod_df = production_df.copy()
+        # AI 시뮬레이션에서는 '실제 당일 생산(추가생산 등)'을 무시하고,
+        # 오직 8시(기초) 생산량만 남긴 뒤, 나머지는 AI가 알아서 판단하여 생산하도록 합니다.
+        if not production_df.empty and 'PROD_DGRE' in production_df.columns:
+            sim_prod_df = production_df[production_df['PROD_DGRE'].astype(str) == '1'].copy()
+        else:
+            sim_prod_df = production_df.copy()
+            
         sim_sales_df = sales_df.copy()
         ai_actions_log = []
 
