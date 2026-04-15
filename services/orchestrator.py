@@ -46,7 +46,7 @@ class AgentOrchestrator:
         masked_fields = classifier_result["masked_fields"]
         
         # 1. 시맨틱 비즈니스 로직 매핑 (Semantic Layer)
-        business_logic = self.semantic_layer.get_logic(safe_prompt)
+        _, business_logic = self.semantic_layer.parse_query_intent(safe_prompt)
         logger.info(f"적용될 비즈니스 로직: {business_logic}")
         
         # 2. 의도 분류 및 가드레일 (Predictor Layer)
