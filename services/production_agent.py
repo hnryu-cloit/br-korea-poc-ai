@@ -42,12 +42,21 @@ class ProductionManagementAgent:
         """평소 4주 평균 대비 오늘의 판매 속도(배수) 계산"""
         current_hour = current_time.hour
 
-        today_sales = self.historical_sales_df[
-            (self.historical_sales_df['MASKED_STOR_CD'] == store_cd) &
-            (self.historical_sales_df['ITEM_CD'] == item_cd) &
-            (self.historical_sales_df['SALE_DT'] == target_date) &
-            (self.historical_sales_df['TMZON_DIV'].astype(int) <= current_hour)
-        ]['SALE_QTY'].sum()
+        has_tmzon = 'TMZON_DIV' in self.historical_sales_df.columns
+
+        if has_tmzon:
+            today_sales = self.historical_sales_df[
+                (self.historical_sales_df['MASKED_STOR_CD'] == store_cd) &
+                (self.historical_sales_df['ITEM_CD'] == item_cd) &
+                (self.historical_sales_df['SALE_DT'] == target_date) &
+                (self.historical_sales_df['TMZON_DIV'].astype(int) <= current_hour)
+            ]['SALE_QTY'].sum()
+        else:
+            today_sales = self.historical_sales_df[
+                (self.historical_sales_df['MASKED_STOR_CD'] == store_cd) &
+                (self.historical_sales_df['ITEM_CD'] == item_cd) &
+                (self.historical_sales_df['SALE_DT'] == target_date)
+            ]['SALE_QTY'].sum()
 
         target_dt = datetime.strptime(target_date, '%Y%m%d')
         start_hist = target_dt - timedelta(weeks=4)
@@ -62,12 +71,20 @@ class ProductionManagementAgent:
             return 1.0
 
         hist_data['sale_dt_dt'] = pd.to_datetime(hist_data['SALE_DT'], format='%Y%m%d')
-        hist_past = hist_data[
-            (hist_data['sale_dt_dt'] >= start_hist) &
-            (hist_data['sale_dt_dt'] < target_dt) &
-            (hist_data['sale_dt_dt'].dt.weekday == target_weekday) &
-            (hist_data['TMZON_DIV'].astype(int) <= current_hour)
-        ]
+        
+        if has_tmzon:
+            hist_past = hist_data[
+                (hist_data['sale_dt_dt'] >= start_hist) &
+                (hist_data['sale_dt_dt'] < target_dt) &
+                (hist_data['sale_dt_dt'].dt.weekday == target_weekday) &
+                (hist_data['TMZON_DIV'].astype(int) <= current_hour)
+            ]
+        else:
+            hist_past = hist_data[
+                (hist_data['sale_dt_dt'] >= start_hist) &
+                (hist_data['sale_dt_dt'] < target_dt) &
+                (hist_data['sale_dt_dt'].dt.weekday == target_weekday)
+            ]
 
         if hist_past.empty:
             return 1.0

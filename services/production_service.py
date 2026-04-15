@@ -186,7 +186,9 @@ class ProductionService:
         return ProductionDashboardResponse(
             store_id=store_id,
             summary=summary,
-            sku_list=sku_list
+            sku_list=sku_list,
+            chart_data=[],
+            action_timeline=[]
         )
 
     def get_simulation_report(self, 
