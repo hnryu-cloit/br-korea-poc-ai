@@ -65,7 +65,7 @@ class SQLGenerator:
         - [필수] 조회 대상 매장 코드는 파라미터 바인딩을 위해 반드시 `:store_id` 로 작성하세요. (예: WHERE masked_stor_cd = :store_id)
         - [필수] 오직 'SELECT' 쿼리만 작성해야 합니다. (UPDATE, DELETE 등 불가)
         - [필수] sale_dt는 bigint(숫자형)입니다. 문자열 비교 함수(LIKE, substring 등)를 사용하지 말고 크기 비교(>=, <=)를 사용하세요. (예: sale_dt >= 20240401)
-        - [필수] 테이블명과 컬럼명은 영문 소문자로만 작성하고, 절대 쌍따옴표(")로 감싸지 마세요. (예: SELECT sale_amt FROM daily_stor_item)
+        - [필수] 테이블명과 컬럼명은 영문 소문자로 작성하고 쌍따옴표를 쓰지 마세요. 단, "ORD_DTL", "DAILY_STOR_ITEM" 등 뷰(View)를 직접 조회해야 할 경우에는 영문 대문자로 작성하고 반드시 쌍따옴표(")로 감싸야 합니다. (예: SELECT "SALE_AMT" FROM "DAILY_STOR_ITEM")
         - [필수] sale_amt, sale_qty 등 계산이 필요한 컬럼은 DB에서 텍스트(text)로 저장되어 있을 수 있으므로 합계를 구할 때 반드시 명시적으로 CAST 함수를 사용해야 합니다. (예: SUM(CAST(sale_amt AS NUMERIC)))
         - 기간 조건이 명시되지 않았다면, 최근 데이터 조회를 가정하고 LIMIT 10 등을 사용해 데이터를 제한하세요.
 
@@ -185,21 +185,51 @@ class SalesAnalyzer:
             return SalesQueryResponse(answer=insight, source_data_period="N/A", data_lineage=[])
 
         # 2. SemanticLayer (질의 유형 분류 및 테이블 힌트)
-        target_tables = self.semantic_layer.get_routing_hints(user_query)
-        logger.info(f"Target Tables selected: {target_tables}")
-
-        # 3. SQLGenerator (LLM + 스키마 -> SELECT SQL)
-        sql_query = self.sql_generator.generate(user_query, target_tables)
-        logger.info(f"Generated SQL: {sql_query}")
-
-        # 4. QueryExecutor (실제 데이터 조회)
+        # 여기서 intent를 명시적으로 가져오도록 수정
+        prompt = f"""
+        당신은 프랜차이즈 데이터 분석 라우터입니다.
+        사용자의 질문을 분석하여, 의도(Intent)와 필요한 테이블을 결정하세요.
+        
+        [사용자 질문]
+        {user_query}
+        
+        [데이터베이스 스키마 정의]
+        {self.agent.get_schema_context()}
+        
+        반드시 다음 JSON 형식으로만 응답하세요:
+        {{
+            "intent_category": "channel | campaign | sales_trend | cross_sell | other",
+            "required_tables": ["테이블명1", "테이블명2"]
+        }}
+        """
+        intent = "other"
+        target_tables = ["DAILY_STOR_ITEM"]
         try:
-            raw_data = self.query_executor.execute(store_id, sql_query, target_tables)
+            res_str = self.gemini.call_gemini_text(prompt, response_type="application/json")
+            data = json.loads(res_str)
+            intent = data.get("intent_category", "other")
+            target_tables = data.get("required_tables", ["DAILY_STOR_ITEM"])
         except Exception as e:
-            logger.error(f"Execution failed: {e}")
-            raw_data = [{"error": str(e)}]
+            logger.error(f"Semantic routing 오류: {e}")
 
-        # 5. GroundedAnalyzer (LLM이 데이터 보고 답변 생성)
+        # 3. 특수 인텐트 처리 (Cross-sell)
+        if intent == "cross_sell":
+            logger.info("Cross-sell intent detected. Running association analysis.")
+            raw_data = self.agent.analyze_cross_sell(store_id)
+            sql_query = "INTERNAL ASSOCIATION RULE MINING (ORD_DTL)"
+        else:
+            # 4. SQLGenerator (LLM + 스키마 -> SELECT SQL)
+            sql_query = self.sql_generator.generate(user_query, target_tables)
+            logger.info(f"Generated SQL: {sql_query}")
+
+            # 5. QueryExecutor (실제 데이터 조회)
+            try:
+                raw_data = self.query_executor.execute(store_id, sql_query, target_tables)
+            except Exception as e:
+                logger.error(f"Execution failed: {e}")
+                raw_data = [{"error": str(e)}]
+
+        # 6. GroundedAnalyzer (LLM이 데이터 보고 답변 생성)
         text, evidence, actions = self.grounded_analyzer.analyze(user_query, raw_data, sql_query)
         
         insight = SalesInsight(
@@ -208,7 +238,7 @@ class SalesAnalyzer:
             actions=actions
         )
 
-        # 6. SalesQueryResponse 구성 (데이터 리니지 포함)
+        # 7. SalesQueryResponse 구성 (데이터 리니지 포함)
         lineage = self.agent.get_data_lineage()
         
         return SalesQueryResponse(
