@@ -165,8 +165,20 @@ class SalesAnalysisAgent:
         """
         items = self.execute_dynamic_sql(store_id, item_sql, ["daily_stor_item"])
         
-        # 피크 타임 (DAILY_STOR_CPI 테이블 활용 또는 DAILY_STOR_ITEM에 시간 정보가 있다면 사용)
-        peak_hour = "12:00~14:00 (점심 피크)"
+        # 피크 타임 (DAILY_STOR_ITEM_TMZON 테이블 활용)
+        peak_sql = """
+            SELECT tmzon_div, SUM(CAST(sale_amt AS NUMERIC)) as amt
+            FROM raw_daily_store_item_tmzon
+            WHERE masked_stor_cd = :store_id
+            GROUP BY 1 ORDER BY amt DESC LIMIT 1
+        """
+        peak_data = self.execute_dynamic_sql(store_id, peak_sql, ["raw_daily_store_item_tmzon"])
+        
+        peak_hour = "데이터 없음"
+        if peak_data and 'tmzon_div' in peak_data[0]:
+            tz = str(peak_data[0]['tmzon_div']).zfill(2)
+            next_tz = str(int(tz) + 1).zfill(2)
+            peak_hour = f"{tz}:00~{next_tz}:00"
         
         return {
             "top_items": [row['item_nm'] for row in items] if items else [],
