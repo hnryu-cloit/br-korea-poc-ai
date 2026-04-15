@@ -40,6 +40,9 @@ class ProductionManagementAgent:
 
     def calculate_sales_velocity(self, store_cd: str, item_cd: str, target_date: str, current_time: datetime) -> float:
         """평소 4주 평균 대비 오늘의 판매 속도(배수) 계산"""
+        if self.historical_sales_df.empty or 'MASKED_STOR_CD' not in self.historical_sales_df.columns:
+            return 1.0
+
         current_hour = current_time.hour
 
         today_sales = self.historical_sales_df[
@@ -81,6 +84,9 @@ class ProductionManagementAgent:
 
     def extract_production_pattern(self, store_cd: str, item_cd: str, target_date: str) -> dict:
         """과거 4주간의 주력 1차, 2차 생산 시간 및 수량 패턴 분석"""
+        if self.engine.production_df.empty or 'MASKED_STOR_CD' not in self.engine.production_df.columns:
+            return {"1st": None, "2nd": None}
+
         target_dt = datetime.strptime(target_date, '%Y%m%d')
         start_hist = target_dt - timedelta(weeks=4)
 
