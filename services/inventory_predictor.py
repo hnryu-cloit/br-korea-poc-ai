@@ -13,7 +13,7 @@ from common.logger import init_logger
 try:
     import lightgbm as lgb
     HAS_LGB = True
-except ImportError:
+except (ImportError, OSError):
     from sklearn.ensemble import RandomForestRegressor
     HAS_LGB = False
 
