@@ -53,7 +53,14 @@ async def verify_token(
     settings: Settings = Depends(get_settings),
 ) -> bool:
     if not settings.AI_SERVICE_TOKEN:
-        warnings.warn("AI_SERVICE_TOKEN 미설정 — 토큰 검증을 건너뜁니다.", stacklevel=1)
+        # 토큰 미설정 — Bearer 헤더가 없는 요청은 통과 (로컬 개발용)
+        # Bearer 헤더가 있으면 검증 설정이 없으므로 거부
+        if credentials is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="AI_SERVICE_TOKEN이 설정되지 않았습니다. 서버 환경변수를 확인하세요.",
+            )
+        warnings.warn("AI_SERVICE_TOKEN 미설정 — 인증 없이 통과 (로컬 개발 전용).", stacklevel=1)
         return True
 
     try:
