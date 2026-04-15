@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Dict, List, Any, Optional
 from common.logger import init_logger
 import os
+import re
 import json
 from sqlalchemy import create_engine, text
 from common.query_logger import query_logger
@@ -28,21 +29,21 @@ class SalesAnalysisAgent:
             
         # 테이블 스키마 정의 (시맨틱 레이어용 컨텍스트)
         self.schema_definitions = {
-            "DAILY_STOR_ITEM": {
-                "description": "일별 매장 상품별 매출",
-                "columns": ["SALE_DT(매출일자)", "MASKED_STOR_CD(매장코드)", "ITEM_CD(상품코드)", "ITEM_NM(상품명)", "SALE_QTY(판매수량)", "SALE_AMT(매출금액)", "DC_AMT(할인금액)"]
+            "raw_daily_store_item": {
+                "description": "일별 매장 상품별 매출. 모든 컬럼은 text 타입. 수치 집계: CAST(sale_qty AS NUMERIC). 날짜 필터: sale_dt >= '20260401' 처럼 반드시 따옴표 있는 문자열 리터럴 사용(숫자 리터럴 금지)",
+                "columns": ["sale_dt(매출일자, text YYYYMMDD, 예: '20260415')", "masked_stor_cd(매장코드, text)", "item_cd(상품코드, text)", "item_nm(상품명, text)", "sale_qty(판매수량, text→CAST AS NUMERIC)", "sale_amt(매출금액, text→CAST AS NUMERIC)", "dc_amt(할인금액, text→CAST AS NUMERIC)"]
             },
-            "DAILY_STOR_PAY_WAY": {
-                "description": "일별 매장 결제수단(채널)별 매출 (배달, 카드 등)",
-                "columns": ["SALE_DT(매출일자)", "MASKED_STOR_CD(매장코드)", "PAY_WAY_CD(결제수단코드 01:신용카드, 08/09/11:모바일/간편결제)", "PAY_DTL_CD(결제상세코드)", "PAY_AMT(결제금액)"]
+            "raw_daily_store_pay_way": {
+                "description": "일별 매장 결제수단(채널)별 매출. 모든 컬럼은 text 타입",
+                "columns": ["sale_dt(매출일자, text)", "masked_stor_cd(매장코드, text)", "pay_way_cd(결제수단코드 01:신용카드 08/09/11:모바일/간편결제, text)", "pay_dtl_cd(결제상세코드, text)", "pay_amt(결제금액, text→CAST(pay_amt AS NUMERIC)로 집계)"]
             },
-            "PAY_CD": {
+            "raw_pay_cd": {
                 "description": "결제수단 상세 마스터 (배달의민족, 요기요 등 확인용)",
-                "columns": ["PAY_DC_CD(결제상세코드)", "PAY_DC_NM(결제수단명)"]
+                "columns": ["pay_dc_cd(결제상세코드, text)", "pay_dc_nm(결제수단명, text)"]
             },
-            "ORD_DTL": {
-                "description": "영수증 단위 상품 판매 상세 (교차판매, 동반구매 분석용)",
-                "columns": ["SALE_DT(매출일자)", "MASKED_STOR_CD(매장코드)", "POS_NO(포스번호)", "BILL_NO(영수증번호)", "ITEM_NM(상품명)"]
+            "raw_daily_store_item_tmzon": {
+                "description": "시간대별 매장 상품 매출 (피크 시간 분석용). 모든 컬럼은 text 타입",
+                "columns": ["sale_dt(매출일자, text)", "masked_stor_cd(매장코드, text)", "item_cd(상품코드, text)", "tmzon_div(시간대 00~23, text)", "sale_qty(판매수량, text→CAST(sale_qty AS NUMERIC)로 집계)", "sale_amt(매출금액, text→CAST(sale_amt AS NUMERIC)로 집계)"]
             }
         }
 
@@ -51,15 +52,20 @@ class SalesAnalysisAgent:
         return json.dumps(self.schema_definitions, ensure_ascii=False, indent=2)
 
     def execute_dynamic_sql(self, store_id: str, sql_query: str, target_tables: List[str]) -> List[Dict[str, Any]]:
-        """
-        LLM이 생성한 동적 SQL을 실행하고 그 결과를 반환하며 히스토리를 저장합니다.
-        보안을 위해 SELECT 문만 허용합니다.
-        """
+        """LLM 생성 동적 SQL 실행 및 히스토리 저장 (SELECT 전용)"""
         if not self.engine:
             return [{"error": "DB 엔진이 초기화되지 않았습니다."}]
-            
-        # 대소문자 구분 문제 해결을 위해 쿼리 내 쌍따옴표 제거 (PostgreSQL 기본 소문자 처리 활용)
+
+        # 쌍따옴표 제거 — PostgreSQL 소문자 처리 활용
         safe_sql = sql_query.replace('"', '')
+
+        # CAST(TO_CHAR(...YYYYMMDD...) AS BIGINT) → TO_CHAR(...) 정규화
+        safe_sql = re.sub(
+            r"CAST\((TO_CHAR\([^)]+,\s*'YYYYMMDD'\))\s+AS\s+(?:BIGINT|INTEGER|INT)\)",
+            r"\1",
+            safe_sql,
+            flags=re.IGNORECASE,
+        )
             
         if not safe_sql.strip().upper().startswith("SELECT"):
             logger.warning("SELECT 쿼리가 아닌 요청 거부")
