@@ -67,7 +67,7 @@ class SalesAnalysisAgent:
             flags=re.IGNORECASE,
         )
             
-        if not safe_sql.strip().upper().startswith("SELECT"):
+        if not safe_sql.strip().upper().startswith("SELECT") and not safe_sql.strip().upper().startswith("WITH"):
             logger.warning("SELECT 쿼리가 아닌 요청 거부")
             return [{"error": "Only SELECT queries are allowed."}]
 
@@ -187,10 +187,16 @@ class SalesAnalysisAgent:
 
     def calculate_comparison_metrics(self, store_id: str) -> Dict[str, Any]:
         """전주 대비 매출 비교 등 성장 지표 계산"""
+        # 현재 데이터베이스에 적재된 최신 날짜를 기준으로 과거 7일과 그 이전 7일을 비교
         sql = """
+            WITH max_date_cte AS (
+                SELECT MAX(CAST(sale_dt AS BIGINT)) as max_dt
+                FROM daily_stor_item
+                WHERE masked_stor_cd = :store_id
+            )
             SELECT 
-                SUM(CASE WHEN sale_dt >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYYMMDD') THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as recent_7d,
-                SUM(CASE WHEN sale_dt < TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYYMMDD') AND sale_dt >= TO_CHAR(CURRENT_DATE - INTERVAL '14 days', 'YYYYMMDD') THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as prev_7d
+                SUM(CASE WHEN CAST(sale_dt AS BIGINT) >= (SELECT max_dt FROM max_date_cte) - 7 THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as recent_7d,
+                SUM(CASE WHEN CAST(sale_dt AS BIGINT) < (SELECT max_dt FROM max_date_cte) - 7 AND CAST(sale_dt AS BIGINT) >= (SELECT max_dt FROM max_date_cte) - 14 THEN CAST(sale_amt AS NUMERIC) ELSE 0 END) as prev_7d
             FROM daily_stor_item
             WHERE masked_stor_cd = :store_id
         """
