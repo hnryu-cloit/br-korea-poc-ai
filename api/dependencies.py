@@ -52,9 +52,20 @@ async def verify_token(
     if not settings.AI_SERVICE_TOKEN:
         warnings.warn("AI_SERVICE_TOKEN 미설정 — 토큰 검증을 건너뜁니다.", stacklevel=1)
         return True
-    if credentials is None or credentials.credentials != settings.AI_SERVICE_TOKEN:
+
+    try:
+        if credentials is None or credentials.credentials != settings.AI_SERVICE_TOKEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or missing service token",
+            )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        logger.error(f"인증 검증 중 예상치 못한 오류: {exc}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing service token",
+            detail="Authentication failed",
         )
     return True
+

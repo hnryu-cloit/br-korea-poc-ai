@@ -6,7 +6,16 @@ from datetime import datetime
 import pandas as pd
 
 from api.dependencies import verify_token, get_production_service, get_ordering_service, get_sales_service
-from api.mock_payload_generator import get_demo_mock_payload
+try:
+    from api.mock_payload_generator import get_demo_mock_payload
+except ImportError:
+    # Fallback if mock generator is not in the expected path
+    def get_demo_mock_payload():
+        return {
+            "store_id": "POC_001",
+            "target_date": "2024-01-15",
+            "current_time": "2024-01-15 14:00:00"
+        }
 from services.dashboard_service import DashboardService
 from schemas.dashboard import HomeDashboardResponse
 
@@ -46,7 +55,7 @@ async def get_home_overview(
             "store_production_data": store_production_data
         }
         
-        result = await asyncio.to_thread(dash_service.get_home_overview, mock_payload, raw_data)
+        result = await dash_service.get_home_overview(mock_payload, raw_data)
         return result
         
     except Exception as exc:
