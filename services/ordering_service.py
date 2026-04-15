@@ -37,6 +37,40 @@ class OrderingService:
         """과거 데이터를 외부(DataLoader 등)에서 로드하여 주입"""
         self.historical_order_df = df
 
+    @staticmethod
+    def _pick_first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
+        for candidate in candidates:
+            if candidate in df.columns:
+                return candidate
+        upper_map = {column.upper(): column for column in df.columns}
+        for candidate in candidates:
+            resolved = upper_map.get(candidate.upper())
+            if resolved:
+                return resolved
+        return None
+
+    def _resolve_order_columns(self, df: pd.DataFrame) -> dict[str, str] | None:
+        required_map = {
+            "store": ["MASKED_STOR_CD", "STORE_ID", "STOR_CD", "store_id"],
+            "date": ["DLV_DT", "SALE_DT", "ORD_DT", "date"],
+            "qty": ["ORD_QTY", "SALE_QTY", "QTY", "qty"],
+        }
+        optional_map = {
+            "item": ["ITEM_NM", "ITEM_NAME", "PRODUCT_NM", "item_name"],
+        }
+
+        resolved: dict[str, str] = {}
+        for key, candidates in required_map.items():
+            column = self._pick_first_existing_column(df, candidates)
+            if column is None:
+                return None
+            resolved[key] = column
+        for key, candidates in optional_map.items():
+            column = self._pick_first_existing_column(df, candidates)
+            if column is not None:
+                resolved[key] = column
+        return resolved
+
     def _get_historical_qty(self, store_id: str, target_date_str: str, days_delta: int = 7, item_nm: str = None) -> int:
         """실제 과거 주문 데이터를 조회하며, 부재 시 비즈니스 룰에 따른 보정 수량 반환"""
         try:
@@ -50,16 +84,26 @@ class OrderingService:
                 return 0
 
             df = self.historical_order_df
-            mask_store = (df['MASKED_STOR_CD'].astype(str) == str(store_id))
-            date_col = df['DLV_DT'].astype(str)
+            column_map = self._resolve_order_columns(df)
+            if column_map is None:
+                logger.warning("주문 이력 컬럼을 해석하지 못해 fallback 수량을 사용합니다.")
+                return 0
+
+            store_col = column_map["store"]
+            date_source_col = column_map["date"]
+            qty_col = column_map["qty"]
+            item_col = column_map.get("item")
+
+            mask_store = (df[store_col].astype(str) == str(store_id))
+            date_col = df[date_source_col].astype(str)
             mask_date = ((date_col == past_date_fmt1) | (date_col == past_date_fmt2))
             
-            if item_nm and 'ITEM_NM' in df.columns:
-                mask_item = (df['ITEM_NM'] == item_nm)
+            if item_nm and item_col:
+                mask_item = (df[item_col] == item_nm)
                 
                 exact_match = df[mask_store & mask_date & mask_item]
                 if not exact_match.empty:
-                    result_qty = int(exact_match['ORD_QTY'].sum())
+                    result_qty = int(pd.to_numeric(exact_match[qty_col], errors="coerce").fillna(0).sum())
                     logger.info(f"[{item_nm}] 매장 실 데이터 기반 수량: {result_qty}")
                     return result_qty
 
@@ -68,24 +112,28 @@ class OrderingService:
                     other_stores_date = df[mask_date & mask_item]
                     
                     if not other_stores_date.empty:
-                        avg_qty = other_stores_date.groupby('MASKED_STOR_CD')['ORD_QTY'].sum().mean()
+                        avg_qty = other_stores_date.groupby(store_col)[qty_col].sum().mean()
                         return int(avg_qty) if pd.notna(avg_qty) else 0
                     else:
-                        avg_qty = df[mask_item].groupby(['MASKED_STOR_CD', 'DLV_DT'])['ORD_QTY'].sum().mean()
+                        avg_qty = df[mask_item].groupby([store_col, date_source_col])[qty_col].sum().mean()
                         return int(avg_qty) if pd.notna(avg_qty) else 0
 
                 logger.info(f"[{item_nm}] 전체 데이터 부재(신제품) -> 타 제품 평균 기반 신제품 가중치(1.2x) 적용")
                 store_date_avg = df[mask_store & mask_date]
                 if not store_date_avg.empty:
-                    avg_qty = store_date_avg.groupby('ITEM_NM')['ORD_QTY'].sum().mean() * 1.2
+                    group_col = item_col or store_col
+                    avg_qty = store_date_avg.groupby(group_col)[qty_col].sum().mean() * 1.2
                     return int(avg_qty) if pd.notna(avg_qty) else 0
                 
-                global_avg = df.groupby(['MASKED_STOR_CD', 'ITEM_NM', 'DLV_DT'])['ORD_QTY'].sum().mean()
+                group_cols = [store_col, date_source_col]
+                if item_col:
+                    group_cols.insert(1, item_col)
+                global_avg = df.groupby(group_cols)[qty_col].sum().mean()
                 return int(global_avg * 1.2) if pd.notna(global_avg) else 150
             
             past_data = df[mask_store & mask_date]
             if not past_data.empty:
-                return int(past_data['ORD_QTY'].sum())
+                return int(pd.to_numeric(past_data[qty_col], errors="coerce").fillna(0).sum())
             
         except Exception as e:
             logger.error(f"Error querying historical data: {e}")
@@ -179,6 +227,8 @@ class OrderingService:
         try:
             ai_raw_response = self.gemini.call_gemini_text(prompt, response_type="json")
             ai_data = ai_raw_response if isinstance(ai_raw_response, dict) else json.loads(ai_raw_response)
+            if not isinstance(ai_data, dict):
+                raise ValueError("ordering reasoning response must be a dict")
             
             summary_insight = ai_data.get("analysis_summary", "")
             closing_msg = ai_data.get("closing_message", "")
@@ -191,11 +241,14 @@ class OrderingService:
                 if not opt.reasoning:
                     opt.reasoning = f"{opt.option_type.value} 기반 추천 수량입니다."
 
-            full_summary = f"{summary_insight}\n\n{closing_msg}"
+            full_summary = "\n\n".join(part for part in (summary_insight, closing_msg) if part).strip()
+            if not full_summary:
+                full_summary = "과거 주문 데이터를 바탕으로 3가지 주문 옵션을 제안합니다."
         except Exception as e:
             logger.error(f"LLM Reasoning failed: {e}")
             full_summary = "과거 주문 데이터를 바탕으로 산출된 옵션입니다. 매장 상황을 고려하여 선택해 주세요."
-            for opt in options: opt.reasoning = f"{opt.option_type.value} 데이터 기반"
+            for opt in options:
+                opt.reasoning = f"{opt.option_type.value} 데이터 기반"
 
         return options, full_summary
 
@@ -246,15 +299,29 @@ class OrderingService:
     def recommend_ordering(self, payload: OrderingRecommendationRequest) -> OrderingRecommendationResponse:
         """API Endpoint 용 STEP 3 & 4 통합 실행"""
         logger.info(f"Processing Ordering Recommendation API for {payload.store_id} at {payload.target_date}")
-        
-        target_product = payload.current_context.get("target_product")
+        current_context = payload.current_context or {}
+        target_product = current_context.get("target_product")
 
         options = self.calculate_base_ordering_options(payload.store_id, payload.target_date, target_product)
-        self._append_special_event_option_if_needed(payload.store_id, payload.target_date, target_product, payload.current_context, options)
+        self._append_special_event_option_if_needed(payload.store_id, payload.target_date, target_product, current_context, options)
 
         enriched_options, summary_insight = self.generate_ordering_insights_and_questions(
-            payload.store_id, payload.target_date, payload.current_context, options
+            payload.store_id, payload.target_date, current_context, options
         )
+
+        if len(enriched_options) < 3:
+            logger.warning("주문 추천 옵션이 부족하여 fallback 옵션을 채웁니다.")
+            fallback_options = self.calculate_base_ordering_options(payload.store_id, payload.target_date, target_product)
+            existing_types = {option.option_type for option in enriched_options}
+            for fallback in fallback_options:
+                if fallback.option_type in existing_types:
+                    continue
+                enriched_options.append(fallback)
+                if len(enriched_options) >= 3:
+                    break
+
+        if not summary_insight:
+            summary_insight = "과거 주문 패턴과 시즌성 가중치를 반영한 주문 추천입니다."
 
         return OrderingRecommendationResponse(
             store_id=payload.store_id,

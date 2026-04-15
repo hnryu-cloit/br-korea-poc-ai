@@ -94,6 +94,32 @@ def test_data_extraction_general_fallback():
     assert "answer" in result
 
 
+# ── Scenario 5-1: 질의 분류기 - PII 마스킹 + 민감 질의 분류 ──────────────────
+def test_query_classifier_masks_pii_and_marks_sensitive():
+    from services.query_classifier import QueryClassifier
+    classifier = QueryClassifier()
+    result = classifier.classify_details("010-1234-5678 번호로 연락줘. 순이익은 얼마야?")
+    assert result["query_type"] == "SENSITIVE"
+    assert "phone_number" in result["masked_fields"]
+    assert "***-****-****" in result["masked_query"]
+
+
+# ── Scenario 5-2: RAG 서비스 - 기본 지식 베이스 fallback ─────────────────────
+def test_rag_service_returns_text_and_sources_without_external_docs():
+    from services.rag_service import RAGService
+
+    class _FakeGemini:
+        def call_gemini_text(self, *args, **kwargs):
+            return "운영 가이드 기반 답변입니다."
+
+    service = RAGService(gemini_client=_FakeGemini(), knowledge_base=None)
+    result = service.generate_with_rag("주문 마감 전에 무엇을 확인해야 해?")
+
+    assert "text" in result
+    assert result["text"]
+    assert isinstance(result["sources"], list)
+
+
 # ── Scenario 6: 피드백 보정 - EMA 계수 갱신 ──────────────────────────────
 def test_production_feedback_correction_ema():
     from services.production_service import ProductionService

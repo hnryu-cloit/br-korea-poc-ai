@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Literal
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,11 @@ _PROFITABILITY_KEYWORDS = [
     "수익", "이익", "BEP", "손익", "시뮬레이션", "흑자", "적자",
 ]
 
+_PII_PATTERNS: list[tuple[str, str, str]] = [
+    (r"0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}", "***-****-****", "phone_number"),
+    (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "***@***", "email"),
+]
+
 
 class QueryClassifier:
     """
@@ -39,27 +45,47 @@ class QueryClassifier:
     Gemini 호출 없이 키워드 매칭으로 동작한다.
     """
 
+    def mask_sensitive_fields(self, query: str) -> tuple[str, list[str]]:
+        """질의 내 PII를 마스킹하고 필드 목록을 반환합니다."""
+        masked_query = query
+        masked_fields: list[str] = []
+        for pattern, replacement, field_name in _PII_PATTERNS:
+            updated_query, count = re.subn(pattern, replacement, masked_query)
+            if count > 0 and field_name not in masked_fields:
+                masked_fields.append(field_name)
+            masked_query = updated_query
+        return masked_query, masked_fields
+
+    def classify_details(self, query: str) -> dict[str, object]:
+        """질의 분류 결과와 마스킹 메타데이터를 함께 반환합니다."""
+        masked_query, masked_fields = self.mask_sensitive_fields(query)
+
+        if any(kw in masked_query for kw in _SENSITIVE_KEYWORDS):
+            query_type: QueryType = "SENSITIVE"
+        elif any(kw in masked_query for kw in _CHANNEL_KEYWORDS):
+            query_type = "CHANNEL"
+        elif any(kw in masked_query for kw in _COMPARISON_KEYWORDS):
+            query_type = "COMPARISON"
+        elif any(kw in masked_query for kw in _PROFITABILITY_KEYWORDS):
+            query_type = "PROFITABILITY"
+        elif any(kw in masked_query for kw in _NUMERIC_KEYWORDS):
+            query_type = "NUMERIC"
+        else:
+            query_type = "GENERAL"
+
+        logger.info(
+            "QueryClassifier: type=%s masked_fields=%s query='%s'",
+            query_type,
+            masked_fields,
+            masked_query[:40],
+        )
+        return {
+            "query_type": query_type,
+            "masked_query": masked_query,
+            "masked_fields": masked_fields,
+            "blocked": query_type == "SENSITIVE",
+        }
+
     def classify(self, query: str) -> QueryType:
         """질의를 분류해 QueryType 문자열 반환."""
-        if any(kw in query for kw in _SENSITIVE_KEYWORDS):
-            logger.info("QueryClassifier: SENSITIVE 질의 탐지 — '%s'", query[:40])
-            return "SENSITIVE"
-
-        if any(kw in query for kw in _CHANNEL_KEYWORDS):
-            logger.info("QueryClassifier: CHANNEL 질의 — '%s'", query[:40])
-            return "CHANNEL"
-
-        if any(kw in query for kw in _COMPARISON_KEYWORDS):
-            logger.info("QueryClassifier: COMPARISON 질의 — '%s'", query[:40])
-            return "COMPARISON"
-
-        if any(kw in query for kw in _PROFITABILITY_KEYWORDS):
-            logger.info("QueryClassifier: PROFITABILITY 질의 — '%s'", query[:40])
-            return "PROFITABILITY"
-
-        if any(kw in query for kw in _NUMERIC_KEYWORDS):
-            logger.info("QueryClassifier: NUMERIC 질의 — '%s'", query[:40])
-            return "NUMERIC"
-
-        logger.info("QueryClassifier: GENERAL 질의 — '%s'", query[:40])
-        return "GENERAL"
+        return self.classify_details(query)["query_type"]  # type: ignore[return-value]
