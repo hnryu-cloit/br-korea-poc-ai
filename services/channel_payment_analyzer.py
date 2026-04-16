@@ -73,6 +73,7 @@ class ChannelPaymentAnalyzer:
                 source_data_period="최근 4주",
                 channel_analysis=channel_res,
                 profit_simulation=profit_res,
+                data_lineage=self.agent.get_data_lineage()
             )
         except Exception as exc:
             logger.error("채널/결제 분석 오류: %s", exc)
@@ -89,4 +90,5 @@ class ChannelPaymentAnalyzer:
                 source_data_period="최근 4주",
                 channel_analysis=channel_res,
                 profit_simulation=profit_res,
+                data_lineage=self.agent.get_data_lineage()
             )

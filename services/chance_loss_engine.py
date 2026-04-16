@@ -57,8 +57,13 @@ class ChanceLossEngine:
             return self._empty_result()
 
         # 시간대별 매출 집계
-        store_sales['hour'] = store_sales['TMZON_DIV'].astype(int)
-        hourly = store_sales.groupby('hour')['SALE_QTY'].sum().reindex(range(8, 23), fill_value=0)
+        if 'TMZON_DIV' in store_sales.columns:
+            store_sales['hour'] = pd.to_numeric(store_sales['TMZON_DIV'], errors='coerce').fillna(0).astype(int)
+            store_sales['SALE_QTY'] = pd.to_numeric(store_sales['SALE_QTY'], errors='coerce').fillna(0)
+            hourly = store_sales.groupby('hour')['SALE_QTY'].sum().reindex(range(8, 23), fill_value=0)
+        else:
+            logger.info("TMZON_DIV 컬럼이 없어 시간대별 찬스로스를 계산할 수 없습니다. (store=%s, item=%s)", store_id, item_id)
+            return self._empty_result()
 
         # 영업 시간대 (8~22시) 중 매출 0 구간 탐지
         zero_hours = hourly[hourly == 0].index.tolist()

@@ -173,7 +173,7 @@ class ProductionManagementAgent:
         need_production = bool(curr_stock < pred_2h)
 
         is_production_item = True
-        if not self.production_list_df.empty:
+        if hasattr(self, 'production_list_df') and not self.production_list_df.empty:
             is_production_item = not self.production_list_df[
                 (self.production_list_df['MASKED_STOR_CD'] == store_cd) &
                 (self.production_list_df['ITEM_CD'] == item_cd)

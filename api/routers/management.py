@@ -76,6 +76,58 @@ router = APIRouter(tags=["management"])
 logger = logging.getLogger(__name__)
 
 
+from pydantic import BaseModel
+from services.chance_loss_engine import ChanceLossEngine
+
+class ChanceLossRequest(BaseModel):
+    store_id: str
+    item_id: str
+    target_date: str
+    unit_price: float = 1500.0
+
+@router.post(
+    "/api/production/chance-loss",
+    dependencies=[Depends(verify_token)],
+    summary="[QA 테스트용] 찬스로스(기회손실) 정량 추정 엔진 단독 실행",
+    description="AI-COMMON-035 QA 검증을 위해 ChanceLossEngine을 단독으로 실행하고 결과를 반환합니다."
+)
+async def estimate_chance_loss(payload: ChanceLossRequest):
+    """실제 DB에서 해당 매장/상품/날짜의 판매 데이터를 읽어와 찬스로스를 추정합니다."""
+    try:
+        from sqlalchemy import create_engine
+        import pandas as pd
+        
+        # 테스트 환경을 위한 직접 DB 연결 (실무에선 Repository 패턴 사용)
+        db_url = "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc"
+        engine = create_engine(db_url)
+        
+        query = f"SELECT * FROM raw_daily_store_item_tmzon WHERE masked_stor_cd = '{payload.store_id}' AND item_cd = '{payload.item_id}' AND sale_dt = '{payload.target_date}'"
+        
+        with engine.connect() as conn:
+            sales_df = pd.read_sql(query, conn)
+            # Ensure columns are uppercase to match engine expectations
+            sales_df.columns = [c.upper() for c in sales_df.columns]
+            
+        prod_df = pd.DataFrame() # 찬스로스 엔진은 생산이력(옵션)이 없어도 동작함
+        
+        cle = ChanceLossEngine()
+        result = cle.estimate_chance_loss(
+            sales_df=sales_df,
+            production_df=prod_df,
+            store_id=payload.store_id,
+            item_id=payload.item_id,
+            target_date=payload.target_date,
+            unit_price=payload.unit_price
+        )
+        
+        return result
+    except Exception as exc:
+        logger.exception("찬스로스 추정 중 오류 발생")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc)
+        )
+
 @router.post(
     "/api/production/simulation",
     response_model=SimulationReportResponse,

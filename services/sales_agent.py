@@ -94,19 +94,42 @@ class SalesAnalysisAgent:
 
     def analyze_real_channel_mix(self, store_id: str) -> Dict[str, Any]:
         """채널별(배달 vs 오프라인) 매출 비중 분석"""
+        # DAILY_STOR_PAY_WAY 뷰에는 PAY_WAY_CD, PAY_DTL_CD 만 존재하므로 PAY_CD 뷰와 JOIN하여 이름(PAY_DC_NM) 추출
         sql = """
-            SELECT
-                CASE
-                    WHEN m.pay_dc_nm LIKE '%%배달%%' OR m.pay_dc_nm IN ('요기요', '배달의민족', '쿠팡이츠', '해피오더') THEN 'Delivery'
+            SELECT 
+                CASE 
+                    WHEN m."PAY_DC_NM" LIKE '%%배달%%' OR m."PAY_DC_NM" LIKE '%%주문%%' OR m."PAY_DC_NM" LIKE '%%픽업%%' OR m."PAY_DC_NM" IN ('요기요', '배달의민족', '쿠팡이츠', '해피오더', '땡겨요', '위메프오') THEN 'Delivery'
                     ELSE 'Offline'
                 END as channel,
-                SUM(CAST(p.pay_amt AS NUMERIC)) as total_amt
-            FROM raw_daily_store_pay_way p
-            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
-            WHERE p.masked_stor_cd = :store_id
+                SUM(CAST(p."PAY_AMT" AS NUMERIC)) as total_amt
+            FROM "DAILY_STOR_PAY_WAY" p
+            LEFT JOIN "PAY_CD" m ON p."PAY_DTL_CD" = m."PAY_DC_CD"
+            WHERE p."MASKED_STOR_CD" = :store_id
             GROUP BY 1
         """
-        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_pay_way", "raw_pay_cd"])
+
+        import re
+        clean_sql = sql
+
+        data = []
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text(clean_sql), {"store_id": store_id})
+                columns = result.keys()
+                rows = result.fetchall()
+                data = [dict(zip(columns, row)) for row in rows]
+
+                query_logger.log_query(
+                    agent_name=self.agent_name,
+                    tables=["DAILY_STOR_PAY_WAY", "PAY_CD"],
+                    query=clean_sql.strip(),
+                    params={"store_id": store_id}
+                )
+
+        except Exception as e:
+            logger.error(f"Channel Mix SQL 실행 오류: {e}")
+            return {"error": str(e)}
+
         valid = [row for row in data if "error" not in row and "channel" in row]
 
         delivery_amt = sum(row['total_amt'] for row in valid if row['channel'] == 'Delivery')
@@ -120,7 +143,6 @@ class SalesAnalysisAgent:
             "offline_amt": float(total_amt - delivery_amt),
             "trend": "배달 비중 유지" if delivery_rate > 20 else "배달 확장 필요"
         }
-
     def simulate_real_profitability(self, store_id: str) -> Dict[str, Any]:
         """실제 매출 기반 수익성 추정 (표준 마진 65% 가정)"""
         sql = """
@@ -146,15 +168,37 @@ class SalesAnalysisAgent:
         """결제 수단별 매출 비중 분석"""
         sql = """
             SELECT
-                m.pay_dc_nm as method,
-                SUM(CAST(p.pay_amt AS NUMERIC)) as amount
-            FROM raw_daily_store_pay_way p
-            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
-            WHERE p.masked_stor_cd = :store_id
+                m."PAY_DC_NM" as method,
+                SUM(CAST(p."PAY_AMT" AS NUMERIC)) as amount
+            FROM "DAILY_STOR_PAY_WAY" p
+            LEFT JOIN "PAY_CD" m ON p."PAY_DTL_CD" = m."PAY_DC_CD"
+            WHERE p."MASKED_STOR_CD" = :store_id
             GROUP BY 1
             ORDER BY amount DESC
         """
-        data = self.execute_dynamic_sql(store_id, sql, ["raw_daily_store_pay_way", "raw_pay_cd"])
+
+        import re
+        clean_sql = sql
+
+        data = []
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text(clean_sql), {"store_id": store_id})
+                columns = result.keys()
+                rows = result.fetchall()
+                data = [dict(zip(columns, row)) for row in rows]
+
+                query_logger.log_query(
+                    agent_name=self.agent_name,
+                    tables=["DAILY_STOR_PAY_WAY", "PAY_CD"],
+                    query=clean_sql.strip(),
+                    params={"store_id": store_id}
+                )
+
+        except Exception as e:
+            logger.error(f"Payment Method SQL 실행 오류: {e}")
+            return [{"error": str(e)}]
+
         return [
             {**row, "amount": float(row["amount"]) if row.get("amount") is not None else 0.0}
             for row in data if "error" not in row

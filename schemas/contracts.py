@@ -193,7 +193,7 @@ class SalesQueryResponse(BaseModel):
     source_data_period: str = Field(..., description="분석에 사용된 데이터 기간")
     channel_analysis: Optional[Dict[str, Any]] = Field(None, description="채널별 매출 비중 분석 데이터")
     profit_simulation: Optional[Dict[str, Any]] = Field(None, description="표준 마진 기반 수익성 시뮬레이션 데이터")
-    data_lineage: Optional[List[Dict[str, Any]]] = Field(None, description="AI가 생성 및 실행한 쿼리 히스토리 (투명성 검증용)")
+    data_lineage: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="AI가 생성 및 실행한 쿼리 히스토리 (투명성 검증용)")
 
 
 # --- 공통 응답 구조 ---

@@ -207,19 +207,19 @@ class ProductionService:
         # 1. 마스터 정보 추출
         item_nm = "알 수 없는 상품"
         unit_price, item_cost = 1500, 700
-        try:
-            for df in [sales_df, production_df, inventory_df]:
-                if not df.empty and 'ITEM_CD' in df.columns and 'ITEM_NM' in df.columns:
-                    matches = df[df['ITEM_CD'] == item_id]
-                    if not matches.empty:
+        for df in [sales_df, production_df, inventory_df]:
+            if not df.empty and 'ITEM_CD' in df.columns:
+                matches = df[df['ITEM_CD'] == item_id]
+                if not matches.empty:
+                    if 'ITEM_NM' in df.columns and pd.notna(matches.iloc[0]['ITEM_NM']):
                         item_nm = str(matches.iloc[0]['ITEM_NM'])
-                        if 'SALE_PRC' in matches.columns and pd.notna(matches.iloc[0]['SALE_PRC']):
-                            unit_price = int(matches.iloc[0]['SALE_PRC'])
-                        if 'ITEM_COST' in matches.columns and pd.notna(matches.iloc[0]['ITEM_COST']):
-                            item_cost = int(matches.iloc[0]['ITEM_COST'])
+                    if 'SALE_PRC' in df.columns and pd.notna(matches.iloc[0]['SALE_PRC']):
+                        unit_price = int(matches.iloc[0]['SALE_PRC'])
+                    if 'ITEM_COST' in df.columns and pd.notna(matches.iloc[0]['ITEM_COST']):
+                        item_cost = int(matches.iloc[0]['ITEM_COST'])
+                    
+                    if item_nm != "알 수 없는 상품":
                         break
-        except Exception:
-            pass
 
         # 2. 시뮬레이션 루프 (Actual vs AI-Guided)
         # AI 시뮬레이션에서는 '실제 당일 생산(추가생산 등)'을 무시하고,

@@ -22,8 +22,20 @@ logger = init_logger("inventory_predictor")
 
 class InventoryPredictor:
     """[Balanced High-Precision] 안정성과 정확도를 모두 잡은 최종 예측 엔진"""
+    _instance = None
+    _model_cache = None
+    _stats_cache = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(InventoryPredictor, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self, model_dir: Optional[str] = None):
+        if self._initialized:
+            return
+            
         self.model = None
         if model_dir is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +48,18 @@ class InventoryPredictor:
         self.feature_cols = ['hour', 'weekday', 'is_weekend', 'lag_1h', 'lag_2h', 'rolling_mean_3h', 'store_avg', 'item_avg', 'hist_4w_avg']
         self.stats: Dict[str, Any] = {}
         self.meta_loaded: bool = False
-        self.load_model()
+        
+        if InventoryPredictor._model_cache is not None:
+            self.model = InventoryPredictor._model_cache
+            self.stats = InventoryPredictor._stats_cache
+            self.meta_loaded = True
+            self._initialized = True
+            logger.info("캐시된 예측 모델을 사용합니다.")
+        else:
+            if self.load_model():
+                InventoryPredictor._model_cache = self.model
+                InventoryPredictor._stats_cache = self.stats
+                self._initialized = True
 
     def _prepare_training_data(self, history_df: pd.DataFrame, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
         df = history_df.copy()
