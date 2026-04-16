@@ -18,88 +18,86 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _SCHEMA: dict = {
-    "DAILY_STOR_ITEM": {
+    "raw_daily_store_item": {
         "description": "일별 매장-상품 매출 집계 (가장 기본적인 매출 원천)",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드 (필터 기준)",
-            "SALE_DT": "판매일 (YYYYMMDD, 날짜 비교 시 TO_DATE(CAST(col AS TEXT),'YYYYMMDD') 사용)",
-            "ITEM_NM": "상품명",
-            "SALE_AMT": "매출액 원, CAST AS NUMERIC 필요",
-            "SALE_QTY": "판매 수량, CAST AS NUMERIC 필요",
-            "DC_AMT": "할인 금액 원",
+            "masked_stor_cd": "매장 코드 (필터 기준)",
+            "sale_dt": "판매일 (YYYYMMDD 문자열, 날짜 비교: sale_dt >= '20260101' 형식 사용)",
+            "item_nm": "상품명",
+            "sale_amt": "매출액 원, CAST(sale_amt AS NUMERIC) 필요",
+            "sale_qty": "판매 수량, CAST(sale_qty AS NUMERIC) 필요",
+            "dc_amt": "할인 금액 원",
         },
         "notes": "피크 시간대·상품별 매출·기간 비교 등 대부분의 매출 질문에 사용",
     },
-    "DAILY_STOR_PAY_WAY": {
+    "raw_daily_store_pay_way": {
         "description": "일별 매장 결제수단별 매출 (배달·온라인·오프라인 채널 분류)",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드",
-            "SALE_DT": "판매일 YYYYMMDD",
-            "PAY_WAY_CD": "결제수단 코드 ('01'=신용카드, '02'=현금, '07'~'11'=간편결제/배달)",
-            "PAY_AMT": "결제 금액 원, CAST AS NUMERIC 필요",
-            "PAY_DTL_CD": "결제 상세 코드 (PAY_CD 테이블 JOIN 키)",
+            "masked_stor_cd": "매장 코드",
+            "sale_dt": "판매일 YYYYMMDD",
+            "pay_way_cd": "결제수단 코드 ('01'=신용카드, '02'=현금, '07'~'11'=간편결제/배달)",
+            "pay_amt": "결제 금액 원, CAST(pay_amt AS NUMERIC) 필요",
+            "pay_dtl_cd": "결제 상세 코드 (raw_pay_cd JOIN 키)",
         },
-        "notes": "배달앱 매출 분리 시 PAY_CD LEFT JOIN: ON PAY_DTL_CD = PAY_DC_CD",
+        "notes": "배달앱 매출 분리 시 raw_pay_cd LEFT JOIN: ON pay_dtl_cd = pay_dc_cd",
     },
-    "PAY_CD": {
+    "raw_pay_cd": {
         "description": "결제수단 코드 참조 테이블",
         "columns": {
-            "PAY_DC_CD": "결제 상세 코드",
-            "PAY_DC_NM": "결제수단명 (예: '요기요', '배달의민족', '해피오더')",
+            "pay_dc_cd": "결제 상세 코드",
+            "pay_dc_nm": "결제수단명 (예: '요기요', '배달의민족', '해피오더')",
         },
     },
-    "DAILY_STOR_CPI": {
-        "description": "캠페인(T데이 등) 시간대별 매출 집계",
+    "raw_daily_store_cpi_tmzon": {
+        "description": "캠페인(T데이 등) 시간대별 매출 집계 — SALE_DT 컬럼 없음, 날짜 필터 불가",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드",
-            "SALE_DT": "판매일 YYYYMMDD",
-            "ACT_AMT_00~ACT_AMT_23": "각 시간대(00~23시) 매출액 (24개 컬럼)",
+            "masked_stor_cd": "매장 코드",
+            "cpi_cd": "캠페인 코드",
+            "cpi_nm": "캠페인명",
+            "act_amt_00~act_amt_23": "각 시간대(00~23시) 실매출액 (24개 컬럼)",
+            "qty_00~qty_23": "각 시간대(00~23시) 판매수량 (24개 컬럼)",
         },
-        "notes": "캠페인일 시간대별 분석. 일반 매출 비교 시 DAILY_STOR_ITEM과 함께 사용",
-    },
-    "ORD_DTL": {
-        "description": "주문 상세 (영수증 단위 상품 목록, 교차판매 조합 분석)",
-        "columns": {
-            "MASKED_STOR_CD": "매장 코드",
-            "SALE_DT": "판매일 YYYYMMDD",
-            "POS_NO": "POS 번호",
-            "BILL_NO": "영수증 번호",
-            "ITEM_NM": "상품명",
-        },
-        "notes": "동일 SALE_DT+POS_NO+BILL_NO self-join으로 함께 팔린 상품 조합 추출",
+        "notes": "SALE_DT 없음 — 날짜 범위 필터 불가. 캠페인별 시간대 분포 조회에만 사용",
     },
     "raw_production_extract": {
-        "description": "생산 이력",
+        "description": "생산 이력 — 총 생산량은 prod_qty + prod_qty_2 + prod_qty_3 합산",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드", "ITEM_CD": "상품 코드",
-            "PROD_DT": "생산일 YYYYMMDD", "PROD_DGRE": "생산 차수", "PROD_QTY": "생산 수량",
+            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드", "item_nm": "상품명",
+            "prod_dt": "생산일 YYYYMMDD",
+            "prod_qty": "1차 생산 수량",
+            "prod_qty_2": "2차 생산 수량",
+            "prod_qty_3": "3차 생산 수량",
         },
+        "notes": "총 생산량 = COALESCE(prod_qty,0) + COALESCE(prod_qty_2,0) + COALESCE(prod_qty_3,0)",
     },
     "raw_order_extract": {
-        "description": "발주 이력",
+        "description": "발주 이력 — 점주 발주 수량(ord_qty)과 실 출하 확정 수량(confrm_qty) 구분",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드", "ITEM_CD": "상품 코드",
-            "ORD_DT": "발주일 YYYYMMDD", "ORD_QTY": "발주 수량",
+            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드", "item_nm": "상품명",
+            "dlv_dt": "배송일 YYYYMMDD",
+            "ord_qty": "점주 발주 수량",
+            "confrm_qty": "실 출하 확정 수량",
+            "ord_rec_qty": "시스템 권고 발주 수량",
         },
     },
     "raw_inventory_extract": {
         "description": "재고 이력",
         "columns": {
-            "MASKED_STOR_CD": "매장 코드", "ITEM_CD": "상품 코드",
-            "STOCK_DT": "재고 기준일 YYYYMMDD", "STOCK_QTY": "재고 수량",
+            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드",
+            "stock_dt": "재고 기준일 YYYYMMDD", "stock_qty": "재고 수량",
         },
     },
 }
 
 _TABLE_HINTS: dict[str, list[str]] = {
-    "sales":      ["DAILY_STOR_ITEM"],
-    "channel":    ["DAILY_STOR_PAY_WAY", "PAY_CD"],
-    "campaign":   ["DAILY_STOR_CPI", "DAILY_STOR_ITEM"],
-    "cross_sell": ["ORD_DTL"],
+    "sales":      ["raw_daily_store_item"],
+    "channel":    ["raw_daily_store_pay_way", "raw_pay_cd"],
+    "campaign":   ["raw_daily_store_cpi_tmzon", "raw_daily_store_item"],
+    "cross_sell": ["raw_daily_store_item"],
     "production": ["raw_production_extract"],
     "order":      ["raw_order_extract"],
     "inventory":  ["raw_inventory_extract"],
-    "general":    ["DAILY_STOR_ITEM", "DAILY_STOR_PAY_WAY"],
+    "general":    ["raw_daily_store_item", "raw_daily_store_pay_way"],
 }
 
 
@@ -136,12 +134,13 @@ _SQL_SYSTEM = """\
 
 [필수 규칙]
 1. SELECT 문만 생성한다. 변경 쿼리(INSERT/UPDATE/DELETE/DROP 등) 절대 금지.
-2. 항상 "MASKED_STOR_CD" = :store_id 필터를 포함한다.
-3. 날짜 비교: TO_DATE(CAST("SALE_DT" AS TEXT), 'YYYYMMDD') 형식 사용.
-4. 기본 기간: MAX(SALE_DT) 기준 최근 28일.
-5. 숫자 컬럼은 CAST AS NUMERIC 처리한다.
+2. 항상 masked_stor_cd = :store_id 필터를 포함한다 (컬럼명 소문자, 쌍따옴표 금지).
+3. 날짜 비교: sale_dt >= '20260101' 형식 사용 (문자열 리터럴, 따옴표 필수).
+4. 기본 기간: MAX(sale_dt) 기준 최근 28일.
+5. 숫자 컬럼은 CAST(컬럼명 AS NUMERIC) 처리한다.
 6. LIMIT 200 이하로 결과를 제한한다.
-7. 응답은 JSON만 반환한다 (설명 텍스트 없이).
+7. 테이블명·컬럼명은 모두 소문자, 쌍따옴표 사용 금지.
+8. 응답은 JSON만 반환한다 (설명 텍스트 없이).
 """
 
 
@@ -164,19 +163,19 @@ class SQLGenerator:
         schema_context = get_schema_context(table_hints)
 
         prompt = f"""[DB 스키마]
-{schema_context}
-
-[응답 형식]
-{{
-  "sql": "실행할 SELECT 쿼리 (파라미터: :store_id)",
-  "description": "이 쿼리가 조회하는 내용 한 문장 (점주에게 보여줄 근거 문구)",
-  "relevant_tables": ["사용된 테이블명 목록"]
-}}
-
-[점주 질문]
-{query}
-
-JSON만 반환하세요."""
+        {schema_context}
+        
+        [응답 형식]
+        {{
+          "sql": "실행할 SELECT 쿼리 (파라미터: :store_id)",
+          "description": "이 쿼리가 조회하는 내용 한 문장 (점주에게 보여줄 근거 문구)",
+          "relevant_tables": ["사용된 테이블명 목록"]
+        }}
+        
+        [점주 질문]
+        {query}
+        
+        JSON만 반환하세요."""
 
         raw = self.gemini.call_gemini_text(
             prompt,
