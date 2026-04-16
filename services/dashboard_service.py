@@ -21,13 +21,29 @@ class DashboardService:
         self.order_service = order_service
         self.sales_service = sales_analyzer
 
-    def get_home_overview(self, mock_payload: dict, raw_data: dict) -> HomeDashboardResponse:
+    def _calc_deadline_minutes(self, current_time: datetime.datetime) -> int:
+        """주문 마감까지 남은 분 수 계산 (order_service의 product_group_deadlines 기준)."""
+        if self.order_service.product_group_deadlines:
+            earliest = sorted(self.order_service.product_group_deadlines.values())[0]
+            try:
+                hour, minute = map(int, earliest.split(":", 1))
+                deadline_dt = current_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                remaining = int((deadline_dt - current_time).total_seconds() / 60)
+                return max(remaining, 0)
+            except (ValueError, AttributeError):
+                logger.warning("주문 마감 시간 파싱 실패: %s", earliest)
+        # product_group_deadlines 미설정 시 기본 마감 14:00 기준
+        deadline_dt = current_time.replace(hour=14, minute=0, second=0, microsecond=0)
+        remaining = int((deadline_dt - current_time).total_seconds() / 60)
+        return max(remaining, 0)
+
+    def get_home_overview(self, payload: dict, raw_data: dict) -> HomeDashboardResponse:
         """
         [HOME] 3대 에이전트의 핵심 지표를 취합하여 FE가 요청한 통합 대시보드 데이터를 생성합니다.
         """
-        store_id = mock_payload["store_id"]
-        target_date = mock_payload["target_date"]
-        current_time = mock_payload["current_time"]
+        store_id = payload["store_id"]
+        target_date = payload["target_date"]
+        current_time = payload["current_time"]
 
         # 1. 생산 현황 (가장 위험한 품목 추출)
         inv_df = pd.DataFrame(raw_data.get("inventory_data", []), columns=['MASKED_STOR_CD', 'STOCK_DT', 'ITEM_CD', 'ITEM_NM', 'STOCK_QTY'] if not raw_data.get("inventory_data") else None)
@@ -53,8 +69,8 @@ class DashboardService:
         top_item = critical_items[0] if critical_items else None
 
         
-        # 2. 주문 관리 정보 (Mocked for POC)
-        order_deadline_min = 17
+        # 2. 주문 마감까지 남은 분 수 (실제 마감 시간 기준)
+        order_deadline_min = self._calc_deadline_minutes(current_time)
 
         # --- A. Dashboard Overview (상단) ---
         priority_actions = []
