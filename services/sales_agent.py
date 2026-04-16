@@ -114,15 +114,21 @@ class SalesAnalysisAgent:
 
         delivery_rate = float(round((delivery_amt / total_amt * 100), 1)) if total_amt > 0 else 0.0
 
+        # DELIVERY_EXPANSION_THRESHOLD 환경변수로 배달 확장 기준 설정 (기본값 20%)
+        try:
+            delivery_threshold = float(os.getenv("DELIVERY_EXPANSION_THRESHOLD", "20"))
+        except (ValueError, TypeError):
+            delivery_threshold = 20.0
+
         return {
             "delivery_rate": delivery_rate,
             "online_amt": float(delivery_amt),
             "offline_amt": float(total_amt - delivery_amt),
-            "trend": "배달 비중 유지" if delivery_rate > 20 else "배달 확장 필요"
+            "trend": "배달 비중 유지" if delivery_rate > delivery_threshold else "배달 확장 필요"
         }
 
     def simulate_real_profitability(self, store_id: str) -> Dict[str, Any]:
-        """실제 매출 기반 수익성 추정 (표준 마진 65% 가정)"""
+        """실제 매출 기반 수익성 추정"""
         sql = """
             SELECT SUM(CAST(sale_amt AS NUMERIC)) as total_sales
             FROM raw_daily_store_item
@@ -132,7 +138,13 @@ class SalesAnalysisAgent:
         first = data[0] if data and "error" not in data[0] else {}
         total_sales = float(first.get('total_sales') or 0)
 
-        margin_rate = 0.65
+        # STANDARD_MARGIN_RATE 환경변수 우선 적용, 미설정 시 0.65 기본값
+        _default_margin = 0.65
+        try:
+            margin_rate = float(os.getenv("STANDARD_MARGIN_RATE", str(_default_margin)))
+        except (ValueError, TypeError):
+            margin_rate = _default_margin
+
         estimated_profit = total_sales * margin_rate
 
         return {
