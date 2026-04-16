@@ -35,103 +35,97 @@ class DashboardService:
         sales_df = pd.DataFrame(raw_data.get("sales_data", []), columns=['MASKED_STOR_CD', 'SALE_DT', 'ITEM_CD', 'SALE_QTY', 'TMZON_DIV'] if not raw_data.get("sales_data") else None)
         store_prod_df = pd.DataFrame(raw_data.get("store_production_data", []))
 
-        # 데이터가 없을 때를 대비한 예외 처리
-        urgent_status = "위험"
-        alert_msg = "현재고 12개이나 최근 4주 판매 패턴 분석 결과 1시간 후 2개로 위험 수준입니다. 당장 생산을 권장합니다."
-        item_nm = "초코 도넛"
-        current_qty = 12
-        predict_1h_qty = 2
-        reduction_pct = 18.0
-        item_cd = "choco-donut"
-        can_produce = True
-        critical_count = 3
-        avg_reduction = 18.0
-
         dash_res = None
         try:
             dash_res = self.prod_service.get_dashboard_summary(
                 store_id, target_date, inv_df, prod_df, sales_df, store_prod_df
             )
         except Exception as e:
-            logger.warning(f"Failed to get real dashboard summary, using fallback: {e}")
-            
-            # fallback mock data
+            logger.warning(f"생산 대시보드 조회 실패 - 빈 상태로 반환: {e}")
             dash_res = type('obj', (object,), {
-                'summary': type('obj', (object,), {'critical_count': 3, 'avg_chance_loss_reduction': 18.0}),
-                'sku_list': [
-                    type('obj', (object,), {
-                        'status': '위험',
-                        'item_cd': 'choco-donut',
-                        'item_nm': '초코 도넛',
-                        'current_qty': 12,
-                        'predict_1h_qty': 2,
-                        'chance_loss_reduction_pct': 18.0,
-                        'alert_message': '현재고 12개이나 최근 4주 판매 패턴 분석 결과 1시간 후 2개로 위험 수준입니다. 당장 생산을 권장합니다.',
-                        'can_produce': True
-                    })
-                ]
+                'summary': type('obj', (object,), {'critical_count': 0, 'avg_chance_loss_reduction': 0.0}),
+                'sku_list': []
             })
 
+        critical_count = getattr(dash_res.summary, 'critical_count', 0)
+        avg_reduction = getattr(dash_res.summary, 'avg_chance_loss_reduction', 0.0)
         critical_items = [s for s in dash_res.sku_list if getattr(s, 'status', None) == "위험"]
-        top_item = critical_items[0] if critical_items else dash_res.sku_list[0]
+        top_item = critical_items[0] if critical_items else None
 
         
         # 2. 주문 관리 정보 (Mocked for POC)
-        order_deadline_min = 17 
-        
+        order_deadline_min = 17
+
         # --- A. Dashboard Overview (상단) ---
-        priority_actions = [
-            DashboardAction(
+        priority_actions = []
+
+        # 위험 SKU가 있을 때만 생산 액션 추가
+        if top_item is not None:
+            priority_actions.append(DashboardAction(
                 id="production-urgent-1",
                 type="production",
-                urgency="urgent" if top_item.status == "위험" else "important",
-                badge_label=f"긴급 - {top_item.alert_message.split('.')[0]}",
-                title=f"{top_item.item_nm} 생산 필요",
-                description=f"현재 {top_item.current_qty}개 → 1시간 후 {top_item.predict_1h_qty}개 예상. 지금 생산 시 찬스로스 {top_item.chance_loss_reduction_pct}% 감소 가능",
+                urgency="urgent" if getattr(top_item, 'status', '') == "위험" else "important",
+                badge_label=f"긴급 - {getattr(top_item, 'alert_message', '생산 필요').split('.')[0]}",
+                title=f"{getattr(top_item, 'item_nm', '상품')} 생산 필요",
+                description=(
+                    f"현재 {getattr(top_item, 'current_qty', '-')}개 → "
+                    f"1시간 후 {getattr(top_item, 'predict_1h_qty', '-')}개 예상. "
+                    f"지금 생산 시 찬스로스 {getattr(top_item, 'chance_loss_reduction_pct', 0)}% 감소 가능"
+                ),
                 cta_label="생산관리 상세보기",
                 cta_path="/production",
                 focus_section="risk-skus",
-                related_sku_id=top_item.item_cd,
-                ai_reasoning=top_item.alert_message,
-                impact_metric=f"찬스로스 {top_item.chance_loss_reduction_pct}% 감소",
-                is_finished_good=not top_item.can_produce,
+                related_sku_id=getattr(top_item, 'item_cd', ''),
+                ai_reasoning=getattr(top_item, 'alert_message', ''),
+                impact_metric=f"찬스로스 {getattr(top_item, 'chance_loss_reduction_pct', 0)}% 감소",
+                is_finished_good=not getattr(top_item, 'can_produce', True),
                 confidence_score=0.92
-            ),
-            DashboardAction(
-                id="ordering-deadline-1",
-                type="ordering",
-                urgency="important",
-                badge_label="중요 - 주문 마감 임박",
-                title=f"주문 마감 {order_deadline_min}분 남음",
-                description="오늘 주문 미완료 - AI 추천 3안 검토 후 점주가 직접 확정 필요",
-                cta_label="주문 검토하기",
-                cta_path="/ordering",
-                focus_section="deadline",
-                ai_reasoning="과거 4주 판매 트렌드와 오늘 날씨(흐림, 18도)를 고려할 때 평소보다 10% 증량 발주를 권장합니다.",
-                impact_metric="결품 방지율 98% 확보",
-                confidence_score=0.88
-            ),
-            DashboardAction(
-                id="sales-profit-1",
-                type="sales",
+            ))
+        elif critical_count == 0:
+            priority_actions.append(DashboardAction(
+                id="production-ok-1",
+                type="production",
                 urgency="recommended",
-                badge_label="권장 - 손익 확인",
-                title="오늘 손익 확인 권장",
-                description="어제 대비 매출 15% 증가 · 손익분기점 초과 달성",
-                cta_label="손익분석 상세보기",
-                cta_path="/sales",
-                focus_section="profit-summary",
-                ai_reasoning="배달 채널 프로모션 효과로 인해 객단가가 1,200원 상승하며 수익성이 크게 개선되었습니다.",
-                impact_metric="영업이익 +342,000원",
-                confidence_score=0.95
-            )
-        ]
+                badge_label="정상 - 생산 현황 점검 권장",
+                title="생산 현황 확인",
+                description="현재 위험 SKU가 감지되지 않았습니다. 생산 현황을 점검해 주세요.",
+                cta_label="생산관리 상세보기",
+                cta_path="/production",
+                focus_section="overview",
+                confidence_score=0.7
+            ))
+
+        priority_actions.append(DashboardAction(
+            id="ordering-deadline-1",
+            type="ordering",
+            urgency="important",
+            badge_label="중요 - 주문 마감 임박",
+            title=f"주문 마감 {order_deadline_min}분 남음",
+            description="오늘 주문 미완료 - AI 추천 3안 검토 후 점주가 직접 확정 필요",
+            cta_label="주문 검토하기",
+            cta_path="/ordering",
+            focus_section="deadline",
+            impact_metric="결품 방지율 98% 확보",
+            confidence_score=0.88
+        ))
+        priority_actions.append(DashboardAction(
+            id="sales-profit-1",
+            type="sales",
+            urgency="recommended",
+            badge_label="권장 - 손익 확인",
+            title="오늘 손익 확인 권장",
+            description="손익분석 화면에서 실 데이터 기반 매출·순매출·상품별 분석을 확인하세요.",
+            cta_label="손익분석 상세보기",
+            cta_path="/sales",
+            focus_section="profit-summary",
+            confidence_score=0.85
+        ))
 
         stats = [
-            DashboardStat(key="production_risk_count", label="품절 위험 SKU", value=f"{dash_res.summary.critical_count}개", tone="danger"),
+            DashboardStat(key="production_risk_count", label="품절 위험 SKU", value=f"{critical_count}개", tone="danger" if critical_count > 0 else "default"),
             DashboardStat(key="ordering_deadline_minutes", label="주문 마감까지", value=f"{order_deadline_min}분", tone="primary"),
-            DashboardStat(key="today_profit_estimate", label="오늘 순이익 추정", value="+342,000원", tone="success"),
-            DashboardStat(key="alert_count", label="알림 상태", value="긴급 2건", tone="default")
+            DashboardStat(key="today_profit_estimate", label="오늘 순이익 추정", value="데이터 조회 필요", tone="default"),
+            DashboardStat(key="alert_count", label="알림 상태", value=f"긴급 {critical_count}건" if critical_count > 0 else "정상", tone="danger" if critical_count > 0 else "default")
         ]
 
         overview_data = DashboardOverviewResponse(
@@ -156,13 +150,23 @@ class DashboardService:
                         PromptAction(id="production-2", label="찬스 로스가 뭔가요?", prompt="찬스 로스가 뭔가요?"),
                         PromptAction(id="production-3", label="품절 처리 방법은?", prompt="품절 처리 방법은?")
                     ],
-                    highlights=[
-                        CardHighlight(title=f"{item_nm} 재고 소진 1시간 전", description=f"현재 재고 {current_qty}개 · 지금 생산 시 찬스 로스 {reduction_pct}% 감소 가능", tone="danger"),
-                        CardHighlight(title="말차 도넛 소진 속도 빠름", description="평소 대비 30% 빠른 판매 속도 감지", tone="warning")
-                    ],
+                    highlights=(
+                        [
+                            CardHighlight(
+                                title=f"{getattr(top_item, 'item_nm', '상품')} 재고 소진 1시간 전",
+                                description=(
+                                    f"현재 재고 {getattr(top_item, 'current_qty', '-')}개 · "
+                                    f"지금 생산 시 찬스 로스 {getattr(top_item, 'chance_loss_reduction_pct', 0)}% 감소 가능"
+                                ),
+                                tone="danger"
+                            )
+                        ] if top_item is not None else [
+                            CardHighlight(title="위험 SKU 없음", description="현재 품절 위험 상품이 감지되지 않았습니다.", tone="info")
+                        ]
+                    ),
                     metrics=[
-                        CardMetric(label="품절 위험", value=f"{critical_count}개", tone="danger"),
-                        CardMetric(label="찬스 로스 절감", value=f"{avg_reduction}%", tone="primary")
+                        CardMetric(label="품절 위험", value=f"{critical_count}개", tone="danger" if critical_count > 0 else "default"),
+                        CardMetric(label="찬스 로스 절감", value=f"{avg_reduction:.1f}%" if avg_reduction else "-", tone="primary")
                     ]
                 ),
                 DashboardCard(
@@ -198,25 +202,27 @@ class DashboardService:
                         PromptAction(id="sales-3", label="어제와 비교하면?", prompt="어제와 비교하면?")
                     ],
                     highlights=[
-                        CardHighlight(title="오늘 순이익", description="+342,000원 · 순이익률 18.5%", tone="success"),
-                        CardHighlight(title="손익분기점 달성 · +230,000원 초과", description="매장 운영 패턴과 최근 성과를 반영한 답변을 제공합니다.", tone="info")
+                        CardHighlight(title="오늘 순이익 추정", description="손익 분석 화면에서 실 데이터 기반 분석을 확인하세요.", tone="info"),
+                        CardHighlight(title="매출 인사이트 조회 가능", description="AI 질의로 채널별·상품별 매출 분석을 제공합니다.", tone="info")
                     ],
                     metrics=[
-                        CardMetric(label="매출", value="1,850,000원", tone="default"),
-                        CardMetric(label="원가", value="-890,000원", tone="danger"),
-                        CardMetric(label="인건비", value="-520,000원", tone="danger"),
-                        CardMetric(label="기타 비용", value="-98,000원", tone="danger")
+                        CardMetric(label="매출", value="손익분석 화면 참조", tone="default"),
+                        CardMetric(label="순매출", value="손익분석 화면 참조", tone="default"),
                     ]
                 )
             ]
         )
 
         # --- C. Dashboard Insights (하단) ---
+        production_insight = (
+            f"품절 위험 SKU {critical_count}개가 감지되었습니다. 생산 관리 화면에서 확인하세요."
+            if critical_count > 0
+            else "현재 품절 위험 SKU가 없습니다. 생산 현황을 정기적으로 점검하세요."
+        )
         insights_data = DashboardInsightsResponse(
             insights=[
-                InsightItem(id="weekend-demand", description="주말 매출이 평일 대비 40% 높습니다. 주말 생산량 선반영이 필요합니다.", evidence_sources=["최근 4주 요일별 매출 트렌드"]),
-                InsightItem(id="top-margin-item", description="초코 도넛 순이익률 18.9%로 최고 수익 품목입니다.", evidence_sources=["원가율 대비 판매가 분석"]),
-                InsightItem(id="matcha-margin", description="말차 도넛 원가율 개선 필요. 현재 순이익률 17.9%입니다.", evidence_sources=["원가 변동 및 마진 분석"])
+                InsightItem(id="production-status", description=production_insight, evidence_sources=["생산 예측 엔진 (실 DB 기반)"]),
+                InsightItem(id="sales-query", description="손익 분석 화면에서 AI 질의로 상품별·채널별 매출 인사이트를 확인할 수 있습니다.", evidence_sources=["매출 분석 Agent"]),
             ],
             quick_links=[
                 QuickLink(label="생산 관리", path="/production"),
