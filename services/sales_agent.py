@@ -137,14 +137,20 @@ class SalesAnalysisAgent:
 
         delivery_rate = float(round((delivery_amt / total_amt * 100), 1)) if total_amt > 0 else 0.0
 
+        # DELIVERY_EXPANSION_THRESHOLD 환경변수로 배달 확장 기준 설정 (기본값 20%)
+        try:
+            delivery_threshold = float(os.getenv("DELIVERY_EXPANSION_THRESHOLD", "20"))
+        except (ValueError, TypeError):
+            delivery_threshold = 20.0
+
         return {
             "delivery_rate": delivery_rate,
             "online_amt": float(delivery_amt),
             "offline_amt": float(total_amt - delivery_amt),
-            "trend": "배달 비중 유지" if delivery_rate > 20 else "배달 확장 필요"
+            "trend": "배달 비중 유지" if delivery_rate > delivery_threshold else "배달 확장 필요"
         }
     def simulate_real_profitability(self, store_id: str) -> Dict[str, Any]:
-        """실제 매출 기반 수익성 추정 (표준 마진 65% 가정)"""
+        """실제 매출 기반 수익성 추정"""
         sql = """
             SELECT SUM(CAST(sale_amt AS NUMERIC)) as total_sales
             FROM raw_daily_store_item
@@ -154,7 +160,13 @@ class SalesAnalysisAgent:
         first = data[0] if data and "error" not in data[0] else {}
         total_sales = float(first.get('total_sales') or 0)
 
-        margin_rate = 0.65
+        # STANDARD_MARGIN_RATE 환경변수 우선 적용, 미설정 시 0.65 기본값
+        _default_margin = 0.65
+        try:
+            margin_rate = float(os.getenv("STANDARD_MARGIN_RATE", str(_default_margin)))
+        except (ValueError, TypeError):
+            margin_rate = _default_margin
+
         estimated_profit = total_sales * margin_rate
 
         return {
@@ -259,37 +271,46 @@ class SalesAnalysisAgent:
         }
 
     def analyze_cross_sell(self, store_id: str) -> List[Dict[str, Any]]:
-        """연관규칙 기반 교차판매(동반구매) 조합 분석"""
+        """일별 동반 판매 상품 조합 분석 (raw_daily_store_item 기반 일자 수준 공출현)"""
+        # 영수증 단위 데이터(ORD_DTL)가 없으므로 raw_daily_store_item의 일자 수준 공출현으로 대체
         sql = """
-            WITH transactions AS (
-                SELECT "SALE_DT" as sale_dt, "POS_NO" as pos_no, "BILL_NO" as bill_no, "ITEM_NM" as item_nm
-                FROM "ORD_DTL"
-                WHERE "MASKED_STOR_CD" = :store_id
+            WITH daily_items AS (
+                SELECT
+                    CAST(sale_dt AS TEXT) AS sale_dt,
+                    COALESCE(NULLIF(TRIM(CAST(item_nm AS TEXT)), ''), CAST(item_cd AS TEXT)) AS item_nm
+                FROM raw_daily_store_item
+                WHERE CAST(masked_stor_cd AS TEXT) = :store_id
+                  AND NULLIF(TRIM(CAST(item_nm AS TEXT)), '') IS NOT NULL
+                  AND CAST(sale_dt AS TEXT) >= TO_CHAR(CURRENT_DATE - INTERVAL '28 days', 'YYYYMMDD')
             ),
             item_pairs AS (
-                SELECT t1.item_nm as item_a, t2.item_nm as item_b, COUNT(*) as pair_count
-                FROM transactions t1
-                JOIN transactions t2 ON t1.sale_dt = t2.sale_dt AND t1.pos_no = t2.pos_no AND t1.bill_no = t2.bill_no
+                SELECT t1.item_nm AS item_a, t2.item_nm AS item_b, COUNT(*) AS pair_count
+                FROM daily_items t1
+                JOIN daily_items t2 ON t1.sale_dt = t2.sale_dt
                 WHERE t1.item_nm < t2.item_nm
-                  -- 도메인 지식 반영: 먼치킨과 미니 도넛류끼리의 뻔한 패키지성 동반 구매 조합은 제외하여 유의미한 인사이트 도출
-                  AND NOT ((t1.item_nm LIKE '%%먼치킨%%' OR t1.item_nm LIKE '%%미니%%') AND 
+                  AND NOT ((t1.item_nm LIKE '%%먼치킨%%' OR t1.item_nm LIKE '%%미니%%') AND
                            (t2.item_nm LIKE '%%먼치킨%%' OR t2.item_nm LIKE '%%미니%%'))
                 GROUP BY 1, 2
             ),
             item_counts AS (
-                SELECT item_nm, COUNT(DISTINCT bill_no) as item_count
-                FROM transactions
+                SELECT item_nm, COUNT(DISTINCT sale_dt) AS item_count
+                FROM daily_items
                 GROUP BY 1
             ),
             total_tx AS (
-                SELECT COUNT(DISTINCT bill_no) as total_count FROM transactions
+                SELECT COUNT(DISTINCT sale_dt) AS total_count FROM daily_items
             )
-            SELECT 
+            SELECT
                 p.item_a, p.item_b, p.pair_count,
-                ROUND(CAST(p.pair_count AS NUMERIC) / t.total_count, 4) as support,
-                ROUND(CAST(p.pair_count AS NUMERIC) / c1.item_count, 4) as confidence,
-                ROUND((CAST(p.pair_count AS NUMERIC) / t.total_count) / 
-                      ((CAST(c1.item_count AS NUMERIC) / t.total_count) * (CAST(c2.item_count AS NUMERIC) / t.total_count)), 2) as lift
+                ROUND(CAST(p.pair_count AS NUMERIC) / NULLIF(t.total_count, 0), 4) AS support,
+                ROUND(CAST(p.pair_count AS NUMERIC) / NULLIF(c1.item_count, 0), 4) AS confidence,
+                ROUND(
+                    (CAST(p.pair_count AS NUMERIC) / NULLIF(t.total_count, 0)) /
+                    NULLIF(
+                        (CAST(c1.item_count AS NUMERIC) / NULLIF(t.total_count, 0)) *
+                        (CAST(c2.item_count AS NUMERIC) / NULLIF(t.total_count, 0)),
+                    0), 2
+                ) AS lift
             FROM item_pairs p
             CROSS JOIN total_tx t
             JOIN item_counts c1 ON p.item_a = c1.item_nm
@@ -298,24 +319,20 @@ class SalesAnalysisAgent:
             ORDER BY lift DESC, support DESC
             LIMIT 10
         """
-        # 임시로 execute_dynamic_sql의 쌍따옴표 제거 로직 우회 (내부 호출 전용)
-        clean_sql = sql
-        
         try:
             with self.engine.connect() as conn:
-                result = conn.execute(text(clean_sql), {"store_id": store_id})
+                result = conn.execute(text(sql), {"store_id": store_id})
                 columns = result.keys()
                 rows = result.fetchall()
                 data = [dict(zip(columns, row)) for row in rows]
-                
-                # Data Lineage 누락 해결: 내부 쿼리 실행 로그 강제 기록
+
                 query_logger.log_query(
                     agent_name=self.agent_name,
-                    tables=["ORD_DTL"],
-                    query=clean_sql.strip(),
+                    tables=["raw_daily_store_item"],
+                    query=sql.strip(),
                     params={"store_id": store_id}
                 )
-                
+
                 return data
         except Exception as e:
             logger.error(f"Cross sell SQL 실행 오류: {e}")
