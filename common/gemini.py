@@ -1,23 +1,29 @@
-import os
-import time
 import base64
 import csv
-from datetime import datetime
-from pathlib import Path
+import mimetypes
+import os
+import shutil
+import tempfile
 import threading
+import time
+from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
 from PIL import Image
 
 # logger는 파일 상단에서 한 번만 임포트합니다.
 from common.logger import init_logger, timefn
 
 # CSV 로깅을 위한 전역 변수
-BILLING_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../results/billing.csv")
+BILLING_CSV_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "../results/billing.csv"
+)
 csv_lock = threading.Lock()
+
 
 def encode_image_to_base64(file_path: str) -> str:
     """로컬 이미지 파일을 Base64로 인코딩하는 함수"""
@@ -28,6 +34,7 @@ def encode_image_to_base64(file_path: str) -> str:
         print(f"오류: 파일 '{file_path}'을(를) 찾을 수 없습니다.")
         return None
 
+
 def load_image_bytes(file_path: str) -> bytes:
     """로컬 이미지 파일을 읽어 원본 바이트를 반환하는 함수"""
     try:
@@ -37,7 +44,15 @@ def load_image_bytes(file_path: str) -> bytes:
         print(f"오류: 파일 '{file_path}'을(를) 찾을 수 없습니다.")
         return None
 
-def log_gemini_call(function_name: str, model_name: str, prompt: str, response: str, status: str, api_call_count: int = 1):
+
+def log_gemini_call(
+    function_name: str,
+    model_name: str,
+    prompt: str,
+    response: str,
+    status: str,
+    api_call_count: int = 1,
+):
     """
     Gemini API 호출 내역을 CSV 파일에 로깅하는 함수
 
@@ -60,22 +75,26 @@ def log_gemini_call(function_name: str, model_name: str, prompt: str, response: 
 
     with csv_lock:
         try:
-            with open(csv_path, 'a', newline='', encoding='utf-8-sig') as f:
+            with open(csv_path, "a", newline="", encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
 
                 if not file_exists:
-                    writer.writerow(['function', 'model_name', 'timestamp', 'prompt', 'response', 'status', 'api_call_count'])
+                    writer.writerow(
+                        [
+                            "function",
+                            "model_name",
+                            "timestamp",
+                            "prompt",
+                            "response",
+                            "status",
+                            "api_call_count",
+                        ]
+                    )
 
                 # 로그 데이터 작성
-                writer.writerow([
-                    function_name,
-                    model_name,
-                    timestamp,
-                    prompt,
-                    response,
-                    status,
-                    api_call_count
-                ])
+                writer.writerow(
+                    [function_name, model_name, timestamp, prompt, response, status, api_call_count]
+                )
         except Exception as e:
             print(f"CSV 로깅 중 오류 발생: {e}")
 
@@ -84,7 +103,7 @@ class Gemini:
 
     def __init__(self):
         load_dotenv()
-        self.api_key = os.getenv('API_KEY')
+        self.api_key = os.getenv("API_KEY")
 
         # Developer API 클라이언트 (텍스트 및 이미지 생성용)
         self.client = genai.Client(api_key=self.api_key)
@@ -99,6 +118,7 @@ class Gemini:
 
     def retry_with_delay(max_retries=None):
         """재시도 데코레이터 - 함수별로 다른 retry 횟수 지원"""
+
         def decorator(func):
             def wrapper(self, *args, **kwargs):
                 retries = max_retries if max_retries is not None else self.max_retries
@@ -116,18 +136,19 @@ class Gemini:
                         self.logger.error(f"gemini 호출 {attempt + 1}번째 실패: {e}")
                         time.sleep(delay)
                         delay *= 2
+
             return wrapper
+
         return decorator
 
     @retry_with_delay(max_retries=3)
     @timefn
-    def get_embeddings(self, text: str, model: str = "gemini-embedding-001", api_call_count=1) -> list[float]:
+    def get_embeddings(
+        self, text: str, model: str = "gemini-embedding-001", api_call_count=1
+    ) -> list[float]:
         """텍스트를 벡터로 변환하는 임베딩 메서드"""
         try:
-            result = self.client.models.embed_content(
-                model=model,
-                contents=[text]
-            )
+            result = self.client.models.embed_content(model=model, contents=[text])
             return result.embeddings[0].values
         except Exception as e:
             self.logger.error(f"임베딩 생성 실패: {e}")
@@ -135,15 +156,14 @@ class Gemini:
 
     @retry_with_delay(max_retries=3)
     @timefn
-    def call_gemini_image_text(self, prompt, image, text=None, response_type="application/json", api_call_count=1):
+    def call_gemini_image_text(
+        self, prompt, image, text=None, response_type="application/json", api_call_count=1
+    ):
         """이미지와 텍스트를 함께 처리하는 함수"""
         response_text = None
         status = "실패"
 
         try:
-            import os
-            import tempfile
-            import shutil
             # 한글 경로 문제를 해결하기 위해 임시 파일을 영문 이름으로 생성
             _, ext = os.path.splitext(image)
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_file:
@@ -166,14 +186,14 @@ class Gemini:
                     "temperature": 0,
                     "top_p": 1,
                     "top_k": 1,
-                }
+                },
             )
             response_text = response.candidates[0].content.parts[0].text
             status = "성공"
             return response_text
         except Exception as e:
             try:
-                error_message = str(e).encode('utf-8', 'replace').decode('utf-8')
+                error_message = str(e).encode("utf-8", "replace").decode("utf-8")
             except Exception:
                 error_message = repr(e)
             response_text = f"오류: {error_message}"
@@ -188,12 +208,22 @@ class Gemini:
                 prompt=prompt_str,
                 response=response_text if response_text else "응답 없음",
                 status=status,
-                api_call_count=api_call_count
+                api_call_count=api_call_count,
             )
 
     @retry_with_delay(max_retries=3)
     @timefn
-    def call_generate_image(self, prompt, reference_image=None, product_images=None, aspect_ratio="1:1", resolution="1K", output_mime_type="image/png", system_prompt=None, api_call_count=1):
+    def call_generate_image(
+        self,
+        prompt,
+        reference_image=None,
+        product_images=None,
+        aspect_ratio="1:1",
+        resolution="1K",
+        output_mime_type="image/png",
+        system_prompt=None,
+        api_call_count=1,
+    ):
         """
         Gemini 이미지 생성 함수 (gemini-3-pro-image-preview 모델 사용)
 
@@ -214,9 +244,6 @@ class Gemini:
         response_summary = "이미지 생성 실패"
 
         try:
-            import os
-            import mimetypes
-
             # Parts 리스트 구성
             parts = []
 
@@ -228,10 +255,7 @@ class Gemini:
                         mime_type, _ = mimetypes.guess_type(reference_image)
                         if not mime_type:
                             mime_type = "image/png"
-                        parts.append(types.Part.from_bytes(
-                            data=image_bytes,
-                            mime_type=mime_type
-                        ))
+                        parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
                 except Exception as e:
                     self.logger.error(f"레퍼런스 이미지 읽기 실패: {e}")
                     raise
@@ -245,10 +269,9 @@ class Gemini:
                             mime_type, _ = mimetypes.guess_type(image_path)
                             if not mime_type:
                                 mime_type = "image/png"
-                            parts.append(types.Part.from_bytes(
-                                data=image_bytes,
-                                mime_type=mime_type
-                            ))
+                            parts.append(
+                                types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+                            )
                     except Exception as e:
                         self.logger.error(f"제품 이미지 읽기 실패: {image_path}, {e}")
                         raise
@@ -267,9 +290,13 @@ class Gemini:
                 response_modalities=["TEXT", "IMAGE"],
                 safety_settings=[
                     types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
-                    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
-                    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
-                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
+                    ),
+                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
                 ],
                 image_config=types.ImageConfig(
                     aspect_ratio=aspect_ratio,
@@ -303,14 +330,16 @@ class Gemini:
                                 image.verify()
 
                                 status = "성공"
-                                response_summary = f"이미지 생성 완료 ({aspect_ratio}, {resolution})"
+                                response_summary = (
+                                    f"이미지 생성 완료 ({aspect_ratio}, {resolution})"
+                                )
                                 return image_bytes
 
             raise Exception("생성된 이미지가 응답에 없습니다.")
 
         except Exception as e:
             try:
-                error_message = str(e).encode('utf-8', 'replace').decode('utf-8')
+                error_message = str(e).encode("utf-8", "replace").decode("utf-8")
             except Exception:
                 error_message = repr(e)
             response_summary = f"오류: {error_message}"
@@ -328,17 +357,19 @@ class Gemini:
                 prompt=prompt_str,
                 response=response_summary,
                 status=status,
-                api_call_count=api_call_count
+                api_call_count=api_call_count,
             )
 
     @retry_with_delay(max_retries=3)
     @timefn
-    def call_gemini_text(self, prompt, system_instruction=None, response_type="application/json", api_call_count=1):
+    def call_gemini_text(
+        self, prompt, system_instruction=None, response_type="application/json", api_call_count=1
+    ):
         """텍스트만 처리하는 함수 (시스템 프롬프트 지원 및 실행 시간 콘솔 출력 추가)"""
         response_text = None
         status = "실패"
         start_t = time.time()
-        
+
         # MIME type 보정
         mime_type = response_type
         if mime_type == "text":
@@ -349,7 +380,7 @@ class Gemini:
         try:
             parts = [types.Part.from_text(text=prompt)]
             contents = [types.Content(parts=parts)]
-            
+
             # config 구성
             config_args = {
                 "response_mime_type": mime_type,
@@ -359,22 +390,22 @@ class Gemini:
             }
             if system_instruction:
                 config_args["system_instruction"] = system_instruction
-                
+
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=contents,
-                config=types.GenerateContentConfig(**config_args)
+                config=types.GenerateContentConfig(**config_args),
             )
             response_text = response.text
             status = "성공"
-            
+
             elapsed = time.time() - start_t
             print(f"\n  [System] ⏱️ LLM(Gemini) 분석 생성 소요 시간: {elapsed:.2f}초")
-            
+
             return response_text
         except Exception as e:
             try:
-                error_message = str(e).encode('utf-8', 'replace').decode('utf-8')
+                error_message = str(e).encode("utf-8", "replace").decode("utf-8")
             except Exception:
                 error_message = repr(e)
             response_text = f"오류: {error_message}"
@@ -387,7 +418,7 @@ class Gemini:
                 prompt=str(prompt),
                 response=response_text if response_text else "응답 없음",
                 status=status,
-                api_call_count=api_call_count
+                api_call_count=api_call_count,
             )
 
     @retry_with_delay(max_retries=3)
@@ -406,14 +437,14 @@ class Gemini:
                     "temperature": 0,
                     "top_p": 1,
                     "top_k": 1,
-                }
+                },
             )
             response_text = response.candidates[0].content.parts[0].text
             status = "성공"
             return response_text
         except Exception as e:
             try:
-                error_message = str(e).encode('utf-8', 'replace').decode('utf-8')
+                error_message = str(e).encode("utf-8", "replace").decode("utf-8")
             except Exception:
                 error_message = repr(e)
             response_text = f"오류: {error_message}"
@@ -428,5 +459,5 @@ class Gemini:
                 prompt=content_str,
                 response=response_text if response_text else "응답 없음",
                 status=status,
-                api_call_count=api_call_count
+                api_call_count=api_call_count,
             )
