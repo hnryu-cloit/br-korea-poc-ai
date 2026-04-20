@@ -4,10 +4,10 @@ import logging
 import pandas as pd
 import numpy as np
 import joblib
+import time
 
 # ML Models
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import lightgbm as lgb
 
@@ -22,11 +22,12 @@ if ai_dir not in sys.path:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("champion_model_trainer")
 
-def chance_loss_objective(y_true, y_pred):
+def chance_loss_objective_dynamic(y_true, y_pred, penalties):
+    """지점별 클러스터 특성에 따른 가변 패널티 적용 손실 함수"""
     residual = y_pred - y_true
-    penalty = 5.0
-    grad = np.where(residual < 0, penalty * residual, residual)
-    hess = np.where(residual < 0, penalty, 1.0)
+    # penalties는 y_true와 동일한 길이를 가진 배열
+    grad = np.where(residual < 0, penalties * residual, residual)
+    hess = np.where(residual < 0, penalties, 1.0)
     return grad, hess
 
 class ChampionModelTrainer:
@@ -37,67 +38,96 @@ class ChampionModelTrainer:
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
         
+        # [Champion] 검증된 상권별 최적 패널티 설정
+        self.penalty_map = {
+            0: 2.6,  # 로드샵
+            1: 2.2,  # 아침상권
+            2: 2.4,  # 배달상권
+            3: 2.0,  # 퇴근상권
+            4: 2.2   # 주말상권
+        }
+        
     def load_mart_data(self) -> pd.DataFrame:
-        logger.info("Data Mart 테이블(ai_sales_data_mart) 로딩 시작...")
+        logger.info("1. 최종 학습용 Data Mart 테이블 로딩 시작...")
         query = "SELECT * FROM ai_sales_data_mart"
         df = pd.read_sql(query, self.engine)
+        df.columns = [c.upper() for c in df.columns]
         df['DATETIME'] = pd.to_datetime(df['DATETIME'])
-        logger.info(f"데이터 로드 완료: {len(df)}건")
+        
+        # 패널티 수치 할당
+        df['PENALTY'] = df['STORE_CLUSTER'].map(self.penalty_map).fillna(2.4)
+        logger.info(f"데이터 로드 완료: {len(df):,}건")
         return df
 
     def train_champion(self, df: pd.DataFrame):
-        test_end = pd.to_datetime('2026-03-10 23:59:59')
-        test_start = test_end - pd.Timedelta(days=30)
-        full_train_start = pd.to_datetime('2025-03-11 00:00:00')
+        # [Strategy] 챔피언 시나리오: 전체 기간 학습
+        # 평가를 위해 최근 30일을 테스트셋으로 분리하되, 최종 모델은 전체를 다시 학습 가능
+        test_end = df['DATETIME'].max()
+        train_end = test_end - pd.Timedelta(days=30)
 
-        train_df = df[(df['DATETIME'] >= full_train_start) & (df['DATETIME'] <= test_start)].copy()
-        test_df = df[(df['DATETIME'] > test_start) & (df['DATETIME'] <= test_end)].copy()
+        train_df = df[df['DATETIME'] <= train_end].copy()
+        test_df = df[df['DATETIME'] > train_end].copy()
         
-        y_test_actual = test_df['TARGET_1H_AHEAD'].values
+        logger.info(f"2. 챔피언 모델 학습 시작 (학습: ~{train_end.date()}, 평가: {train_end.date()}~)")
         
         f_scaler, t_scaler = StandardScaler(), StandardScaler()
-        X_tr, y_tr = train_df[self.features].copy(), train_df[['TARGET_1H_AHEAD']].copy()
-        X_te, y_te = test_df[self.features].copy(), test_df[['TARGET_1H_AHEAD']].copy()
+        X_tr, y_tr = train_df[self.features].astype(float), train_df[['TARGET_1H_AHEAD']].astype(float)
+        X_te, y_te_actual = test_df[self.features].astype(float), test_df['TARGET_1H_AHEAD'].values
+        p_tr = train_df['PENALTY'].values
+
+        # 스케일링 (Feature Name 유지)
+        X_tr_sc = pd.DataFrame(f_scaler.fit_transform(X_tr), columns=self.features)
+        X_te_sc = pd.DataFrame(f_scaler.transform(X_te), columns=self.features)
+        y_tr_sc = t_scaler.fit_transform(y_tr).flatten()
         
-        for c in self.features:
-            X_tr[c], X_te[c] = X_tr[c].astype(float), X_te[c].astype(float)
-            
-        X_tr.loc[:, self.features] = f_scaler.fit_transform(X_tr)
-        X_te.loc[:, self.features] = f_scaler.transform(X_te)
-        y_tr_scaled = t_scaler.fit_transform(y_tr).flatten()
+        # 3. 모델 정의 및 학습 (최적 파라미터 적용)
+        lgb_reg = lgb.LGBMRegressor(
+            random_state=42, 
+            verbosity=-1, 
+            learning_rate=0.05, 
+            max_depth=7, 
+            n_estimators=200
+        )
+        # 커스텀 가변 패널티 목적 함수 주입
+        lgb_reg.set_params(**{'objective': lambda y_t, y_p: chance_loss_objective_dynamic(y_t, y_p, p_tr)})
         
-        logger.info("==> 챔피언 모델(LightGBM) 학습 및 하이퍼파라미터 튜닝 중...")
-        lgb_reg = lgb.LGBMRegressor(random_state=42, n_estimators=100, verbosity=-1)
-        lgb_reg.set_params(**{'objective': chance_loss_objective})
+        start_t = time.time()
+        lgb_reg.fit(X_tr_sc, y_tr_sc)
+        logger.info(f"모델 학습 완료 (소요시간: {time.time()-start_t:.1f}초)")
         
-        tscv = TimeSeriesSplit(n_splits=3)
-        search = RandomizedSearchCV(lgb_reg, {'learning_rate': [0.01, 0.05], 'max_depth': [5, 7]}, n_iter=2, cv=tscv, scoring='neg_mean_absolute_error', n_jobs=-1, random_state=42)
-        search.fit(X_tr, y_tr_scaled)
+        # 4. 성능 검증 (최근 30일 데이터 기준)
+        preds_scaled = lgb_reg.predict(X_te_sc)
+        preds = t_scaler.inverse_transform(preds_scaled.reshape(-1, 1)).flatten()
+        preds = np.maximum(0, preds)
         
-        best_model = search.best_estimator_
+        mae = mean_absolute_error(y_te_actual, preds)
+        rmse = np.sqrt(mean_squared_error(y_te_actual, preds))
+        chance_loss = np.sum(np.maximum(0, y_te_actual - preds))
+        accuracy = max(0, (1 - mae / np.mean(y_te_actual)) * 100) if np.mean(y_te_actual) > 0 else 0
+
+        # 5. 모델 및 스케일러 저장
+        # [Fix] PicklingError 방지: 저장 전 lambda 객체 제거 (예측에는 영향 없음)
+        lgb_reg.set_params(objective=None)
         
-        joblib.dump(best_model, os.path.join(self.model_dir, 'advanced_inventory_lgbm.joblib'))
+        joblib.dump(lgb_reg, os.path.join(self.model_dir, 'advanced_inventory_lgbm.joblib'))
         joblib.dump(f_scaler, os.path.join(self.model_dir, 'feature_scaler.joblib'))
         joblib.dump(t_scaler, os.path.join(self.model_dir, 'target_scaler.joblib'))
-        
-        preds_actual = t_scaler.inverse_transform(best_model.predict(X_te).reshape(-1, 1)).flatten()
-        rmse = np.sqrt(mean_squared_error(y_test_actual, preds_actual))
-        mae = mean_absolute_error(y_test_actual, preds_actual)
-        chance_loss = np.sum(np.maximum(0, y_test_actual - preds_actual))
-        accuracy = max(0, (1 - mae / np.mean(y_test_actual)) * 100) if np.mean(y_test_actual) > 0 else 0
-        
+        # 패널티 설정도 저장 (Inference 시 활용 가능)
+        joblib.dump(self.penalty_map, os.path.join(self.model_dir, 'penalty_config.joblib'))
+
         print("\n" + "="*60)
         print(f"{'🏆 최종 챔피언 모델 학습 결과 보고서':^60}")
         print("="*60)
-        print(f"선정 알고리즘: LightGBM (Chance Loss Objective)")
-        print(f"평가 기간: {test_start.date()} ~ {test_end.date()}")
+        print(f"선정 알고리즘: LightGBM (Dynamic Chance Loss)")
+        print(f"학습 데이터  : 전체 기간 (Cumulative)")
+        print(f"평가 기간    : 최근 30일")
         print("-" * 60)
-        print(f"RMSE (오차 안정성) : {rmse:.4f} 개")
-        print(f"MAE  (평균 오차)   : {mae:.4f} 개")
-        print(f"기회손실 합계      : {chance_loss:.2f} 개")
-        print(f"모델 정확도        : {accuracy:.2f} %")
+        print(f"MAE (평균 오차)   : {mae:.4f} 개")
+        print(f"RMSE (오차 안정성): {rmse:.4f} 개")
+        print(f"기회손실 총합    : {chance_loss:,.1f} 개")
+        print(f"모델 정확도      : {accuracy:.2f} %")
         print("-" * 60)
-        logger.info(f"✅ 모델 파일이 저장되었습니다: {self.model_dir}")
+        logger.info(f"✅ 최종 챔피언 모델이 저장되었습니다: {self.model_dir}")
 
 def run_pipeline():
     db_url = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc")
