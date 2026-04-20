@@ -280,3 +280,11 @@ mypy --explicit-package-bases api common services pipeline schemas
 - 상권/고객 분석 실데이터 강제(합성값 제거, 연도/분기 미존재 시 실데이터 폴백) 작업도 backend 영역 구현이며 AI 서비스 코드는 변경하지 않았습니다.
 - 상권/고객 분석 5개 블록(업종/매출/인구/지역/고객특성) 화면 재구성 및 응답 스키마 확장 작업 역시 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
 - 신규/단골 비율 고객식별 컬럼 자동탐지 템플릿 확장도 backend 영역 구현이며 AI 서비스 코드는 변경하지 않았습니다.
+- `ordering/history` 실데이터 렌더링 보정(프론트 API 파라미터 정합화, 백엔드 `store_id` 필수·에러 우선 정책)은 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
+
+- 상권 화면 에러 배너 조건 조정(메인 market-intelligence 실패 기준)은 frontend 표시 로직 변경이며 AI 서비스 코드는 변경하지 않았습니다.
+
+- 이번 세션의 `/analytics/market` 오류 문구 완화 및 market-intelligence 예외 안전 처리(200 기본 구조 반환)는 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
+- 이번 세션의 analytics KPI 0값 보정(`STORE_DEMO`/미존재 점포ID 폴백, 프론트 점포 자동 보정) 역시 backend+frontend 범위 작업이며 AI 서비스 코드는 변경하지 않았습니다.
+- 프론트 `.env.example` 기본 점포 ID를 `POC_012`로 조정하고, backend metrics의 빈 기간 자동 폴백을 추가한 작업도 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
+- analytics `할인 결제 비중` 소수 정밀도 표시 보정(`0.1%` 미만 2자리 표기)도 backend 표시 포맷 변경이며 AI 서비스 코드는 변경하지 않았습니다.
