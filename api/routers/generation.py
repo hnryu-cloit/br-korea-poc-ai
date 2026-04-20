@@ -1,11 +1,10 @@
-import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import verify_token
-from schemas.generation import GenerationResponse, SalesQueryRequest
 from pipeline.run import run_pipeline
+from schemas.generation import GenerationResponse, SalesQueryRequest
 
 logger = logging.getLogger(__name__)
 

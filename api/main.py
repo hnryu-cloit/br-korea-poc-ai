@@ -1,8 +1,8 @@
 import logging
 import warnings
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
-    if not settings.AI_SERVICE_TOKEN:
+    if settings.APP_ENV != "local" and not settings.AI_SERVICE_TOKEN:
+        raise RuntimeError("AI_SERVICE_TOKEN is required when APP_ENV is not local.")
+    if settings.APP_ENV == "local" and not settings.AI_SERVICE_TOKEN:
         warnings.warn("AI_SERVICE_TOKEN 미설정 — 로컬 개발 전용으로만 사용하세요.", stacklevel=1)
     logger.info("br-korea-poc AI Service 시작")
     yield
