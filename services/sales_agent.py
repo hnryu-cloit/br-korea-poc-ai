@@ -7,7 +7,7 @@ import json
 from sqlalchemy import create_engine, text
 from common.query_logger import query_logger
 
-logger = init_logger("sales_agent")
+logger = init_logger(__name__)
 
 class SalesAnalysisAgent:
     """
@@ -108,7 +108,6 @@ class SalesAnalysisAgent:
             GROUP BY 1
         """
 
-        import re
         clean_sql = sql
 
         data = []
@@ -189,7 +188,6 @@ class SalesAnalysisAgent:
             ORDER BY amount DESC
         """
 
-        import re
         clean_sql = sql
 
         data = []

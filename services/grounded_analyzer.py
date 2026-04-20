@@ -185,6 +185,7 @@ class GroundedSalesAnalyzer:
 # helpers
 # ------------------------------------------------------------------
 
+
 def _format_rows(rows: list[dict], columns: list[str]) -> str:
     """테이블 형식 문자열로 변환 (LLM 가독성 최적화)."""
     if not rows:

@@ -2,44 +2,22 @@
 
 운영 가이드 / FAQ 기반 근거 검색 + Chunking + Metadata + Rerank 최적화 포함.
 """
+
 from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from common.gemini import Gemini
 
 logger = logging.getLogger(__name__)
 
 # 최적 청크 설정
-CHUNK_SIZE = 512      # 토큰 기준 최적 청크 크기
-CHUNK_OVERLAP = 50    # 청크 간 오버랩 토큰 수
-_DEFAULT_KNOWLEDGE_DOCS: list[dict[str, str]] = [
-    {
-        "source": "operations_guide",
-        "section": "ordering_deadline",
-        "content": "주문 관련 운영 가이드입니다. 주문 마감 20분 전에는 점주에게 주문 검토 알림을 제공하고, 추천 옵션은 최종 결정이 아닌 보조 자료로 안내해야 합니다.",
-    },
-    {
-        "source": "operations_guide",
-        "section": "production_risk",
-        "content": "생산 관리 운영 가이드입니다. 품절 위험 SKU는 1시간 후 예측 재고와 최근 판매 속도를 함께 보고 즉시 생산, 주의, 정상 상태로 구분합니다.",
-    },
-    {
-        "source": "operations_guide",
-        "section": "sales_faq",
-        "content": "매출 분석 FAQ입니다. 배달, 채널, 비교, 수익성 질의에는 실제 데이터 근거와 실행 가능한 액션을 함께 제시하고 민감정보는 차단해야 합니다.",
-    },
-    {
-        "source": "faq",
-        "section": "guardrail",
-        "content": "점주는 임의 가격 변경이나 비공식 할인 정책을 수행할 수 없습니다. 발주, 진열, 배달앱 운영, 리뷰 관리 범위의 액션만 제안해야 합니다.",
-    },
-]
-
-
+CHUNK_SIZE = 512  # 토큰 기준 최적 청크 크기
+CHUNK_OVERLAP = 50  # 청크 간 오버랩 토큰 수
 class RAGService:
     """지식 베이스 기반 RAG 서비스.
 
@@ -57,10 +35,12 @@ class RAGService:
             self._chunks = self._build_chunks(self._knowledge_base)
 
     def _load_default_knowledge_base(self) -> list[dict]:
-        """로컬 지식 문서를 읽거나 내장 문서를 fallback으로 사용합니다."""
-        candidate_files = [
-            Path(__file__).resolve().parents[1] / "eval-data" / "sample.json",
-        ]
+        """로컬 지식 문서를 읽습니다. 지식 파일이 없으면 빈 목록을 반환합니다."""
+        env_path = os.getenv("RAG_KNOWLEDGE_PATH", "").strip()
+        candidate_files = []
+        if env_path:
+            candidate_files.append(Path(env_path))
+        candidate_files.append(Path(__file__).resolve().parents[1] / "eval-data" / "knowledge.json")
         documents: list[dict] = []
         for file_path in candidate_files:
             if not file_path.exists():
@@ -81,8 +61,8 @@ class RAGService:
             logger.info("로컬 지식 베이스 문서 %d건 로드", len(documents))
             return documents
 
-        logger.info("로컬 지식 베이스가 없어 내장 문서를 사용합니다.")
-        return list(_DEFAULT_KNOWLEDGE_DOCS)
+        logger.warning("로컬 지식 베이스가 없어 RAG 문서 없이 동작합니다.")
+        return []
 
     # ── 문서 청킹 ────────────────────────────────────────────────────────
 
@@ -99,15 +79,17 @@ class RAGService:
             while start < len(words):
                 end = min(start + CHUNK_SIZE, len(words))
                 chunk_text = " ".join(words[start:end])
-                chunks.append({
-                    "content": chunk_text,
-                    "metadata": {
-                        "source": source,
-                        "section": section,
-                        "chunk_index": chunk_idx,
-                        "language": "ko",
-                    },
-                })
+                chunks.append(
+                    {
+                        "content": chunk_text,
+                        "metadata": {
+                            "source": source,
+                            "section": section,
+                            "chunk_index": chunk_idx,
+                            "language": "ko",
+                        },
+                    }
+                )
                 chunk_idx += 1
                 if end >= len(words):
                     break
@@ -133,7 +115,11 @@ class RAGService:
         for doc in docs:
             content = doc.get("content", doc.get("text", "")).lower()
             metadata = doc.get("metadata", {})
-            source = " ".join(str(v).lower() for v in metadata.values()) if isinstance(metadata, dict) else ""
+            source = (
+                " ".join(str(v).lower() for v in metadata.values())
+                if isinstance(metadata, dict)
+                else ""
+            )
             haystack = f"{content} {source}"
             score = sum(2 if w in content else 1 for w in query_words if w in haystack)
             scored.append((score, doc))
@@ -155,7 +141,7 @@ class RAGService:
     def generate_with_rag(
         self,
         query: str,
-        store_id: Optional[str] = None,
+        store_id: str | None = None,
         top_k: int = 5,
     ) -> dict[str, Any]:
         """RAG 파이프라인: 검색 → 컨텍스트 구성 → LLM 응답 생성."""
@@ -200,7 +186,7 @@ class RAGService:
 
     # ── QA 캐시 ─────────────────────────────────────────────────────────
 
-    def lookup_qa_cache(self, store_id: str, query: str) -> Optional[dict]:
+    def lookup_qa_cache(self, store_id: str, query: str) -> dict | None:
         """store_id + query 기반 QA 캐시 조회"""
         key = f"{store_id}:{query.strip()[:80]}"
         cached = self._qa_cache.get(key)

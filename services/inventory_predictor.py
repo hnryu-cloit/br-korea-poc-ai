@@ -17,7 +17,7 @@ except (ImportError, OSError):
     from sklearn.ensemble import RandomForestRegressor
     HAS_LGB = False
 
-logger = init_logger("inventory_predictor")
+logger = init_logger(__name__)
 
 
 class InventoryPredictor:
@@ -35,7 +35,7 @@ class InventoryPredictor:
     def __init__(self, model_dir: Optional[str] = None):
         if self._initialized:
             return
-            
+
         self.model = None
         if model_dir is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +48,7 @@ class InventoryPredictor:
         self.feature_cols = ['hour', 'weekday', 'is_weekend', 'lag_1h', 'lag_2h', 'rolling_mean_3h', 'store_avg', 'item_avg', 'hist_4w_avg']
         self.stats: Dict[str, Any] = {}
         self.meta_loaded: bool = False
-        
+
         if InventoryPredictor._model_cache is not None:
             self.model = InventoryPredictor._model_cache
             self.stats = InventoryPredictor._stats_cache
