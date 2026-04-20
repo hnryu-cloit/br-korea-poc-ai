@@ -101,25 +101,43 @@ def calc_historical_pure_average(df_sales: pd.DataFrame) -> pd.DataFrame:
     return df_sales
 
 def apply_cold_start_transition(df_sales: pd.DataFrame) -> pd.DataFrame:
-    """신제품/신규지점의 경우 클러스터 참조 패턴에서 자체 데이터로 점진적 가중치 전환을 수행합니다."""
+    """
+    신제품/신규지점 처리 로직:
+    - 출시 초기 2주(14일): 100% 클러스터 참조 패턴 사용
+    - 출시 2주~4주(14~28일): 클러스터 패턴에서 자체 데이터로 점진적 전환 (Soft Transition)
+    - 출시 4주(28일) 이후: 100% 자체 데이터 사용
+    """
     logger.info("6. 신제품 클러스터 참조 및 점진적 가중치 전환(Soft Transition) 적용 중...")
+    
+    # 1. 매장/상품별 최초 노출일(출시일) 계산
     store_item_intro = df_sales.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['DATETIME'].min().rename('INTRO_DT')
     df_sales = df_sales.merge(store_item_intro.reset_index(), on=['MASKED_STOR_CD', 'ITEM_CD'], how='left')
     df_sales['DAYS_SINCE_INTRO'] = (df_sales['DATETIME'] - df_sales['INTRO_DT']).dt.days
     
+    # 2. 동일 클러스터 내 시간대별 판매 패턴 산출 (신제품의 기준점)
     cluster_pattern = df_sales.groupby(['STORE_CLUSTER', 'ITEM_CD', 'WEEKDAY', 'HOUR'])['SALE_QTY'].mean().rename('CLUSTER_REF_AVG')
     df_sales = df_sales.merge(cluster_pattern.reset_index(), on=['STORE_CLUSTER', 'ITEM_CD', 'WEEKDAY', 'HOUR'], how='left')
     
+    # 3. 가중치(OWN_WEIGHT) 설정
+    # - 14일 이전: 0.0 (100% 클러스터 참조)
+    # - 14~28일: 0.0 ~ 1.0 (선형 전환)
+    # - 28일 이후: 1.0 (100% 자체 데이터)
     df_sales['OWN_WEIGHT'] = np.clip((df_sales['DAYS_SINCE_INTRO'] - 14) / 14.0, 0.0, 1.0)
     
+    # 4. 보정 대상 선정: 출시 4주 이내이거나 데이터가 아예 없는 경우
     mask_need_ref = (df_sales['DAYS_SINCE_INTRO'] <= 28) | (df_sales['HIST_4W_AVG'] == 0)
+    
+    # 5. 혼합 가중치 적용 (HIST_4W_AVG 업데이트)
     df_sales.loc[mask_need_ref, 'HIST_4W_AVG'] = (
         df_sales.loc[mask_need_ref, 'HIST_4W_AVG'] * df_sales.loc[mask_need_ref, 'OWN_WEIGHT'] +
         df_sales.loc[mask_need_ref, 'CLUSTER_REF_AVG'].fillna(0) * (1 - df_sales.loc[mask_need_ref, 'OWN_WEIGHT'])
     )
     
+    # 6. 극초기 보정: 클러스터 데이터조차 없는 경우 전체 시간대별 평균으로 최후 보정
     menu_hourly_avg = df_sales.groupby(['DATETIME'])['SALE_QTY'].transform('mean').astype(np.float32)
     df_sales['HIST_4W_AVG'] = df_sales['HIST_4W_AVG'].replace(0, np.nan).fillna(menu_hourly_avg).fillna(0)
+    
+    # 7. 임시 계산 컬럼 제거
     df_sales.drop(['INTRO_DT', 'DAYS_SINCE_INTRO', 'CLUSTER_REF_AVG', 'OWN_WEIGHT'], axis=1, inplace=True)
     return df_sales
 

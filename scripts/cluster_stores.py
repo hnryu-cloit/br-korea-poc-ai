@@ -24,33 +24,55 @@ def run_store_clustering(db_url: str, n_clusters: int = 4):
     engine = create_engine(db_url)
     
     logger.info("1. 클러스터링을 위한 과거 판매 데이터 로드 중...")
-    # 최근 3개월 이상의 충분한 데이터를 기반으로 분석 (안정적 패턴 도출)
-    query = """
+    # 1-1. 시간대별 상품 판매 데이터 (규모, 시간대, 주말 피처용)
+    query_sales = """
         SELECT masked_stor_cd, sale_dt, tmzon_div as hour, sale_qty 
         FROM raw_daily_store_item_tmzon
     """
-    df = pd.read_sql(query, engine)
+    df = pd.read_sql(query_sales, engine)
     df['sale_qty'] = pd.to_numeric(df['sale_qty'], errors='coerce').fillna(0).astype(float)
     df['sale_dt'] = pd.to_datetime(df['sale_dt'], format='%Y%m%d')
     df['weekday'] = df['sale_dt'].dt.weekday
     df['is_weekend'] = (df['weekday'] >= 5).astype(int)
     
+    # 1-2. 채널별(온/오프라인) 판매 데이터 (온라인 비중 피처용)
+    # 가정: ORD_TYPE이 특정 코드이거나 테이블 이름에 기반하여 전체 매출 대비 온라인 채널 매출 집계
+    query_online = """
+        SELECT masked_stor_cd, sale_qty as online_qty
+        FROM raw_daily_store_online
+    """
+    try:
+        df_online = pd.read_sql(query_online, engine)
+        df_online['online_qty'] = pd.to_numeric(df_online['online_qty'], errors='coerce').fillna(0).astype(float)
+        store_online_sum = df_online.groupby('masked_stor_cd')['online_qty'].sum().reset_index()
+    except Exception as e:
+        logger.warning(f"온라인 채널 데이터를 불러오는 데 실패했습니다. 온라인 비중을 0으로 처리합니다. (Error: {e})")
+        store_online_sum = pd.DataFrame(columns=['masked_stor_cd', 'online_qty'])
+    
     logger.info("2. 매장별 행동 피처(Behavioral Features) 추출 중...")
-    # 피처 1: 매출 규모 (평균 판매량)
-    # 피처 2: 주말 매출 비중
-    # 피처 3: 피크 시간대 (가장 판매가 집중되는 시간)
-    # 피처 4: 매출 변동성 (표준편차)
+    # 피처 1~4 추출
     store_features = df.groupby('masked_stor_cd').agg({
-        'sale_qty': ['mean', 'std'],
+        'sale_qty': ['mean', 'std', 'sum'],
         'is_weekend': 'mean',
         'hour': lambda x: x.value_counts().index[0] if not x.empty else 12
     })
     
-    store_features.columns = ['avg_qty', 'std_qty', 'weekend_ratio', 'peak_hour']
+    store_features.columns = ['avg_qty', 'std_qty', 'total_qty', 'weekend_ratio', 'peak_hour']
     store_features = store_features.fillna(0).reset_index()
     
+    # 피처 5: 온라인(배달/픽업) 비중 추가
+    store_features = store_features.merge(store_online_sum, on='masked_stor_cd', how='left')
+    store_features['online_qty'] = store_features['online_qty'].fillna(0)
+    
+    # 총 매출 중 온라인 매출이 차지하는 비율 계산 (0 분모 방지)
+    store_features['online_ratio'] = np.where(
+        store_features['total_qty'] > 0, 
+        store_features['online_qty'] / store_features['total_qty'], 
+        0
+    )
+    
     logger.info("3. K-Means 클러스터링 수행 중...")
-    feature_cols = ['avg_qty', 'std_qty', 'weekend_ratio', 'peak_hour']
+    feature_cols = ['avg_qty', 'std_qty', 'weekend_ratio', 'peak_hour', 'online_ratio']
     scaler = StandardScaler()
     scaled_features = scaler.fit_transform(store_features[feature_cols])
     
