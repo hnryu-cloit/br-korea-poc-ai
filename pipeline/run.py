@@ -1,22 +1,23 @@
 from __future__ import annotations
-from typing import Any, Dict
 
-from common.logger import init_logger
+from typing import Any
+
 from common.gemini import Gemini
+from common.logger import init_logger
 from services.orchestrator import AgentOrchestrator
 
 logger = init_logger("pipeline")
 
 
-async def run_pipeline(prompt: str, context: Dict[str, Any] | None = None) -> dict[str, object]:
+async def run_pipeline(prompt: str, context: dict[str, Any] | None = None) -> dict[str, object]:
     """
     AI 파이프라인 메인 진입점 — 자연어 입력을 오케스트레이터에 위임해 결과를 반환한다.
     """
     logger.info("파이프라인 실행 시작: %s", prompt[:50])
-    
+
     gemini = Gemini()
     orchestrator = AgentOrchestrator(gemini)
-    
+
     # 오케스트레이터에 자연어 처리 위임
     result = await orchestrator.handle_request(prompt, context)
 

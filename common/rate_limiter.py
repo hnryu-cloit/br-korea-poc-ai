@@ -1,4 +1,5 @@
 """LLM API 호출용 인메모리 슬라이딩 윈도우 Rate Limiter."""
+
 from __future__ import annotations
 
 import logging

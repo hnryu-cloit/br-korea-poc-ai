@@ -1,12 +1,17 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from api.dependencies import verify_token, get_production_service, get_ordering_service, get_sales_service
-from services.dashboard_service import DashboardService
+from api.dependencies import (
+    get_ordering_service,
+    get_production_service,
+    get_sales_service,
+)
 from schemas.dashboard import HomeDashboardResponse
+from services.dashboard_service import DashboardService
 
 router = APIRouter(prefix="/api/home", tags=["home"])
 logger = logging.getLogger(__name__)
@@ -15,18 +20,18 @@ logger = logging.getLogger(__name__)
 class HomeOverviewRequest(BaseModel):
     store_id: str
     target_date: str
-    inventory_data: List[Dict[str, Any]] = []
-    production_data: List[Dict[str, Any]] = []
-    sales_data: List[Dict[str, Any]] = []
-    store_production_data: List[Dict[str, Any]] = []
+    inventory_data: list[dict[str, Any]] = []
+    production_data: list[dict[str, Any]] = []
+    sales_data: list[dict[str, Any]] = []
+    store_production_data: list[dict[str, Any]] = []
 
 
 @router.post("/overview", response_model=HomeDashboardResponse)
 async def get_home_overview(
     body: HomeOverviewRequest,
-    prod_service = Depends(get_production_service),
-    order_service = Depends(get_ordering_service),
-    sales_service = Depends(get_sales_service)
+    prod_service=Depends(get_production_service),
+    order_service=Depends(get_ordering_service),
+    sales_service=Depends(get_sales_service),
 ) -> HomeDashboardResponse:
     """매장 홈 대시보드 통합 정보를 반환합니다."""
     try:

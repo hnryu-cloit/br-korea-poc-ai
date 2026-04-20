@@ -11,50 +11,69 @@ from api.config import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 from common.gemini import Gemini
-
-from services.sales_analyzer import SalesAnalyzer
+from services.chance_loss_service import ChanceLossService
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
-from services.production_service import ProductionService
-from services.ordering_service import OrderingService
-from services.rag_service import RAGService
 from services.orchestrator import AgentOrchestrator
+from services.ordering_service import OrderingService
+from services.production_service import ProductionService
+from services.rag_service import RAGService
+from services.sales_analyzer import SalesAnalyzer
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 # Singleton-like Gemini client
 _gemini_client = Gemini()
 
+
 def get_gemini_client() -> Gemini:
     return _gemini_client
+
 
 def get_rag_service(gemini: Gemini = Depends(get_gemini_client)) -> RAGService:
     return RAGService(gemini_client=gemini)
 
+
 def get_orchestrator(gemini: Gemini = Depends(get_gemini_client)) -> AgentOrchestrator:
     return AgentOrchestrator(gemini_client=gemini)
+
 
 def get_sales_analyzer(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:
     return SalesAnalyzer(gemini_client=gemini)
 
-def get_channel_payment_analyzer(gemini: Gemini = Depends(get_gemini_client)) -> ChannelPaymentAnalyzer:
+
+def get_channel_payment_analyzer(
+    gemini: Gemini = Depends(get_gemini_client),
+) -> ChannelPaymentAnalyzer:
     return ChannelPaymentAnalyzer(gemini_client=gemini)
+
 
 def get_sales_service(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:
     return SalesAnalyzer(gemini_client=gemini)
 
+
 def get_production_service(gemini: Gemini = Depends(get_gemini_client)) -> ProductionService:
     return ProductionService(gemini_client=gemini)
 
+
 def get_ordering_service(gemini: Gemini = Depends(get_gemini_client)) -> OrderingService:
     return OrderingService(gemini_client=gemini)
+
+
+def get_chance_loss_service() -> ChanceLossService:
+    return ChanceLossService()
+
 
 async def verify_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     settings: Settings = Depends(get_settings),
 ) -> bool:
     if not settings.AI_SERVICE_TOKEN:
-        # 토큰 미설정 — Bearer 헤더가 없는 요청은 통과 (로컬 개발용)
-        # Bearer 헤더가 있으면 검증 설정이 없으므로 거부
+        if settings.APP_ENV != "local":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI_SERVICE_TOKEN이 설정되지 않았습니다. 서버 환경변수를 확인하세요.",
+            )
+        # 로컬 개발 모드: 토큰 미설정 + Bearer 미사용 요청만 허용
         if credentials is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -78,4 +97,3 @@ async def verify_token(
             detail="Authentication failed",
         )
     return True
-

@@ -1,83 +1,36 @@
 import asyncio
 import logging
-from typing import Any
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
-# 백엔드가 전송하는 소문자/snake_case 필드명을 DB 컬럼명으로 정규화
-_COL_ALIASES: dict[str, str] = {
-    "stor_cd": "MASKED_STOR_CD",
-    "store_id": "MASKED_STOR_CD",
-    "store_code": "MASKED_STOR_CD",
-    "masked_stor_cd": "MASKED_STOR_CD",
-    "item_cd": "ITEM_CD",
-    "item_code": "ITEM_CD",
-    "item_nm": "ITEM_NM",
-    "item_name": "ITEM_NM",
-    "sale_qty": "SALE_QTY",
-    "qty": "SALE_QTY",
-    "prod_qty": "PROD_QTY",
-    "sale_dt": "SALE_DT",
-    "date": "SALE_DT",
-    "prod_dt": "PROD_DT",
-    "tmzon_div": "TMZON_DIV",
-    "hour": "TMZON_DIV",
-    "inv_qty": "INV_QTY",
-    "stock_qty": "STOCK_QTY",
-    "inv_dt": "INV_DT",
-    "stock_dt": "STOCK_DT",
-    "sale_amt": "SALE_AMT",
-    "sale_prc": "SALE_PRC",
-    "item_cost": "ITEM_COST",
-    "prod_dgre": "PROD_DGRE",
-}
-
-
-def _normalize_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
-    """JSON 행 목록을 DB 컬럼명 기준 DataFrame으로 변환합니다."""
-    df = pd.DataFrame(rows)
-    if not df.empty:
-        rename_map = {k: v for k, v in _COL_ALIASES.items() if k in df.columns}
-        if rename_map:
-            df.rename(columns=rename_map, inplace=True)
-        
-        # 수치형 컬럼 강제 형변환 (매칭되는 별칭 포함)
-        numeric_cols = ["SALE_QTY", "SALE_AMT", "PROD_QTY", "INV_QTY", "STOCK_QTY", "ITEM_COST", "SALE_PRC"]
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-    return df
-
-from api.dependencies import get_ordering_service, get_production_service, verify_token
+from api.dependencies import get_chance_loss_service, get_ordering_service, get_production_service, verify_token
+from schemas.contracts import (
+    DeadlineAlertResponse,
+    ExceptionCheckRequest,
+    ExceptionCheckResult,
+    FeedbackCorrectionResponse,
+    FeedbackRecord,
+    OrderingRecommendationRequest,
+    OrderingRecommendationResponse,
+    PushNotificationListResponse,
+    SimulationFullRequest,
+    SimulationReportResponse,
+)
 from schemas.management import (
+    OrderingOption,
     OrderingRecommendRequest,
     OrderingRecommendResponse,
-    OrderingOption,
     ProductionPredictRequest,
     ProductionPredictResponse,
 )
-from schemas.contracts import (
-    OrderingRecommendationRequest,
-    OrderingRecommendationResponse,
-    SimulationFullRequest,
-    SimulationReportResponse,
-    FeedbackRecord,
-    FeedbackCorrectionResponse,
-    ExceptionCheckRequest,
-    ExceptionCheckResult,
-    PushNotificationListResponse,
-    DeadlineAlertResponse,
-)
+from services.chance_loss_service import ChanceLossService
 from services.ordering_service import OrderingService
-from services.production_service import ProductionService
+from services.production_service import ProductionService, normalize_payload_df
 
 router = APIRouter(tags=["management"])
 logger = logging.getLogger(__name__)
 
-
-from pydantic import BaseModel
-from services.chance_loss_engine import ChanceLossEngine
 
 class ChanceLossRequest(BaseModel):
     store_id: str
@@ -85,47 +38,31 @@ class ChanceLossRequest(BaseModel):
     target_date: str
     unit_price: float = 1500.0
 
+
 @router.post(
     "/api/production/chance-loss",
     dependencies=[Depends(verify_token)],
     summary="[QA 테스트용] 찬스로스(기회손실) 정량 추정 엔진 단독 실행",
-    description="AI-COMMON-035 QA 검증을 위해 ChanceLossEngine을 단독으로 실행하고 결과를 반환합니다."
+    description="AI-COMMON-035 QA 검증을 위해 ChanceLossEngine을 단독으로 실행하고 결과를 반환합니다.",
 )
-async def estimate_chance_loss(payload: ChanceLossRequest):
-    """실제 DB에서 해당 매장/상품/날짜의 판매 데이터를 읽어와 찬스로스를 추정합니다."""
+async def estimate_chance_loss(
+    payload: ChanceLossRequest,
+    service: ChanceLossService = Depends(get_chance_loss_service),
+):
+    """찬스로스 추정 결과를 반환합니다."""
     try:
-        from sqlalchemy import create_engine
-        import pandas as pd
-        
-        # 테스트 환경을 위한 직접 DB 연결 (실무에선 Repository 패턴 사용)
-        db_url = "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc"
-        engine = create_engine(db_url)
-        
-        query = f"SELECT * FROM raw_daily_store_item_tmzon WHERE masked_stor_cd = '{payload.store_id}' AND item_cd = '{payload.item_id}' AND sale_dt = '{payload.target_date}'"
-        
-        with engine.connect() as conn:
-            sales_df = pd.read_sql(query, conn)
-            # Ensure columns are uppercase to match engine expectations
-            sales_df.columns = [c.upper() for c in sales_df.columns]
-            
-        prod_df = pd.DataFrame() # 찬스로스 엔진은 생산이력(옵션)이 없어도 동작함
-        
-        cle = ChanceLossEngine()
-        result = cle.estimate_chance_loss(
-            sales_df=sales_df,
-            production_df=prod_df,
+        return await asyncio.to_thread(
+            service.estimate_from_db,
             store_id=payload.store_id,
             item_id=payload.item_id,
             target_date=payload.target_date,
-            unit_price=payload.unit_price
+            unit_price=payload.unit_price,
         )
-        
-        return result
     except Exception as exc:
         logger.exception("찬스로스 추정 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc)
+            detail=str(exc),
         )
 
 @router.post(
@@ -144,13 +81,12 @@ async def get_production_simulation(
     try:
         logger.info(f"시뮬레이션 요청: 매장 {payload.store_id}, 상품 {payload.item_id}")
 
-        inv_df = _normalize_df(payload.inventory_data)
-        prod_df = _normalize_df(payload.production_data)
-        sales_df = _normalize_df(payload.sales_data)
+        inv_df = normalize_payload_df(payload.inventory_data)
+        prod_df = normalize_payload_df(payload.production_data)
+        sales_df = normalize_payload_df(payload.sales_data)
 
         result = await asyncio.to_thread(
-            service.get_simulation_report,
-            payload, inv_df, prod_df, sales_df
+            service.get_simulation_report, payload, inv_df, prod_df, sales_df
         )
         return result
     except Exception as exc:
@@ -235,7 +171,8 @@ async def recommend_ordering_compat(
             weather_summary=result.weather_summary,
             trend_summary=result.trend_summary,
             business_date=result.business_date,
-            guardrail_note=result.caution_text or OrderingRecommendResponse.model_fields["guardrail_note"].default,
+            guardrail_note=result.caution_text
+            or OrderingRecommendResponse.model_fields["guardrail_note"].default,
         )
     except Exception as exc:
         logger.exception("주문 추천 중 오류 발생")

@@ -62,7 +62,9 @@ _SCHEMA: dict = {
     "raw_production_extract": {
         "description": "생산 이력 — 총 생산량은 prod_qty + prod_qty_2 + prod_qty_3 합산",
         "columns": {
-            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드", "item_nm": "상품명",
+            "masked_stor_cd": "매장 코드",
+            "item_cd": "상품 코드",
+            "item_nm": "상품명",
             "prod_dt": "생산일 YYYYMMDD",
             "prod_qty": "1차 생산 수량",
             "prod_qty_2": "2차 생산 수량",
@@ -73,7 +75,9 @@ _SCHEMA: dict = {
     "raw_order_extract": {
         "description": "발주 이력 — 점주 발주 수량(ord_qty)과 실 출하 확정 수량(confrm_qty) 구분",
         "columns": {
-            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드", "item_nm": "상품명",
+            "masked_stor_cd": "매장 코드",
+            "item_cd": "상품 코드",
+            "item_nm": "상품명",
             "dlv_dt": "배송일 YYYYMMDD",
             "ord_qty": "점주 발주 수량",
             "confrm_qty": "실 출하 확정 수량",
@@ -83,21 +87,23 @@ _SCHEMA: dict = {
     "raw_inventory_extract": {
         "description": "재고 이력",
         "columns": {
-            "masked_stor_cd": "매장 코드", "item_cd": "상품 코드",
-            "stock_dt": "재고 기준일 YYYYMMDD", "stock_qty": "재고 수량",
+            "masked_stor_cd": "매장 코드",
+            "item_cd": "상품 코드",
+            "stock_dt": "재고 기준일 YYYYMMDD",
+            "stock_qty": "재고 수량",
         },
     },
 }
 
 _TABLE_HINTS: dict[str, list[str]] = {
-    "sales":      ["raw_daily_store_item"],
-    "channel":    ["raw_daily_store_pay_way", "raw_pay_cd"],
-    "campaign":   ["raw_daily_store_cpi_tmzon", "raw_daily_store_item"],
+    "sales": ["raw_daily_store_item"],
+    "channel": ["raw_daily_store_pay_way", "raw_pay_cd"],
+    "campaign": ["raw_daily_store_cpi_tmzon", "raw_daily_store_item"],
     "cross_sell": ["raw_daily_store_item"],
     "production": ["raw_production_extract"],
-    "order":      ["raw_order_extract"],
-    "inventory":  ["raw_inventory_extract"],
-    "general":    ["raw_daily_store_item", "raw_daily_store_pay_way"],
+    "order": ["raw_order_extract"],
+    "inventory": ["raw_inventory_extract"],
+    "general": ["raw_daily_store_item", "raw_daily_store_pay_way"],
 }
 
 
@@ -191,7 +197,7 @@ class SQLGenerator:
 
         sql = data.get("sql", "").strip()
         if not sql.upper().lstrip().startswith("SELECT"):
-            raise ValueError(f"SQL 안전성 검증 실패: SELECT 문이 아닙니다.")
+            raise ValueError("SQL 안전성 검증 실패: SELECT 문이 아닙니다.")
 
         logger.info("SQLGenerator: 생성 완료 — %s", data.get("description", ""))
         return GeneratedSQL(
@@ -206,7 +212,17 @@ class SQLGenerator:
 # ---------------------------------------------------------------------------
 
 _MAX_ROWS = 200
-_FORBIDDEN = {"insert", "update", "delete", "drop", "truncate", "alter", "create", "grant", "revoke"}
+_FORBIDDEN = {
+    "insert",
+    "update",
+    "delete",
+    "drop",
+    "truncate",
+    "alter",
+    "create",
+    "grant",
+    "revoke",
+}
 
 
 class QueryExecutionError(Exception):
@@ -217,8 +233,11 @@ class QueryExecutor:
     """생성된 SELECT SQL을 안전하게 실행하고 결과를 반환한다."""
 
     def __init__(self, db_url: str | None = None) -> None:
-        default = "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc"
-        self.db_url = db_url or os.getenv("DATABASE_URL", default)
+        self.db_url = db_url or os.getenv("DATABASE_URL")
+        if not self.db_url:
+            logger.error("DATABASE_URL이 설정되지 않아 QueryExecutor DB 연결을 비활성화합니다.")
+            self.engine = None
+            return
         try:
             self.engine = create_engine(self.db_url)
         except Exception as e:

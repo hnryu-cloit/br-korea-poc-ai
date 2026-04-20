@@ -1,19 +1,19 @@
 """LLM 호출 메타데이터 로거 - 민감정보 마스킹 포함."""
+
 from __future__ import annotations
 
 import logging
 import re
 from datetime import datetime
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 # (패턴, 대체 문자열)
 _SENSITIVE_PATTERNS: list[tuple[str, str]] = [
-    (r"\d{3}-\d{3,4}-\d{4}", "[PHONE]"),                          # 전화번호
+    (r"\d{3}-\d{3,4}-\d{4}", "[PHONE]"),  # 전화번호
     (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL]"),  # 이메일
-    (r"\d{6}-[1-4]\d{6}", "[RRN]"),                                # 주민등록번호
-    (r"\d{4}-\d{4}-\d{4}-\d{4}", "[CARD]"),                       # 카드번호
+    (r"\d{6}-[1-4]\d{6}", "[RRN]"),  # 주민등록번호
+    (r"\d{4}-\d{4}-\d{4}-\d{4}", "[CARD]"),  # 카드번호
 ]
 
 
@@ -31,8 +31,8 @@ class LLMCallLogger:
         query_type: str,
         was_blocked: bool,
         tokens_used: int = 0,
-        store_id: Optional[str] = None,
-        error: Optional[str] = None,
+        store_id: str | None = None,
+        error: str | None = None,
     ) -> None:
         """쿼리 유형, 차단 여부, 토큰 수만 기록합니다 (쿼리 원문 제외)."""
         masked_store = (

@@ -8,7 +8,7 @@ from common.logger import init_logger
 from schemas.contracts import SalesInsight, SalesQueryRequest, SalesQueryResponse
 from services.sales_agent import SalesAnalysisAgent
 
-logger = init_logger("channel_payment_analyzer")
+logger = init_logger(__name__)
 
 
 class ChannelPaymentAnalyzer:

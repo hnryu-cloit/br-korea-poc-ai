@@ -3,11 +3,12 @@
 SQL/데이터 우선 처리 + 필요 시 AI 분석을 결합한 경량 질의 엔진.
 오케스트레이터의 NUMERIC / COMPARISON 경로에서 호출됩니다.
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from services.sales_agent import SalesAnalysisAgent
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 class DataExtractionEngine:
     """자연어 질의를 의도(intent)로 분류하고 구조화된 데이터를 반환합니다."""
 
-    def __init__(self, sales_agent: Optional["SalesAnalysisAgent"] = None) -> None:
+    def __init__(self, sales_agent: SalesAnalysisAgent | None = None) -> None:
         self.agent = sales_agent
 
     INTENT_PATTERNS: dict[str, list[str]] = {
@@ -43,7 +44,7 @@ class DataExtractionEngine:
         self,
         query: str,
         store_id: str,
-        date_range: Optional[dict[str, str]] = None,
+        date_range: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """질의를 처리하고 구조화된 추출 결과를 반환합니다.
 
@@ -83,10 +84,14 @@ class DataExtractionEngine:
                 except Exception as exc:
                     logger.warning("total_sales 실데이터 조회 실패: %s", exc)
                     result["data"] = {}
-                    result["answer"] = "현재 매출 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                    result["answer"] = (
+                        "현재 매출 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                    )
             else:
                 result["data"] = {}
-                result["answer"] = "현재 매출 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                result["answer"] = (
+                    "현재 매출 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                )
 
         elif intent == "peak_hours":
             if self.agent:
@@ -95,17 +100,25 @@ class DataExtractionEngine:
                     peak = profile.get("peak_hour", "")
                     if peak:
                         result["data"] = {"peak_range": peak}
-                        result["answer"] = f"피크 시간대는 {peak}이며, 해당 시간대에 집중 대응이 필요합니다."
+                        result["answer"] = (
+                            f"피크 시간대는 {peak}이며, 해당 시간대에 집중 대응이 필요합니다."
+                        )
                     else:
                         result["data"] = {}
-                        result["answer"] = "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                        result["answer"] = (
+                            "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                        )
                 except Exception as exc:
                     logger.warning("peak_hours 실데이터 조회 실패: %s", exc)
                     result["data"] = {}
-                    result["answer"] = "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                    result["answer"] = (
+                        "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                    )
             else:
                 result["data"] = {}
-                result["answer"] = "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                result["answer"] = (
+                    "피크 시간대 데이터를 조회할 수 없습니다. 손익분석 화면을 확인해 주세요."
+                )
 
         elif intent == "top_items":
             if self.agent:
@@ -119,14 +132,20 @@ class DataExtractionEngine:
                         result["answer"] = f"가장 많이 팔린 메뉴는 {names} 순입니다."
                     else:
                         result["data"] = {}
-                        result["answer"] = "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                        result["answer"] = (
+                            "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                        )
                 except Exception as exc:
                     logger.warning("top_items 실데이터 조회 실패: %s", exc)
                     result["data"] = {}
-                    result["answer"] = "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                    result["answer"] = (
+                        "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                    )
             else:
                 result["data"] = {}
-                result["answer"] = "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                result["answer"] = (
+                    "인기 메뉴 데이터를 조회할 수 없습니다. 손익분석 > 상품 탭을 확인해 주세요."
+                )
 
         elif intent == "comparison":
             if self.agent:
@@ -142,11 +161,17 @@ class DataExtractionEngine:
                     )
                 except Exception as exc:
                     logger.warning("comparison 실데이터 조회 실패: %s", exc)
-                    result["data"] = {"note": "비교 분석은 구체적인 대상 기간/메뉴 지정이 필요합니다."}
-                    result["answer"] = "비교할 기간이나 메뉴를 구체적으로 지정해주세요. 예: '전주 대비 이번 주 매출 비교'"
+                    result["data"] = {
+                        "note": "비교 분석은 구체적인 대상 기간/메뉴 지정이 필요합니다."
+                    }
+                    result["answer"] = (
+                        "비교할 기간이나 메뉴를 구체적으로 지정해주세요. 예: '전주 대비 이번 주 매출 비교'"
+                    )
             else:
                 result["data"] = {"note": "비교 분석은 구체적인 대상 기간/메뉴 지정이 필요합니다."}
-                result["answer"] = "비교할 기간이나 메뉴를 구체적으로 지정해주세요. 예: '전주 대비 이번 주 매출 비교'"
+                result["answer"] = (
+                    "비교할 기간이나 메뉴를 구체적으로 지정해주세요. 예: '전주 대비 이번 주 매출 비교'"
+                )
 
         elif intent == "profitability":
             if self.agent:
@@ -162,14 +187,20 @@ class DataExtractionEngine:
                         )
                     else:
                         result["data"] = {}
-                        result["answer"] = "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                        result["answer"] = (
+                            "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                        )
                 except Exception as exc:
                     logger.warning("profitability 실데이터 조회 실패: %s", exc)
                     result["data"] = {}
-                    result["answer"] = "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                    result["answer"] = (
+                        "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                    )
             else:
                 result["data"] = {}
-                result["answer"] = "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                result["answer"] = (
+                    "현재 수익성 데이터를 조회할 수 없습니다. 손익분석 화면에서 확인해 주세요."
+                )
 
         elif intent == "inventory":
             result["data"] = {"note": "실시간 재고는 생산 현황 화면에서 확인 가능합니다."}

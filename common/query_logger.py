@@ -1,4 +1,5 @@
 """SQL 쿼리 실행 히스토리 로거 — 에이전트별 lineage 추적"""
+
 from __future__ import annotations
 
 import logging

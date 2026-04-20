@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import statistics
+from datetime import time as dt_time
 from typing import Any, Dict, List, Optional
+
 import pandas as pd
 
 from schemas.management import ProductionPredictRequest, ProductionPredictResponse
@@ -26,7 +29,7 @@ from common.logger import init_logger
 from common.prompt import create_production_alarm_prompt
 from .production_agent import ProductionManagementAgent
 
-logger = init_logger("production_service")
+logger = init_logger(__name__)
 
 class ProductionService:
     def __init__(self, gemini_client: Gemini):
@@ -95,7 +98,6 @@ class ProductionService:
 
         # 1. ±1σ 신뢰구간 — 이력 부족 시 예측값 15% 적용
         if len(sales_values) >= 3:
-            import statistics
             std_dev = statistics.stdev(sales_values[-6:]) if len(sales_values) >= 6 else statistics.stdev(sales_values)
         else:
             std_dev = predicted_stock_1h * 0.15
@@ -364,8 +366,6 @@ class ProductionService:
         avg_production_qty: Optional[float] = None,
     ) -> ExceptionCheckResult:
         """마감 직전 억제 및 대량 주문 수동 검토 예외 규칙 적용."""
-        from datetime import time as dt_time
-
         closing_h, closing_m = map(int, store_closing_time.split(":"))
         if current_time:
             cur_h, cur_m = map(int, current_time.split(":"))
