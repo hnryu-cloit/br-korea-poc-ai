@@ -68,11 +68,11 @@ class SKUProductionStatus(BaseModel):
     status: str
     current_qty: int
     predict_1h_qty: int
-    avg_4w_prod_1st: Optional[ProductionPattern]
-    avg_4w_prod_2nd: Optional[ProductionPattern]
+    avg_4w_prod_1st: ProductionQtyPattern | None
+    avg_4w_prod_2nd: ProductionQtyPattern | None
     chance_loss_reduction_pct: int
     sales_velocity: float
-    tags: List[str]
+    tags: list[str]
     alert_message: str
     can_produce: bool
 
@@ -183,12 +183,40 @@ class SalesQueryRequest(BaseModel):
     """매출 관련 자연어 질의 요청"""
     store_id: str
     query: str = Field(..., description="점주 질의 (예: '어제 배달 비중이 왜 낮았지?')")
-    raw_data_context: Optional[List[Dict[str, Any]]] = Field(None, description="DB에서 조회된 관련 매출 통계 데이터")
+    domain: str | None = Field(None, description="질의 도메인 (production|ordering|sales)")
+    system_instruction: str | None = Field(None, description="동적 시스템 프롬프트")
+    raw_data_context: list[dict[str, Any]] | None = Field(
+        None, description="DB에서 조회된 관련 매출 통계 데이터"
+    )
+
+
+class SalesPromptSuggestRequest(BaseModel):
+    """매장 컨텍스트 기반 추천 질문 생성 요청"""
+
+    store_id: str
+    domain: str = Field(default="sales", description="질문 도메인 (production|ordering|sales)")
+    context_prompts: list[dict[str, str]] = Field(
+        default_factory=list, description="백엔드가 생성한 데이터 기반 초안 질문"
+    )
+    system_instruction: str | None = Field(None, description="동적 시스템 프롬프트")
+
+
+class SalesPromptItem(BaseModel):
+    label: str
+    category: str
+    prompt: str
+
+
+class SalesPromptSuggestResponse(BaseModel):
+    store_id: str
+    domain: str
+    prompts: list[SalesPromptItem] = Field(default_factory=list)
 
 
 class SalesQueryResponse(BaseModel):
     """매출 질의 응답"""
     answer: SalesInsight
+    confidence_score: float = Field(1.0, description="응답 신뢰도 (0~1)")
     generated_at: datetime = Field(default_factory=datetime.now)
     source_data_period: str = Field(..., description="분석에 사용된 데이터 기간")
     channel_analysis: Optional[Dict[str, Any]] = Field(None, description="채널별 매출 비중 분석 데이터")

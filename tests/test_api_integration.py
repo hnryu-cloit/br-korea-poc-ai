@@ -3,6 +3,7 @@ AI 서비스 엔드포인트 통합 테스트
 - LLM(Gemini) 호출을 mock으로 대체하여 API 계약만 검증합니다.
 - app.dependency_overrides를 사용해 FastAPI DI를 올바르게 오버라이드합니다.
 """
+
 from __future__ import annotations
 
 import sys
@@ -119,20 +120,20 @@ for module_name, class_name in [
         setattr(module, class_name, _StubService)
         sys.modules[module_name] = module
 
-from api.config import get_settings, Settings
-from api.dependencies import get_sales_analyzer, get_production_service, get_ordering_service
+from api.config import Settings, get_settings
+from api.dependencies import get_ordering_service, get_production_service, get_sales_analyzer
 from api.main import app
-from schemas.management import ProductionPredictResponse
 from schemas.contracts import (
     ChartDataPoint,
-    OrderOptionType,
     OrderingOption,
     OrderingRecommendationResponse,
+    OrderOptionType,
     SalesInsight,
     SalesQueryResponse,
     SimulationReportResponse,
     SimulationSummary,
 )
+from schemas.management import ProductionPredictResponse
 
 TOKEN = "test-token"
 
@@ -155,6 +156,7 @@ def auth_headers():
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
+
 def test_health(client: TestClient) -> None:
     res = client.get("/health")
     assert res.status_code == 200
@@ -171,6 +173,7 @@ def test_core_routes_are_exposed(client: TestClient) -> None:
 
 
 # ── Sales Query ───────────────────────────────────────────────────────────────
+
 
 def test_sales_query_requires_token(client: TestClient) -> None:
     res = client.post("/sales/query", json={"prompt": "배달 매출 분석해줘"})
@@ -214,6 +217,7 @@ def test_sales_query_invalid_payload(client: TestClient) -> None:
 
 # ── Production Predict ────────────────────────────────────────────────────────
 
+
 def test_production_predict_success(client: TestClient) -> None:
     stub_response = ProductionPredictResponse(
         sku="SKU_001",
@@ -234,7 +238,9 @@ def test_production_predict_success(client: TestClient) -> None:
             json={
                 "sku": "SKU_001",
                 "current_stock": 15,
-                "history": [{"timestamp": "2024-01-01T12:00:00", "stock": 20, "production": 0, "sales": 5}],
+                "history": [
+                    {"timestamp": "2024-01-01T12:00:00", "stock": 20, "production": 0, "sales": 5}
+                ],
                 "pattern_4w": [0.8, 1.2],
             },
             headers=auth_headers(),
@@ -265,6 +271,7 @@ def test_production_predict_requires_token(client: TestClient) -> None:
 
 
 # ── Ordering Recommend ────────────────────────────────────────────────────────
+
 
 def test_ordering_recommend_success(client: TestClient) -> None:
     stub_response = OrderingRecommendationResponse(
@@ -380,7 +387,12 @@ def test_ordering_recommend_current_contract_success(client: TestClient) -> None
 
 def test_production_simulation_success(client: TestClient) -> None:
     stub_response = SimulationReportResponse(
-        metadata={"store_id": "POC_001", "item_id": "SKU_001", "item_name": "초코 도넛", "date": "2024-01-15"},
+        metadata={
+            "store_id": "POC_001",
+            "item_id": "SKU_001",
+            "item_name": "초코 도넛",
+            "date": "2024-01-15",
+        },
         summary_metrics=SimulationSummary(
             additional_sales_qty=12.0,
             additional_profit_amt=18000,

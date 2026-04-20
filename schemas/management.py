@@ -56,4 +56,6 @@ class OrderingRecommendResponse(BaseModel):
     weather_summary: str | None = None
     trend_summary: str | None = None
     business_date: str | None = None
-    guardrail_note: str = "최종 주문 결정은 점주의 권한입니다. 추천 옵션은 보조 자료로만 활용해주세요."
+    guardrail_note: str = (
+        "최종 주문 결정은 점주의 권한입니다. 추천 옵션은 보조 자료로만 활용해주세요."
+    )
