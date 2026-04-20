@@ -22,3 +22,6 @@ dependencies:
       - sqlalchemy
       - psycopg2-binary
       - pytest
+      - ruff
+      - black
+      - mypy

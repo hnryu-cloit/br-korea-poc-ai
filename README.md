@@ -147,6 +147,21 @@ python pipeline/train_model.py
 pytest tests/
 ```
 
+## 코드 컨벤션 (ruff / black / mypy)
+
+```bash
+# Lint
+ruff check .
+
+# Format
+black .
+
+# Type check
+mypy --explicit-package-bases api common services pipeline schemas
+```
+
+`mypy`는 `pyproject.toml` 설정에 따라 `tests/`, `scripts/` 디렉터리를 제외하고 검사합니다.
+
 ## 주요 API 엔드포인트
 
 | 메서드 | 경로 | 설명 |

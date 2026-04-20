@@ -17,3 +17,6 @@ colorlog
 pgvector
 sqlalchemy
 psycopg2-binary
+ruff
+black
+mypy
