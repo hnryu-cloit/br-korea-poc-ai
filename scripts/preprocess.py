@@ -128,10 +128,11 @@ def apply_cold_start_transition(df_sales: pd.DataFrame) -> pd.DataFrame:
     mask_need_ref = (df_sales['DAYS_SINCE_INTRO'] <= 28) | (df_sales['HIST_4W_AVG'] == 0)
     
     # 5. 혼합 가중치 적용 (HIST_4W_AVG 업데이트)
-    df_sales.loc[mask_need_ref, 'HIST_4W_AVG'] = (
+    calculated_vals = (
         df_sales.loc[mask_need_ref, 'HIST_4W_AVG'] * df_sales.loc[mask_need_ref, 'OWN_WEIGHT'] +
         df_sales.loc[mask_need_ref, 'CLUSTER_REF_AVG'].fillna(0) * (1 - df_sales.loc[mask_need_ref, 'OWN_WEIGHT'])
     )
+    df_sales.loc[mask_need_ref, 'HIST_4W_AVG'] = calculated_vals.astype(np.float32)
     
     # 6. 극초기 보정: 클러스터 데이터조차 없는 경우 전체 시간대별 평균으로 최후 보정
     menu_hourly_avg = df_sales.groupby(['DATETIME'])['SALE_QTY'].transform('mean').astype(np.float32)
@@ -180,7 +181,8 @@ def generate_target_and_save(df_sales: pd.DataFrame, engine) -> None:
     df_sales['TARGET_1H_AHEAD'] = df_sales.groupby(['MASKED_STOR_CD', 'ITEM_CD'])['SALE_QTY'].shift(-1)
     df_sales = df_sales.dropna(subset=['TARGET_1H_AHEAD'])
     
-    logger.info("10. Data Mart 테이블(ai_sales_data_mart)에 저장 중...")
+    logger.info("10. Data Mart 테이블(ai_sales_data_mart)에 저장 중 (고속 처리)...")
+    # 대용량 데이터 고속 저장을 위한 청크 최적화 (chunksize 10000 -> 50000, method='multi' 유지)
     df_sales.to_sql('ai_sales_data_mart', engine, if_exists='replace', index=False, chunksize=50000, method='multi')
 
 def prepare_and_save_mart(db_url: str):
