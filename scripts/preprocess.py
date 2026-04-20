@@ -28,13 +28,37 @@ def prepare_and_save_mart(db_url: str):
         JOIN raw_campaign_item i ON m.cmp_cd = i.cmp_cd
     ''')
     
-    df_sales = pd.read_sql(sales_query, engine)
+    df_sales_raw = pd.read_sql(sales_query, engine)
     df_camp = pd.read_sql(campaign_query, engine)
     
-    df_sales.columns = [c.upper() for c in df_sales.columns]
+    df_sales_raw.columns = [c.upper() for c in df_sales_raw.columns]
     df_camp.columns = [c.upper() for c in df_camp.columns]
+
+    # ---------------------------------------------------------
+    # [통합] 1-1. 매장별 영업시간 추정 및 업데이트
+    # ---------------------------------------------------------
+    logger.info("1-1. 매장별 판매 패턴 기반 영업시간 추정 중...")
+    df_sales_raw['SALE_QTY_FLOAT'] = pd.to_numeric(df_sales_raw['SALE_QTY'], errors='coerce').fillna(0).astype(float)
     
-    df_sales['SALE_QTY'] = pd.to_numeric(df_sales['SALE_QTY'], errors='coerce').fillna(0).astype(np.float32)
+    # 매출이 발생한 시간대만 추출하여 시작/종료 시각 추정
+    active_sales = df_sales_raw[df_sales_raw['SALE_QTY_FLOAT'] > 0].copy()
+    active_sales['HOUR_INT'] = active_sales['TMZON_DIV'].astype(int)
+    
+    daily_limits = active_sales.groupby(['MASKED_STOR_CD', 'SALE_DT'])['HOUR_INT'].agg(['min', 'max']).reset_index()
+    store_op_hours = daily_limits.groupby('MASKED_STOR_CD').agg({
+        'min': lambda x: int(np.percentile(x, 10)), # 상위 10% (보수적 시작 시각)
+        'max': lambda x: int(np.percentile(x, 90))  # 하위 10% (보수적 종료 시각)
+    }).reset_index()
+    store_op_hours.columns = ['MASKED_STOR_CD', 'OPEN_HOUR', 'CLOSE_HOUR']
+    
+    # DB 반영 (마트 생성 시마다 최신화)
+    store_op_hours.to_sql('store_operating_hours', engine, if_exists='replace', index=False)
+    logger.info(f"영업시간 정보 업데이트 완료 ({len(store_op_hours)}개 매장)")
+
+    # 원본 데이터 가공 시작
+    df_sales = df_sales_raw.copy()
+    df_sales['SALE_QTY'] = df_sales['SALE_QTY_FLOAT']
+    df_sales.drop(columns=['SALE_QTY_FLOAT'], inplace=True)
     df_sales['DATETIME'] = pd.to_datetime(df_sales['SALE_DT'] + df_sales['TMZON_DIV'].astype(str).str.zfill(2), format='%Y%m%d%H')
     df_sales['HOUR'] = df_sales['DATETIME'].dt.hour.astype(np.int8)
     df_sales['WEEKDAY'] = df_sales['DATETIME'].dt.weekday.astype(np.int8)
