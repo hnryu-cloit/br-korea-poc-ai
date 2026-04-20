@@ -108,6 +108,12 @@ br-korea-poc-ai/
 | `APP_HOST` | `0.0.0.0` | 바인딩 호스트 |
 | `APP_PORT` | `8001` | 개발 서버 기본 포트 |
 
+- 소진공 빅데이터 OpenAPI(`certKey`)는 AI 서비스가 아닌 백엔드(`br-korea-poc-backend/.env`)에서 관리합니다.
+- 상권 인텔리전스 외부 API(소진공 상권 경쟁사 조회) 호출은 백엔드가 담당하며, AI 서비스는 `EXTERNAL_API_KEY`/`SBIZ_API_COMMERCIAL_MAP_KEY`/`SBIZ_API_STORE_STATUS_KEY`를 직접 사용하지 않습니다.
+- 상권·고객 분석 화면의 `store_reports`(소진공 API 키 상태/연동상태)는 백엔드 `market-intelligence` 응답 필드이며, AI 서비스는 해당 상태를 계산하거나 저장하지 않습니다.
+- 주간 분석 리포트 다운로드(`GET /api/analytics/market-intelligence/weekly-report`)도 백엔드에서 markdown을 생성하며 AI 서비스는 파일 생성을 직접 담당하지 않습니다.
+- `slsIdex` 실호출 기반 `실호출 미확인/점검 필요` 판정 또한 백엔드에서 처리하며, AI 서비스는 해당 외부 API 호출을 수행하지 않습니다.
+
 ## 실행 방법
 
 ### 1. 의존성 설치
@@ -261,3 +267,16 @@ mypy --explicit-package-bases api common services pipeline schemas
 - `InventoryPredictor`의 학습 데이터 경로(`resources/04_poc_data/`)는 실제 환경에 맞게 조정이 필요합니다.
 - 사용자 피드백 반영 온라인 학습 루프는 미구현 상태입니다 (P2).
 - Gemini API 호출 내역은 `results/billing.csv`에 자동 기록됩니다.
+
+- 백엔드가 실호출 상태를 판정하는 대상 API(`sns/hotplace/delivery/tour/stor/sls`) 목록 변경 시 AI 서비스 코드는 수정하지 않습니다.
+
+## Session Update (2026-04-20)
+
+- 이번 세션에서 AI 서비스 코드 변경은 없으며, 주간 상권 리포트 다운로드 안정화는 backend 영역에서 처리되었습니다.
+- 메뉴 이미지 URL 서빙/표시 작업은 backend + frontend 영역에서 처리되었고 AI 서비스 코드는 변경하지 않았습니다.
+- 이미지 미존재 기본 썸네일(placeholder) 적용 역시 frontend 정적 에셋 처리이며 AI 서비스 변경 사항은 없습니다.
+- CORS/500 안정화(`notifications`, `home`, `production`) 작업도 backend+frontend 영역에서 처리되었고 AI 서비스 코드는 변경하지 않았습니다.
+- 주문관리/발주이력 경계 분리 및 발주이력 인사이트 고도화 작업 역시 backend+frontend 영역 구현이며 AI 서비스 코드는 변경하지 않았습니다.
+- 상권/고객 분석 실데이터 강제(합성값 제거, 연도/분기 미존재 시 실데이터 폴백) 작업도 backend 영역 구현이며 AI 서비스 코드는 변경하지 않았습니다.
+- 상권/고객 분석 5개 블록(업종/매출/인구/지역/고객특성) 화면 재구성 및 응답 스키마 확장 작업 역시 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
+- 신규/단골 비율 고객식별 컬럼 자동탐지 템플릿 확장도 backend 영역 구현이며 AI 서비스 코드는 변경하지 않았습니다.
