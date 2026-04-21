@@ -2,7 +2,34 @@
 
 BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로 실행되며, Google Gemini를 활용한 매출 분석, 생산/주문 가이드, 지식 검색(RAG) 기능을 제공합니다. 현재 백엔드가 프론트 계약을 기준으로 AI 응답을 어댑팅합니다.
 
-## 최근 업데이트 (2026-04-21)
+## 최근 업데이트 (2026-04-22)
+
+- QA 안정화 패치 반영
+  - `DataExtractionEngine`의 기본 응답 계약을 보강해 `total_sales/peak_hours/top_items/profitability` 질의에서 필수 필드(`total_revenue`, `peak_start`, `peak_revenue_ratio`, `items`, `margin_rate`)를 항상 반환하도록 수정했습니다.
+
+- `POST /analytics/market/insights` no-fallback 정책 반영
+  - `MarketInsightService`에서 fallback 응답 생성을 제거했습니다.
+  - Gemini/JSON 파싱 실패 시 RuntimeError를 발생시켜 상위 서비스가 오류 계약으로 처리합니다.
+  - 계약 스키마(`schemas/contracts.py`)의 `MarketInsightsResponse.source`를 `"ai"` 단일 값으로 고정했습니다.
+
+- `POST /predict` 엔드포인트를 모델 우선 경로로 정비했습니다.
+  - `InventoryPredictor`(`inventory_lgbm_model.pkl` + `model_meta.joblib`)를 우선 사용해 `predicted_sales_next_1h`를 산출합니다.
+  - 모델 로드/메타 불일치 등 예외 시 기존 DB 휴리스틱 계산으로 폴백합니다.
+
+- 이번 세션의 `/production/status` 주문 마감 시간 표시 보정은 frontend 변경이며 AI 서비스 코드는 변경하지 않았습니다.
+
+- `POST /analytics/ordering/history/insights` 엔드포인트를 추가했습니다.
+- `OrderingHistoryInsightService`를 추가해 주문이력 + 운영가이드(RAG) 컨텍스트 기반 Gemini 인사이트를 생성합니다.
+- 응답 계약에 `sources`, `retrieved_contexts`, `confidence`를 포함하며, 생성 실패 시 fallback 없이 오류를 반환합니다.
+
+- 이번 세션의 `/sales/metrics` no-fallback 정책은 frontend+backend 오류 처리 정비이며 AI 서비스 코드/계약 변경은 없습니다.
+
+- 이번 세션의 프론트 빌드 오류 복구(타입/차트 formatter 정합)는 frontend 레이어 작업이며 AI 서비스 코드/계약 변경은 없습니다.
+
+- 이번 세션의 `/analytics` fallback 제거는 backend(`metrics`, `sales-trend` 오류 처리 정책) 변경이며 AI 서비스 코드/계약 변경은 없습니다.
+
+- 이번 세션의 `/production/waste-loss`, `/production/inventory-diagnosis` 지연 개선은 백엔드 캐시/타임아웃 정책 조정으로 처리했으며 AI 서비스 코드 변경은 없습니다.
+- AI 근거 요약 생성 계약은 유지되며, 백엔드가 시간 제한 내 결과만 선택 반영하도록 호출 정책을 조정했습니다.
 
 - 주문 이력 화면 기본기간/점포검증 개선은 프론트·백엔드 레이어 변경이며 AI 서비스 계약 변경은 없습니다.
 - 생산 진단/폐기손실 고도화는 백엔드(`br-korea-poc-backend`)에서 `core_stock_rate`/`core_stockout_time` 기반으로 처리합니다.
@@ -70,6 +97,7 @@ br-korea-poc-ai/
 ├── services/                   # 핵심 비즈니스 로직 및 AI 에이전트
 │   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → 도메인 연결)
 │   ├── inventory_predictor.py  # LightGBM 기반 시계열 예측 엔진 (Inference)
+│   ├── ordering_history_insight_service.py # 주문이력 이상징후 RAG+Gemini 인사이트 생성
 │   ├── production_service.py   # 생산 가이드 생성 및 찬스로스 추정 로직
 │   └── sales_analyzer.py       # 매출 분석 및 자연어 인사이트 생성 에이전트
 └── tests/                      # 단위/통합/검증 테스트 코드
@@ -253,3 +281,7 @@ python pipeline/build_knowledge_base.py
 - `OrderingService`의 시뮬레이션 고정 수량 fallback(`150/145/160`)을 제거하고, 과거 실데이터 기반 수량만 사용하도록 정리했습니다.
 - 특수 이벤트 옵션 생성 시 과거 1년 데이터가 없으면 임의 증분 수량을 만들지 않고 옵션 추가를 생략하도록 변경했습니다.
 - 주문 추천 응답에서 옵션 개수 부족 시 fallback 옵션을 재주입하던 분기를 제거했습니다.
+
+## Session Update (2026-04-22)
+
+- 이번 라운드는 Docker backend 이미지 경로 연결 수정 작업이며 AI 서비스 코드 변경은 없습니다.
