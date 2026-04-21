@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.dependencies import verify_token
+from api.error_contract import build_error_detail
 from pipeline.run import run_pipeline
 from schemas.generation import GenerationResponse, SalesQueryRequest
 
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/generation", tags=["generation"])
 
 
 @router.post("", response_model=GenerationResponse, dependencies=[Depends(verify_token)])
-async def generate(payload: SalesQueryRequest) -> GenerationResponse:
+async def generate(payload: SalesQueryRequest, request: Request) -> GenerationResponse:
     """에이전트 파이프라인을 실행하고 구조화된 생성 결과를 반환합니다."""
     try:
         logger.info("파이프라인 실행 시작 (프롬프트: %s)", payload.prompt[:30])
@@ -27,5 +28,10 @@ async def generate(payload: SalesQueryRequest) -> GenerationResponse:
         logger.exception("파이프라인 실행 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="파이프라인 실행에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="GENERATION_PIPELINE_FAILED",
+                message="파이프라인 실행에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc

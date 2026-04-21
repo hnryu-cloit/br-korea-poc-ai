@@ -3,8 +3,9 @@ import warnings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib import import_module
+from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from api.config import get_settings
 from api.routers import management
@@ -36,9 +37,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.middleware("http")
+async def attach_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-Id") or uuid4().hex
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = request_id
+    return response
+
+
 app.include_router(management.router)
 
-for router_module in ("api.routers.sales", "api.routers.home", "api.routers.generation"):
+for router_module in ("api.routers.sales", "api.routers.home", "api.routers.generation", "api.routers.meta"):
     try:
         module = import_module(router_module)
     except ModuleNotFoundError as exc:

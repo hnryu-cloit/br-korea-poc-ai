@@ -1,9 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.dependencies import get_channel_payment_analyzer, get_sales_analyzer, verify_token
+from api.error_contract import build_error_detail
 from schemas.contracts import (
     ProfitabilitySimulationRequest,
     ProfitabilitySimulationResponse,
@@ -21,7 +22,9 @@ router = APIRouter(prefix="/sales", tags=["sales"])
 
 @router.post("/query", response_model=SalesQueryResponse, dependencies=[Depends(verify_token)])
 async def query_sales(
-    payload: SalesQueryRequest, analyzer: SalesAnalyzer = Depends(get_sales_analyzer)
+    payload: SalesQueryRequest,
+    request: Request,
+    analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> SalesQueryResponse:
     """자연어 매출 질의를 SalesAnalyzer에 위임해 분석 응답을 반환합니다."""
     try:
@@ -32,7 +35,12 @@ async def query_sales(
         logger.exception("매출 분석 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="매출 분석에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="SALES_QUERY_FAILED",
+                message="매출 분석에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -43,6 +51,7 @@ async def query_sales(
 )
 async def suggest_sales_prompts(
     payload: SalesPromptSuggestRequest,
+    request: Request,
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> SalesPromptSuggestResponse:
     try:
@@ -52,7 +61,12 @@ async def suggest_sales_prompts(
         logger.exception("추천 질문 생성 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="추천 질문 생성에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="SALES_PROMPTS_FAILED",
+                message="추천 질문 생성에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -63,6 +77,7 @@ async def suggest_sales_prompts(
 )
 async def get_profitability_simulation(
     payload: ProfitabilitySimulationRequest,
+    request: Request,
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> ProfitabilitySimulationResponse:
     """수익성 시뮬레이션 요청을 SalesAnalyzer에 위임해 결과를 반환합니다."""
@@ -83,7 +98,12 @@ async def get_profitability_simulation(
         logger.exception("수익성 시뮬레이션 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="수익성 시뮬레이션에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="SALES_PROFITABILITY_FAILED",
+                message="수익성 시뮬레이션에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -94,6 +114,7 @@ async def get_profitability_simulation(
 )
 async def query_channel_payment(
     payload: SalesQueryRequest,
+    request: Request,
     analyzer: ChannelPaymentAnalyzer = Depends(get_channel_payment_analyzer),
 ) -> SalesQueryResponse:
     """채널·결제수단 특화 분석 질의를 ChannelPaymentAnalyzer에 위임해 응답을 반환합니다."""
@@ -105,5 +126,10 @@ async def query_channel_payment(
         logger.exception("채널 및 결제수단 분석 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="채널 및 결제수단 분석에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="CHANNEL_PAYMENT_QUERY_FAILED",
+                message="채널 및 결제수단 분석에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc

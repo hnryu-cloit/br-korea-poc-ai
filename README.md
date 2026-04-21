@@ -218,6 +218,13 @@ python pipeline/build_knowledge_base.py
 - `InventoryPredictor` 모델 메타 미로딩 오류 안내 문구를 실제 학습 스크립트 경로(`scripts/train.py`) 기준으로 정정했습니다.
 - 오케스트레이터의 생산/주문 분기를 `ProductionService.generate_production_guidance()`/`OrderingService.generate_ordering_guidance()`로 위임하고, 해당 서비스 메서드를 추가했습니다.
 - `management` 라우터 연동 안정화를 위해 `normalize_payload_df()`를 `ProductionService` 모듈에 추가했습니다.
+
+## Session Update (2026-04-21, Backend-AI Interface)
+
+- 공통 에러 계약을 추가했습니다. 실패 응답 `detail`은 `error_code/message/retryable/trace_id` 구조를 사용합니다.
+- `api/main.py`에 `X-Request-Id` 미들웨어를 추가해 요청 추적 ID를 수신/생성 후 응답 헤더로 반환합니다.
+- 계약 버전 확인용 `GET /meta/contract` 엔드포인트를 추가했습니다.
+- 주문 마감 알림 batch 조회 `POST /api/ordering/deadline-alerts/batch`를 추가했습니다.
 - 주요 경로(`generation/home/router`, `orchestrator`, `rag`, `ordering guide`)에서 광범위 `except Exception`을 축소해 장애 원인 추적성을 높였습니다.
 
 ## Session Update (2026-04-21, Round 3)

@@ -300,6 +300,14 @@ class DeadlineAlertResponse(BaseModel):
     target_roles: List[str] = Field(default_factory=list)
 
 
+class DeadlineAlertBatchRequest(BaseModel):
+    store_ids: List[str] = Field(default_factory=list, description="조회할 매장 ID 목록")
+
+
+class DeadlineAlertBatchResponse(BaseModel):
+    items: List[DeadlineAlertResponse] = Field(default_factory=list)
+
+
 # --- 수익성 시뮬레이션 ---
 
 class ProfitabilitySimulationRequest(BaseModel):

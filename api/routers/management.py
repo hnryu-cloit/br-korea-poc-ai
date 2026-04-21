@@ -1,11 +1,14 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from api.dependencies import get_chance_loss_service, get_ordering_service, get_production_service, verify_token
+from api.error_contract import build_error_detail
 from schemas.contracts import (
+    DeadlineAlertBatchRequest,
+    DeadlineAlertBatchResponse,
     DeadlineAlertResponse,
     ExceptionCheckRequest,
     ExceptionCheckResult,
@@ -47,6 +50,7 @@ class ChanceLossRequest(BaseModel):
 )
 async def estimate_chance_loss(
     payload: ChanceLossRequest,
+    request: Request,
     service: ChanceLossService = Depends(get_chance_loss_service),
 ):
     """찬스로스 추정 결과를 반환합니다."""
@@ -62,7 +66,12 @@ async def estimate_chance_loss(
         logger.exception("찬스로스 추정 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=build_error_detail(
+                request,
+                error_code="CHANCE_LOSS_FAILED",
+                message="찬스로스 추정에 실패했습니다.",
+                retryable=True,
+            ),
         )
 
 @router.post(
@@ -72,6 +81,7 @@ async def estimate_chance_loss(
 )
 async def get_production_simulation(
     payload: SimulationFullRequest,
+    request: Request,
     service: ProductionService = Depends(get_production_service),
 ) -> SimulationReportResponse:
     """
@@ -93,7 +103,12 @@ async def get_production_simulation(
         logger.exception("시뮬레이션 생성 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"시뮬레이션 생성 실패: {str(exc)}",
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_SIMULATION_FAILED",
+                message="시뮬레이션 생성에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -104,6 +119,7 @@ async def get_production_simulation(
 )
 async def predict_production(
     payload: ProductionPredictRequest,
+    request: Request,
     service: ProductionService = Depends(get_production_service),
 ) -> ProductionPredictResponse:
     try:
@@ -114,7 +130,12 @@ async def predict_production(
         logger.exception("생산 예측 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="생산 예측에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_PREDICT_FAILED",
+                message="생산 예측에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -125,6 +146,7 @@ async def predict_production(
 )
 async def recommend_ordering_compat(
     payload: OrderingRecommendRequest,
+    request: Request,
     service: OrderingService = Depends(get_ordering_service),
 ) -> OrderingRecommendResponse:
     try:
@@ -147,7 +169,7 @@ async def recommend_ordering_compat(
         options = [
             OrderingOption(
                 name=option.option_type.value,
-                recommended_quantity=option.recommended_qty,
+                recommended_qty=option.recommended_qty,
                 priority=index,
                 option_id=option.option_id,
                 title=option.title,
@@ -157,6 +179,7 @@ async def recommend_ordering_compat(
                 reasoning_text=option.reasoning_text or option.reasoning,
                 reasoning_metrics=option.reasoning_metrics,
                 special_factors=option.special_factors,
+                seasonality_weight=option.seasonality_weight,
                 items=option.items,
             )
             for index, option in enumerate(result.recommendations, start=1)
@@ -178,7 +201,12 @@ async def recommend_ordering_compat(
         logger.exception("주문 추천 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="주문 추천에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="ORDERING_RECOMMEND_FAILED",
+                message="주문 추천에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -189,6 +217,7 @@ async def recommend_ordering_compat(
 )
 async def recommend_ordering(
     payload: OrderingRecommendationRequest,
+    request: Request,
     service: OrderingService = Depends(get_ordering_service),
 ) -> OrderingRecommendationResponse:
     try:
@@ -199,7 +228,12 @@ async def recommend_ordering(
         logger.exception("주문 추천 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="주문 추천에 실패했습니다.",
+            detail=build_error_detail(
+                request,
+                error_code="ORDERING_RECOMMEND_FAILED",
+                message="주문 추천에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -210,6 +244,7 @@ async def recommend_ordering(
 )
 async def submit_production_feedback(
     payload: FeedbackRecord,
+    request: Request,
     service: ProductionService = Depends(get_production_service),
 ) -> FeedbackCorrectionResponse:
     """점주 실제 생산량을 피드백으로 등록해 예측 보정 계수를 갱신합니다."""
@@ -224,7 +259,12 @@ async def submit_production_feedback(
         logger.exception("피드백 처리 중 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_FEEDBACK_FAILED",
+                message="피드백 처리에 실패했습니다.",
+                retryable=False,
+            ),
         ) from exc
 
 
@@ -235,6 +275,7 @@ async def submit_production_feedback(
 )
 async def check_production_exception_rules(
     payload: ExceptionCheckRequest,
+    request: Request,
     service: ProductionService = Depends(get_production_service),
 ) -> ExceptionCheckResult:
     """마감 직전 억제 및 대량 주문 수동 검토 예외 규칙을 확인합니다."""
@@ -250,7 +291,12 @@ async def check_production_exception_rules(
         logger.exception("예외 규칙 확인 중 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_EXCEPTION_RULE_FAILED",
+                message="예외 규칙 확인에 실패했습니다.",
+                retryable=False,
+            ),
         ) from exc
 
 
@@ -260,6 +306,7 @@ async def check_production_exception_rules(
     dependencies=[Depends(verify_token)],
 )
 async def get_production_push_alerts(
+    request: Request,
     store_id: str = Query(..., description="매장 ID"),
     service: ProductionService = Depends(get_production_service),
 ) -> PushNotificationListResponse:
@@ -270,7 +317,12 @@ async def get_production_push_alerts(
         logger.exception("PUSH 알림 조회 중 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_PUSH_ALERTS_FAILED",
+                message="PUSH 알림 조회에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
 
 
@@ -280,6 +332,7 @@ async def get_production_push_alerts(
     dependencies=[Depends(verify_token)],
 )
 async def get_ordering_deadline_alerts(
+    request: Request,
     store_id: str = Query(..., description="매장 ID"),
     service: OrderingService = Depends(get_ordering_service),
 ) -> DeadlineAlertResponse:
@@ -290,5 +343,51 @@ async def get_ordering_deadline_alerts(
         logger.exception("마감 알림 조회 중 오류")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=build_error_detail(
+                request,
+                error_code="ORDERING_DEADLINE_ALERT_FAILED",
+                message="마감 알림 조회에 실패했습니다.",
+                retryable=True,
+            ),
+        ) from exc
+
+
+@router.post(
+    "/api/ordering/deadline-alerts/batch",
+    response_model=DeadlineAlertBatchResponse,
+    dependencies=[Depends(verify_token)],
+)
+async def get_ordering_deadline_alerts_batch(
+    payload: DeadlineAlertBatchRequest,
+    request: Request,
+    service: OrderingService = Depends(get_ordering_service),
+) -> DeadlineAlertBatchResponse:
+    """여러 매장의 주문 마감 알림 정보를 일괄 조회합니다."""
+    store_ids = [store_id.strip() for store_id in payload.store_ids if store_id and store_id.strip()]
+    store_ids = list(dict.fromkeys(store_ids))
+    if not store_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=build_error_detail(
+                request,
+                error_code="ORDERING_DEADLINE_ALERT_BATCH_INVALID",
+                message="store_ids는 1개 이상 필요합니다.",
+                retryable=False,
+            ),
+        )
+
+    try:
+        tasks = [asyncio.to_thread(service.get_deadline_alerts, store_id) for store_id in store_ids]
+        items = await asyncio.gather(*tasks)
+        return DeadlineAlertBatchResponse(items=items)
+    except Exception as exc:
+        logger.exception("마감 알림 배치 조회 중 오류")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=build_error_detail(
+                request,
+                error_code="ORDERING_DEADLINE_ALERT_BATCH_FAILED",
+                message="마감 알림 배치 조회에 실패했습니다.",
+                retryable=True,
+            ),
         ) from exc
