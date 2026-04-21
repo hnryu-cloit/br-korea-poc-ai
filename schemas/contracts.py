@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -326,3 +326,51 @@ class ProfitabilitySimulationResponse(BaseModel):
     estimated_profit: float
     top_items: List[Dict[str, Any]]
     simulation_note: str
+
+
+class MarketInsightItem(BaseModel):
+    title: str
+    description: str
+    impact: Literal["high", "medium", "low"] = "medium"
+
+
+class MarketRiskWarningItem(BaseModel):
+    title: str
+    description: str
+    mitigation: str
+
+
+class MarketActionItem(BaseModel):
+    priority: int
+    title: str
+    action: str
+    expected_effect: str
+
+
+class MarketBranchScoreItem(BaseModel):
+    store_id: str
+    store_name: str
+    growth_rate: str
+    risk_level: Literal["high", "medium", "low"] = "medium"
+    summary: str
+
+
+class MarketInsightsRequest(BaseModel):
+    audience: Literal["store_owner", "hq_admin"] = "store_owner"
+    scope: Dict[str, Any] = Field(default_factory=dict)
+    market_data: Dict[str, Any] = Field(default_factory=dict)
+    branch_snapshots: List[Dict[str, Any]] = Field(default_factory=list)
+    store_name: str | None = None
+
+
+class MarketInsightsResponse(BaseModel):
+    executive_summary: str
+    key_insights: List[MarketInsightItem] = Field(default_factory=list)
+    risk_warnings: List[MarketRiskWarningItem] = Field(default_factory=list)
+    action_plan: List[MarketActionItem] = Field(default_factory=list)
+    branch_scoreboard: List[MarketBranchScoreItem] = Field(default_factory=list)
+    report_markdown: str = ""
+    evidence_refs: List[str] = Field(default_factory=list)
+    audience: Literal["store_owner", "hq_admin"] = "store_owner"
+    source: Literal["ai", "fallback"] = "fallback"
+    trace_id: str | None = None

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime
+import os
 import statistics
 from datetime import time as dt_time
 from typing import Any, Dict, List, Optional
 
+import httpx
 import pandas as pd
 
 from schemas.management import ProductionPredictRequest, ProductionPredictResponse
@@ -52,8 +54,73 @@ class ProductionService:
             store_prod_df = pd.DataFrame()
         return ProductionManagementAgent(inventory_df, production_df, sales_df, production_list_df=store_prod_df)
 
+    def _call_ml_model(self, store_id: str, sku: str) -> dict | None:
+        """외부 ML 모델 호출. ML_MODEL_URL 미설정 시 None 반환."""
+        ml_url = os.environ.get("ML_MODEL_URL", "").rstrip("/")
+        if not ml_url:
+            return None
+        token = os.environ.get("AI_SERVICE_TOKEN", "")
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        try:
+            resp = httpx.post(
+                f"{ml_url}/predict",
+                json={"store_id": store_id, "sku": sku},
+                headers=headers,
+                timeout=5.0,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            logger.warning("ML 모델 호출 실패 (store_id=%s sku=%s): %s", store_id, sku, exc)
+            return None
+
+    def _map_ml_response(self, ml_result: dict, sku: str) -> ProductionPredictResponse | None:
+        """ML 모델 응답을 ProductionPredictResponse로 변환."""
+        try:
+            pr = ml_result["prediction_result"]
+            current_stock = float(pr["current_status"]["current_stock"])
+            pred = pr["prediction"]
+            predicted_stock_1h = float(pred["predicted_stock_after_1h"])
+            risk_detected = bool(pred["risk_detected"])
+
+            if risk_detected:
+                stockout_expected_at = "1시간 이내"
+                alert_message = "1시간 이내 품절 위험입니다. 즉시 생산 여부를 확인하세요."
+            else:
+                stockout_expected_at = None
+                alert_message = "다음 1시간 재고는 안정 범위로 예상됩니다."
+
+            std_dev = max(predicted_stock_1h * 0.15, 1.0)
+            return ProductionPredictResponse(
+                sku=sku,
+                predicted_stock_1h=predicted_stock_1h,
+                risk_detected=risk_detected,
+                stockout_expected_at=stockout_expected_at,
+                alert_message=alert_message,
+                confidence=0.90,
+                lower_bound=round(max(0.0, predicted_stock_1h - std_dev), 1),
+                upper_bound=round(predicted_stock_1h + std_dev, 1),
+                confidence_level="high",
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning("ML 모델 응답 파싱 실패: %s | %s", exc, ml_result)
+            return None
+
     def predict_stock(self, payload: ProductionPredictRequest) -> ProductionPredictResponse:
         """백엔드/AI 계약 호환용 1시간 후 재고 예측."""
+        # ML 모델 우선 호출
+        if payload.store_id:
+            ml_result = self._call_ml_model(payload.store_id, payload.sku)
+            if ml_result:
+                mapped = self._map_ml_response(ml_result, payload.sku)
+                if mapped:
+                    return mapped
+
+        if not payload.pattern_4w and not payload.history:
+            raise ValueError(
+                "예측에 필요한 데이터가 없습니다. pattern_4w 또는 history 중 하나 이상을 제공해야 합니다."
+            )
+
         sales_values: list[float] = []
         production_values: list[float] = []
         stock_values: list[float] = []

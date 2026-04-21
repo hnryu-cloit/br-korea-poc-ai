@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class ProductionPredictRequest(BaseModel):
     sku: str
+    store_id: str | None = None
     current_stock: int
     history: list[dict[str, Any]]
     pattern_4w: list[float]
@@ -33,7 +34,7 @@ class OrderingRecommendRequest(BaseModel):
 
 class OrderingOption(BaseModel):
     name: str
-    recommended_quantity: int
+    recommended_qty: int
     priority: int
     option_id: str | None = None
     title: str | None = None
@@ -43,6 +44,7 @@ class OrderingOption(BaseModel):
     reasoning_text: str | None = None
     reasoning_metrics: list[dict[str, str]] = Field(default_factory=list)
     special_factors: list[str] = Field(default_factory=list)
+    seasonality_weight: float | None = None
     items: list[dict[str, Any]] = Field(default_factory=list)
 
 

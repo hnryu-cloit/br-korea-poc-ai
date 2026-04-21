@@ -225,6 +225,13 @@ python pipeline/build_knowledge_base.py
 - `api/main.py`에 `X-Request-Id` 미들웨어를 추가해 요청 추적 ID를 수신/생성 후 응답 헤더로 반환합니다.
 - 계약 버전 확인용 `GET /meta/contract` 엔드포인트를 추가했습니다.
 - 주문 마감 알림 batch 조회 `POST /api/ordering/deadline-alerts/batch`를 추가했습니다.
+
+## Session Update (2026-04-21, Role-Based Market Insights)
+
+- `POST /analytics/market/insights` 엔드포인트를 추가했습니다.
+- `MarketInsightService`를 도입해 상권 집계 데이터를 기반으로 점주(`store_owner`)와 본사(`hq_admin`) audience별 인사이트를 생성합니다.
+- 인사이트 응답은 `executive_summary`, `key_insights`, `risk_warnings`, `action_plan`, `branch_scoreboard`, `report_markdown`, `evidence_refs`, `trace_id`를 포함합니다.
+- 프롬프트 가드레일로 입력 데이터 외 외부 사실 생성을 금지하고, 미제공 수치는 `미확인`으로 유도했습니다.
 - 주요 경로(`generation/home/router`, `orchestrator`, `rag`, `ordering guide`)에서 광범위 `except Exception`을 축소해 장애 원인 추적성을 높였습니다.
 
 ## Session Update (2026-04-21, Round 3)

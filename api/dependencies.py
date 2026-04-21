@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 from common.gemini import Gemini
 from services.chance_loss_service import ChanceLossService
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
+from services.market_insight_service import MarketInsightService
 from services.orchestrator import AgentOrchestrator
 from services.ordering_service import OrderingService
 from services.production_service import ProductionService
@@ -45,6 +46,10 @@ def get_channel_payment_analyzer(
     gemini: Gemini = Depends(get_gemini_client),
 ) -> ChannelPaymentAnalyzer:
     return ChannelPaymentAnalyzer(gemini_client=gemini)
+
+
+def get_market_insight_service(gemini: Gemini = Depends(get_gemini_client)) -> MarketInsightService:
+    return MarketInsightService(gemini_client=gemini)
 
 
 def get_sales_service(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:

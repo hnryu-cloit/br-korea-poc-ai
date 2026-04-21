@@ -49,7 +49,13 @@ async def attach_request_id(request: Request, call_next):
 
 app.include_router(management.router)
 
-for router_module in ("api.routers.sales", "api.routers.home", "api.routers.generation", "api.routers.meta"):
+for router_module in (
+    "api.routers.sales",
+    "api.routers.home",
+    "api.routers.generation",
+    "api.routers.meta",
+    "api.routers.analytics",
+):
     try:
         module = import_module(router_module)
     except ModuleNotFoundError as exc:

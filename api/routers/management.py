@@ -1,8 +1,11 @@
 import asyncio
 import logging
+import os
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
+from sqlalchemy import create_engine, text
 
 from api.dependencies import get_chance_loss_service, get_ordering_service, get_production_service, verify_token
 from api.error_contract import build_error_detail
@@ -126,6 +129,16 @@ async def predict_production(
         logger.info("생산 예측 요청: SKU %s", payload.sku)
         result = await asyncio.to_thread(service.predict_stock, payload)
         return result
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=build_error_detail(
+                request,
+                error_code="PRODUCTION_PREDICT_INVALID_INPUT",
+                message=str(exc),
+                retryable=False,
+            ),
+        ) from exc
     except Exception as exc:
         logger.exception("생산 예측 중 오류 발생")
         raise HTTPException(
@@ -388,6 +401,130 @@ async def get_ordering_deadline_alerts_batch(
                 request,
                 error_code="ORDERING_DEADLINE_ALERT_BATCH_FAILED",
                 message="마감 알림 배치 조회에 실패했습니다.",
+                retryable=True,
+            ),
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
+# ML 모델 형식 호환 엔드포인트
+# 입력: {store_id, sku}  출력: {prediction_result: {...}}
+# ---------------------------------------------------------------------------
+
+class MLPredictRequest(BaseModel):
+    store_id: str
+    sku: str
+
+
+def _get_db_engine():
+    db_url = os.getenv(
+        "DATABASE_URL",
+        "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc",
+    )
+    return create_engine(db_url, pool_pre_ping=True)
+
+
+def _fetch_stock_snapshot(store_id: str, sku: str) -> dict:
+    """core_stock_rate에서 가장 최근 일자의 재고 스냅샷 조회."""
+    engine = _get_db_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("""
+                SELECT prc_dt, ord_avg, sal_avg, stk_avg, stk_rt, is_stockout
+                FROM core_stock_rate
+                WHERE masked_stor_cd = :store_id
+                  AND item_cd        = :sku
+                ORDER BY prc_dt DESC
+                LIMIT 1
+            """),
+            {"store_id": store_id, "sku": sku},
+        ).fetchone()
+    if row is None:
+        return {}
+    return dict(row._mapping)
+
+
+def _fetch_recent_sales(store_id: str, sku: str, days: int = 7) -> list[dict]:
+    """core_stock_rate에서 최근 N일 판매/재고 이력 조회."""
+    engine = _get_db_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT prc_dt, sal_avg, stk_avg, ord_avg
+                FROM core_stock_rate
+                WHERE masked_stor_cd = :store_id
+                  AND item_cd        = :sku
+                ORDER BY prc_dt DESC
+                LIMIT :days
+            """),
+            {"store_id": store_id, "sku": sku, "days": days},
+        ).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+@router.post(
+    "/predict",
+    dependencies=[Depends(verify_token)],
+    summary="ML 모델 형식 생산 예측",
+    description="store_id + sku만으로 DB 데이터 기반 1시간 후 재고를 예측합니다.",
+)
+async def predict_ml_format(
+    payload: MLPredictRequest,
+    request: Request,
+) -> dict:
+    """ML 모델 I/O 형식으로 1시간 후 재고를 예측합니다."""
+    try:
+        snapshot, history = await asyncio.gather(
+            asyncio.to_thread(_fetch_stock_snapshot, payload.store_id, payload.sku),
+            asyncio.to_thread(_fetch_recent_sales, payload.store_id, payload.sku, 7),
+        )
+
+        if not snapshot:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=build_error_detail(
+                    request,
+                    error_code="PREDICT_NO_DATA",
+                    message=f"store_id={payload.store_id}, sku={payload.sku} 에 해당하는 재고 데이터가 없습니다.",
+                    retryable=False,
+                ),
+            )
+
+        current_stock = float(snapshot.get("stk_avg") or 0)
+        recent_sales = [float(r.get("sal_avg") or 0) for r in history]
+        avg_sales = sum(recent_sales) / len(recent_sales) if recent_sales else 0.0
+        predicted_stock_after_1h = round(max(current_stock - avg_sales / 8.0, 0.0), 1)
+        predicted_sales_next_1h = round(avg_sales / 8.0, 1)
+        risk_detected = predicted_stock_after_1h <= max(1.0, current_stock * 0.3)
+        last_updated = snapshot.get("prc_dt", datetime.now().strftime("%Y%m%d"))
+        if len(last_updated) == 8:
+            last_updated = f"{last_updated[:4]}-{last_updated[4:6]}-{last_updated[6:]} 00:00"
+
+        return {
+            "prediction_result": {
+                "store_id": payload.store_id,
+                "sku": payload.sku,
+                "current_status": {
+                    "current_stock": current_stock,
+                    "last_updated": last_updated,
+                },
+                "prediction": {
+                    "predicted_sales_next_1h": predicted_sales_next_1h,
+                    "predicted_stock_after_1h": predicted_stock_after_1h,
+                    "risk_detected": risk_detected,
+                },
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("ML 형식 예측 중 오류")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=build_error_detail(
+                request,
+                error_code="PREDICT_FAILED",
+                message="예측에 실패했습니다.",
                 retryable=True,
             ),
         ) from exc
