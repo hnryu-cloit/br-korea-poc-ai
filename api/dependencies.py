@@ -14,6 +14,7 @@ from common.gemini import Gemini
 from services.chance_loss_service import ChanceLossService
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
 from services.market_insight_service import MarketInsightService
+from services.ordering_history_insight_service import OrderingHistoryInsightService
 from services.orchestrator import AgentOrchestrator
 from services.ordering_service import OrderingService
 from services.production_service import ProductionService
@@ -50,6 +51,13 @@ def get_channel_payment_analyzer(
 
 def get_market_insight_service(gemini: Gemini = Depends(get_gemini_client)) -> MarketInsightService:
     return MarketInsightService(gemini_client=gemini)
+
+
+def get_ordering_history_insight_service(
+    gemini: Gemini = Depends(get_gemini_client),
+    rag_service: RAGService = Depends(get_rag_service),
+) -> OrderingHistoryInsightService:
+    return OrderingHistoryInsightService(gemini_client=gemini, rag_service=rag_service)
 
 
 def get_sales_service(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:
