@@ -45,22 +45,30 @@ br-korea-poc-ai/
 │   ├── main.py                 # 앱 초기화 및 라우터 등록
 │   ├── routers/                # 도메인별 API 엔드포인트 (sales, management 등)
 │   └── schemas.py              # 요청/응답 Pydantic 모델
-├── scripts/                    # [핵심] AI 모델링 및 데이터 파이프라인 스크립트
+├── common/                     # 공통 유틸리티 (Gemini Client, Logger 등)
+├── docs/                       # 프로젝트 가이드라인 문서
+├── evaluators/                 # AI 응답 품질 평가(LLM-as-a-Judge) 및 환각 감지 모듈
+├── models/                     # 학습 완료된 AI 모델 및 스케일러 저장 (.joblib)
+├── pipeline/                   # [핵심] AI 모델링 및 데이터 파이프라인 스크립트
+│   ├── build_knowledge_base.py # 지식 베이스 임베딩 (pgvector)
 │   ├── cluster_stores.py       # 상권 분석 및 매장 클러스터링 (Champion 알고리즘 선정)
 │   ├── preprocess.py           # 데이터 마트 생성 및 고급 전처리 (OOS/신제품 보정)
 │   ├── train.py                # 실전 배포용 최종 챔피언 모델 학습 및 저장
-│   ├── train_test.py           # 모델별/시나리오별 성능 비교 테스트
-│   └── train_val.py            # 6개월 백테스팅 및 ROI(순이익) 시뮬레이션 검증
+│   ├── batch_inference_fast.py # 병렬 추론 파이프라인
+│   └── generate_insights.py    # 데이터 인사이트 도출 스크립트
+├── results/                    # 분석 및 클러스터링 시각화 산출물 보관
+├── schemas/                    # 서비스 공통 데이터 계약 모델 (contracts.py 등)
 ├── services/                   # 핵심 비즈니스 로직 및 AI 에이전트
 │   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → 도메인 연결)
 │   ├── inventory_predictor.py  # LightGBM 기반 시계열 예측 엔진 (Inference)
 │   ├── production_service.py   # 생산 가이드 생성 및 찬스로스 추정 로직
 │   └── sales_analyzer.py       # 매출 분석 및 자연어 인사이트 생성 에이전트
-├── models/                     # 학습 완료된 AI 모델 및 스케일러 저장 (.joblib)
-├── pipeline/                   # 데이터 처리 및 학습 파이프라인 백엔드 로직
-├── schemas/                    # 서비스 공통 데이터 계약 모델 (contracts.py)
-├── common/                     # 공통 유틸리티 (Gemini Client, Logger 등)
-└── tests/                      # 단위/통합 테스트 코드
+└── tests/                      # 단위/통합/검증 테스트 코드
+    ├── train_test.py           # 모델별/시나리오별 성능 비교 테스트
+    ├── train_val.py            # 6개월 백테스팅 및 ROI(순이익) 시뮬레이션 검증
+    ├── evaluate_production.py  # 생산 추정 평가 검증
+    ├── mock_payload_generator.py # 통합 테스트 페이로드 생성
+    └── verify_orchestrator_apis.py # API 오케스트레이션 검증
 ```
 
 ## 환경 변수
@@ -106,7 +114,7 @@ python run.py
 매장 정보(`STOR_MST.xlsx`), 캠페인 마스터(`CPI_MST.xlsx`), 결제 코드(`PAY_CD.csv`)를 pgvector DB에 임베딩합니다.
 
 ```bash
-python build_knowledge_base.py
+python pipeline/build_knowledge_base.py
 ```
 
 ## 🚀 AI 모델 학습 및 데이터 파이프라인
@@ -119,9 +127,9 @@ python build_knowledge_base.py
 
 | 단계 | 실행 스크립트 | 주요 역할 | 실행 주기 |
 |:---:|:---|:---|:---:|
-| **Step 1** | `scripts/cluster_stores.py` | 매장별 행동 패턴 분석 및 상권 군집화 (5개 그룹) | 월 1회 또는 필요 시 |
-| **Step 2** | `scripts/preprocess.py` | 마트 생성 (영업시간 필터링, OOS 보정, 신제품 가중치 전환) | 매일 (Daily Batch) |
-| **Step 3** | `scripts/train.py` | 최종 챔피언 모델(LightGBM) 전체 데이터 학습 및 저장 | 주기적 모델 갱신 시 |
+| **Step 1** | `pipeline/cluster_stores.py` | 매장별 행동 패턴 분석 및 상권 군집화 (5개 그룹) | 월 1회 또는 필요 시 |
+| **Step 2** | `pipeline/preprocess.py` | 마트 생성 (영업시간 필터링, OOS 보정, 신제품 가중치 전환) | 매일 (Daily Batch) |
+| **Step 3** | `pipeline/train.py` | 최종 챔피언 모델(LightGBM) 전체 데이터 학습 및 저장 | 주기적 모델 갱신 시 |
 
 ---
 
@@ -147,7 +155,7 @@ python build_knowledge_base.py
 
 ### 3. 학습 파라미터 및 전략 선정 기준 (Evaluation)
 
-본 시스템의 학습 파라미터는 단순히 오차(MAE)를 줄이는 것이 아니라, **실질적인 매장 순이익(ROI)**을 기준으로 `train_test.py`와 `train_val.py`를 통해 결정되었습니다.
+본 시스템의 학습 파라미터는 단순히 오차(MAE)를 줄이는 것이 아니라, **실질적인 매장 순이익(ROI)**을 기준으로 `tests/train_test.py`와 `pipeline/train_val.py`를 통해 결정되었습니다.
 
 #### **① 알고리즘 선정 기준**
 *   **비교군**: LightGBM, XGBoost, RandomForest, CatBoost

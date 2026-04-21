@@ -16,7 +16,6 @@ class DashboardAction(BaseModel):
     focus_section: str
     related_sku_id: str | None = None
 
-    # [FE 추가 요청 사항 - RFP 반영용]
     ai_reasoning: str | None = Field(None, description="[추가요청] AI 상세 분석 근거")
     is_finished_good: bool | None = Field(
         False, description="[추가요청] 완제품 여부 (생산 버튼 비활성화용)"
