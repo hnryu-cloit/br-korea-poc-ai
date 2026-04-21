@@ -182,7 +182,7 @@ python pipeline/build_knowledge_base.py
 
 ## 현재 상태 메모
 
-- `SalesAnalysisAgent`은 PostgreSQL에 직접 연결해 실제 데이터를 조회합니다. DB 연결 실패 시 하드코딩된 fallback 값을 반환합니다.
+- `SalesAnalysisAgent`은 PostgreSQL에 직접 연결해 실제 데이터를 조회합니다. DB 연결 실패 시 기본값 합성 대신 오류 경로를 반환합니다.
 - `InventoryPredictor`의 학습 데이터 경로(`resources/04_poc_data/`)는 실제 환경에 맞게 조정이 필요합니다.
 - 사용자 피드백 반영 온라인 학습 루프는 미구현 상태입니다 (P2).
 - Gemini API 호출 내역은 `results/billing.csv`에 자동 기록됩니다.
@@ -219,3 +219,14 @@ python pipeline/build_knowledge_base.py
 - 오케스트레이터의 생산/주문 분기를 `ProductionService.generate_production_guidance()`/`OrderingService.generate_ordering_guidance()`로 위임하고, 해당 서비스 메서드를 추가했습니다.
 - `management` 라우터 연동 안정화를 위해 `normalize_payload_df()`를 `ProductionService` 모듈에 추가했습니다.
 - 주요 경로(`generation/home/router`, `orchestrator`, `rag`, `ordering guide`)에서 광범위 `except Exception`을 축소해 장애 원인 추적성을 높였습니다.
+
+## Session Update (2026-04-21, Round 3)
+
+- 매출 추천 질문 생성(`SalesAnalyzer.suggest_prompts`) 실패 시 `context_prompts` 기반 fallback 주입을 제거했습니다.
+- Gemini 호출 실패 시 임시 대체 질문 대신 빈 `prompts`를 반환하도록 변경해, fallback 데이터가 실제 추천처럼 표시되지 않도록 정리했습니다.
+
+## Session Update (2026-04-21, Round 3)
+
+- `OrderingService`의 시뮬레이션 고정 수량 fallback(`150/145/160`)을 제거하고, 과거 실데이터 기반 수량만 사용하도록 정리했습니다.
+- 특수 이벤트 옵션 생성 시 과거 1년 데이터가 없으면 임의 증분 수량을 만들지 않고 옵션 추가를 생략하도록 변경했습니다.
+- 주문 추천 응답에서 옵션 개수 부족 시 fallback 옵션을 재주입하던 분기를 제거했습니다.

@@ -346,10 +346,6 @@ class OrderingService:
         qty_two_weeks = self._get_historical_qty(store_id, target_date, 14, target_product)
         qty_last_month = self._get_historical_qty(store_id, target_date, 28, target_product)
 
-        if qty_last_week == 0 and qty_two_weeks == 0 and qty_last_month == 0:
-            logger.warning("All historical data are zero. Using simulation fallback.")
-            qty_last_week, qty_two_weeks, qty_last_month = 150, 145, 160
-
         season_weight = self.seasonality_engine.get_weight(target_date, target_product)
         if season_weight != 1.0:
             logger.info(f"시즌성 가중치 적용: {season_weight} (date={target_date})")
@@ -393,8 +389,8 @@ class OrderingService:
         special_event = context.get("special_event")
         if special_event:
             qty_special = self._get_historical_qty(store_id, target_date, 365, target_product)
-            if qty_special == 0:
-                qty_special = int(options[0].recommended_qty * 1.5)
+            if qty_special <= 0:
+                return
             options.append(
                 OrderingOption(
                     option_type=OrderOptionType.SPECIAL,
@@ -558,19 +554,6 @@ class OrderingService:
         enriched_options, summary_insight = self.generate_ordering_insights_and_questions(
             payload.store_id, payload.target_date, current_context, options
         )
-
-        if len(enriched_options) < 3:
-            logger.warning("주문 추천 옵션이 부족하여 fallback 옵션을 채웁니다.")
-            fallback_options = self.calculate_base_ordering_options(
-                payload.store_id, payload.target_date, target_product
-            )
-            existing_types = {option.option_type for option in enriched_options}
-            for fallback in fallback_options:
-                if fallback.option_type in existing_types:
-                    continue
-                enriched_options.append(fallback)
-                if len(enriched_options) >= 3:
-                    break
 
         if not summary_insight:
             summary_insight = "과거 주문 패턴과 시즌성 가중치를 반영한 주문 추천입니다."
