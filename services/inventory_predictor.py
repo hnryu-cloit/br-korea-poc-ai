@@ -218,7 +218,7 @@ class InventoryPredictor:
         if not self.meta_loaded:
             raise RuntimeError(
                 "모델 메타(model_meta.joblib)가 로드되지 않았습니다. "
-                "python build_knowledge_base.py 또는 train_model.py를 먼저 실행하세요."
+                "python scripts/train.py를 먼저 실행해 모델을 생성하세요."
             )
 
         target_time = current_time + timedelta(hours=1)

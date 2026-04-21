@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 class SalesQueryRequest(BaseModel):
     prompt: str
+    store_id: str | None = None
+    context: dict[str, Any] | None = None
 
 
 class GenerationResponse(BaseModel):

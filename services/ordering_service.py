@@ -166,7 +166,7 @@ class OrderingService:
             if not past_data.empty:
                 return int(pd.to_numeric(past_data[qty_col], errors="coerce").fillna(0).sum())
 
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             logger.error(f"Error querying historical data: {e}")
 
         return 0
@@ -199,7 +199,7 @@ class OrderingService:
                     for store_id in store_ids:
                         push_msg = self.generate_push_event(store_id, group_name)
                         triggered_pushes.append(push_msg)
-            except Exception as e:
+            except ValueError as e:
                 logger.error(f"마감 시간 파싱 오류 ({group_name} - {deadline_str}): {e}")
 
         return triggered_pushes
@@ -404,6 +404,18 @@ class OrderingService:
                 )
             )
 
+    def generate_ordering_guidance(self, query: str) -> str:
+        """주문 질의에 대한 운영 가이드를 생성합니다."""
+        prompt = (
+            f"다음 주문 관련 질의에 답변하세요: {query}\n\n"
+            "주문 관리 관점에서 추천 수량, 마감 시간, 시즌성 정보를 포함해 한국어로 답변하세요."
+        )
+        try:
+            return self.gemini.call_gemini_text(prompt)
+        except (ValueError, TypeError, RuntimeError) as exc:
+            logger.warning("주문 가이드 생성 실패: %s", exc)
+            return "주문 관리 화면에서 3가지 추천 옵션을 확인하고 마감 시간 전에 주문해주세요."
+
     def generate_ordering_insights_and_questions(
         self, store_id: str, target_date: str, context: dict, options: list[OrderingOption]
     ) -> tuple[list[OrderingOption], str]:
@@ -450,7 +462,7 @@ class OrderingService:
             ).strip()
             if not full_summary:
                 full_summary = "과거 주문 데이터를 바탕으로 3가지 주문 옵션을 제안합니다."
-        except Exception as e:
+        except (ValueError, TypeError, json.JSONDecodeError, RuntimeError) as e:
             logger.error(f"LLM Reasoning failed: {e}")
             full_summary = (
                 "과거 주문 데이터를 바탕으로 산출된 옵션입니다. 매장 상황을 고려하여 선택해 주세요."
@@ -470,7 +482,7 @@ class OrderingService:
                 now_kst = datetime.now(KST)
             else:
                 now_kst = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9)))
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             now_kst = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9)))
 
         deadline_today = now_kst.replace(

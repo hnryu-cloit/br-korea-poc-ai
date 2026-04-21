@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from json import JSONDecodeError
 import logging
 import os
 from pathlib import Path
@@ -47,7 +48,7 @@ class RAGService:
                 continue
             try:
                 payload = json.loads(file_path.read_text(encoding="utf-8"))
-            except Exception as exc:
+            except (OSError, JSONDecodeError) as exc:
                 logger.warning("기본 지식 파일 로드 실패: %s (%s)", file_path, exc)
                 continue
             if isinstance(payload, list):
@@ -163,7 +164,7 @@ class RAGService:
 
         try:
             answer = self.gemini.call_gemini_text(prompt)
-        except Exception as exc:
+        except (ValueError, TypeError, RuntimeError) as exc:
             logger.error("RAG Gemini 호출 실패: %s", exc)
             answer = "운영 가이드 기반 답변을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."
 
@@ -181,6 +182,7 @@ class RAGService:
             "answer": answer,
             "sources": sources,
             "source_documents": source_objects,
+            "retrieved_contexts": [doc.get("content", "") for doc in retrieved],
             "retrieved_count": len(retrieved),
         }
 

@@ -125,6 +125,18 @@ class ProductionService:
             confidence_level=confidence_level,
         )
 
+    def generate_production_guidance(self, query: str) -> str:
+        """생산 질의에 대한 운영 가이드를 생성합니다."""
+        prompt = (
+            f"다음 생산 관련 질의에 답변하세요: {query}\n\n"
+            "생산 관리 관점에서 재고 예측, 생산 타이밍, 위험 감지 정보를 포함해 한국어로 답변하세요."
+        )
+        try:
+            return self.gemini.call_gemini_text(prompt)
+        except (ValueError, TypeError, RuntimeError) as exc:
+            logger.warning("생산 가이드 생성 실패: %s", exc)
+            return "생산 관리 화면에서 SKU별 재고 현황과 1시간 후 예측값을 확인해주세요."
+
     def get_dashboard_summary(self, 
                               store_id: str, 
                               target_date: str,
@@ -421,3 +433,14 @@ class ProductionService:
         chance_loss_amount = round(chance_loss_qty * unit_margin, 2)
         logger.info(f"chance_loss_reduction: qty={chance_loss_qty:.1f}, margin={unit_margin}, amount={chance_loss_amount:.0f}")
         return chance_loss_amount
+
+
+def normalize_payload_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    """입력 payload 리스트를 DataFrame(대문자 컬럼)으로 정규화합니다."""
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    df.columns = [str(column).upper() for column in df.columns]
+    return df

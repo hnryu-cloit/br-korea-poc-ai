@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from typing import Any
@@ -52,10 +53,10 @@ async def get_home_overview(
             "store_production_data": body.store_production_data,
         }
 
-        result = await dash_service.get_home_overview(payload, raw_data)
+        result = await asyncio.to_thread(dash_service.get_home_overview, payload, raw_data)
         return result
 
-    except Exception as exc:
+    except (ValueError, TypeError, RuntimeError) as exc:
         logger.exception("홈 대시보드 생성 중 오류 발생")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
