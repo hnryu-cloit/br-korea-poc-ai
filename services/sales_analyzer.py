@@ -358,17 +358,10 @@ class SalesAnalyzer:
             )
         except Exception as exc:
             logger.error("추천 질문 생성 실패: %s", exc)
-            fallback = [
-                SalesPromptItem(
-                    label=str(item.get("label", "")).strip()[:24],
-                    category=str(item.get("category", payload.domain)).strip() or payload.domain,
-                    prompt=str(item.get("prompt", "")).strip(),
-                )
-                for item in payload.context_prompts
-                if str(item.get("label", "")).strip() and str(item.get("prompt", "")).strip()
-            ][:5]
             return SalesPromptSuggestResponse(
-                store_id=payload.store_id, domain=payload.domain, prompts=fallback
+                store_id=payload.store_id,
+                domain=payload.domain,
+                prompts=[],
             )
 
     def simulate_profitability(
