@@ -7,6 +7,9 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 - 주문 이력 화면 기본기간/점포검증 개선은 프론트·백엔드 레이어 변경이며 AI 서비스 계약 변경은 없습니다.
 - 생산 진단/폐기손실 고도화는 백엔드(`br-korea-poc-backend`)에서 `core_stock_rate`/`core_stockout_time` 기반으로 처리합니다.
 - AI 서비스의 생산 API 계약은 기존과 동일하며, 이번 변경으로 인한 AI 라우터 수정은 없습니다.
+- `inventory-status` 언패킹 오류(`expected 3, got 2`) 대응은 백엔드 서비스 계층 정규화로 처리했으며 AI 서비스 변경은 없습니다.
+- 제품 이미지 미노출 이슈는 프론트 이미지 URL 정규화 로직 보완으로 처리했으며 AI 서비스 변경은 없습니다.
+- `inventory-status`의 422 방어(요약 지표 안전 변환)와 `page/page_size` 파라미터 정비는 백엔드 변경이며 AI 서비스 변경은 없습니다.
 
 ## 개요
 
