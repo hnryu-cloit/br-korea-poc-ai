@@ -53,9 +53,13 @@ class AgentOrchestrator:
         safe_prompt = classifier_result["masked_query"]
         masked_fields = classifier_result["masked_fields"]
 
+        # POS 기기 등에서 넘어온 컨텍스트에서 매장 ID 추출 (기본값 POC_001)
+        context = context or {}
+        store_id = context.get("store_id", "POC_001")
+
         # 1. 시맨틱 비즈니스 로직 매핑 (Semantic Layer)
         _, business_logic = self.semantic_layer.parse_query_intent(safe_prompt)
-        logger.info(f"적용될 비즈니스 로직: {business_logic}")
+        logger.info(f"적용될 비즈니스 로직: {business_logic}, 요청 매장: {store_id}")
 
         # 2. 의도 분류 및 가드레일 (Predictor Layer)
         if intent == "SENSITIVE":
@@ -69,15 +73,71 @@ class AgentOrchestrator:
                 "masked_fields": masked_fields,
             }
 
-        # 3. RAG(지식 검색) 시도 및 품질 평가
-        rag_result = self.rag_service.generate_with_rag(safe_prompt, store_id=store_id)
+        # 3. 도메인 에이전트 우선 분석 (특화 키워드 감지 시)
+        # 💡 [중요] 분류기(Intent) 결과보다 명시적인 키워드를 우선하여 라우팅 정확도 향상
+        
+        # 생산 관리 에이전트 키워드 (부정형 및 구체적 수치 질문 포함)
+        _PRODUCTION_KW = ["생산", "재고", "품절", "제조", "만들", "소진", "생산량", "보유량", "흐름", "안 한", "하지 않은", "미생산"]
+        # 원본 prompt와 safe_prompt 모두에서 키워드 체크
+        check_text = (prompt + safe_prompt).replace(" ", "")
+        
+        if any(kw.replace(" ", "") in check_text for kw in _PRODUCTION_KW):
+            logger.info("생산 관리 에이전트 호출 (Prioritized by Keyword)")
+            try:
+                # payload에 주입되는 질문은 시스템 지침을 제외한 순수 질문(safe_prompt) 사용
+                result = self.prod_agent.analyze(
+                    payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+                )
+                if isinstance(result, dict):
+                    result["query_type"] = "PRODUCTION"
+                    result["processing_route"] = "production_agent_grounded"
+                    result["blocked"] = False
+                    result["masked_fields"] = masked_fields
+                    return result
+            except Exception as exc:
+                logger.error("생산 에이전트 분석 실패: %s", exc)
+
+        # 주문 관리 에이전트 키워드
+        _ORDERING_KW = ["주문", "발주", "마감", "배송", "납품", "주문량", "주문 수", "주문안"]
+        if any(kw.replace(" ", "") in check_text for kw in _ORDERING_KW):
+            logger.info("주문 관리 에이전트 호출 (Prioritized by Keyword)")
+            try:
+                result = self.order_agent.analyze(
+                    payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+                )
+                if isinstance(result, dict):
+                    result["query_type"] = "ORDERING"
+                    result["processing_route"] = "ordering_agent_grounded"
+                    result["blocked"] = False
+                    result["masked_fields"] = masked_fields
+                    return result
+            except Exception as exc:
+                logger.error("주문 에이전트 분석 실패: %s", exc)
+
+        # 채널 및 결제수단 특화 의도 (키워드 매칭이 안 된 경우에만 수행)
+        if intent == "CHANNEL":
+            logger.info("Channel/Payment 전용 분석 에이전트 호출")
+            result = self.channel_agent.analyze(
+                payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+            )
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                dumped["query_type"] = intent
+                dumped["processing_route"] = "channel_agent"
+                dumped["blocked"] = False
+                dumped["masked_fields"] = masked_fields
+                return dumped
+            return result
+
+        # 4. RAG(지식 검색) 시도 및 품질 평가 (범용 질의 및 매뉴얼 질의)
+        rag_result = self.rag_service.generate_with_rag(safe_prompt)
 
         if rag_result.get("text") and "가이드를 찾을 수 없습니다" not in str(rag_result["text"]):
             # 품질 평가 (실시간 신뢰도 측정)
             confidence_score = self.evaluator.evaluate_response(
                 query=safe_prompt,
                 response=str(rag_result["text"]),
-                context=rag_result.get("retrieved_contexts", []),
+                context=rag_result.get("sources", []),
             )
 
             if confidence_score >= 0.7:
@@ -96,52 +156,6 @@ class AgentOrchestrator:
                 logger.warning(
                     f"신뢰도 저하 ({confidence_score:.2f}). 데이터 분석 에이전트로 전환."
                 )
-
-        # 4. 도메인 에이전트 분석 수행
-        # 채널 및 결제수단 특화 의도인 경우 전용 분석 에이전트 호출
-        if intent == "CHANNEL":
-            logger.info("Channel/Payment 전용 분석 에이전트 호출")
-            result = self.channel_agent.analyze(
-                payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
-            )
-            if hasattr(result, "model_dump"):
-                dumped = result.model_dump()
-                dumped["query_type"] = intent
-                dumped["processing_route"] = "channel_agent"
-                dumped["blocked"] = False
-                dumped["masked_fields"] = masked_fields
-                return dumped
-            return result
-
-        # 생산 관리 에이전트 호출
-        _PRODUCTION_KW = ["생산", "재고", "품절", "제조", "만들", "소진", "생산량", "보유량"]
-        if any(kw in safe_prompt for kw in _PRODUCTION_KW):
-            logger.info("생산 관리 에이전트 호출")
-            text = self.prod_agent.generate_production_guidance(safe_prompt)
-            return {
-                "text": text,
-                "evidence": ["생산 관리 에이전트 분석"],
-                "actions": ["생산 현황 확인", "재고 수준 점검", "생산 추천 확인"],
-                "query_type": "GENERAL",
-                "processing_route": "production_agent",
-                "blocked": False,
-                "masked_fields": masked_fields,
-            }
-
-        # 주문 관리 에이전트 호출
-        _ORDERING_KW = ["주문", "발주", "마감", "배송", "납품", "주문량", "주문 수"]
-        if any(kw in safe_prompt for kw in _ORDERING_KW):
-            logger.info("주문 관리 에이전트 호출")
-            text = self.order_agent.generate_ordering_guidance(safe_prompt)
-            return {
-                "text": text,
-                "evidence": ["주문 관리 에이전트 분석"],
-                "actions": ["주문 옵션 확인", "마감 시간 확인", "주문 수량 결정"],
-                "query_type": "GENERAL",
-                "processing_route": "ordering_agent",
-                "blocked": False,
-                "masked_fields": masked_fields,
-            }
 
         # 5. 최종 매출 분석 및 가드레일 적용
         analysis_result = self.sales_agent.analyze(

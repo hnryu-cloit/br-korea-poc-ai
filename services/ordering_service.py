@@ -24,9 +24,10 @@ from schemas.contracts import (
 )
 
 from .seasonality_engine import SeasonalityEngine
+from .sql_pipeline import SQLGenerator, QueryExecutor
+from schemas.contracts import SalesQueryRequest
 
 logger = init_logger(__name__)
-
 
 class OrderingService:
     def __init__(
@@ -36,12 +37,6 @@ class OrderingService:
         product_group_deadlines: dict = None,
         campaign_df: pd.DataFrame = None,
     ):
-        """
-        주문 관리 서비스 초기화
-        :param gemini_client: Gemini API 클라이언트
-        :param historical_order_df: 과거 주문 상세 데이터 (ORD_DTL 테이블 기반 DataFrame)
-        :param product_group_deadlines: 제품 그룹별 마감 시간 딕셔너리
-        """
         self.gemini = gemini_client
         self.historical_order_df = (
             historical_order_df if historical_order_df is not None else pd.DataFrame()
@@ -52,6 +47,71 @@ class OrderingService:
         self.seasonality_engine = SeasonalityEngine(
             campaign_df if campaign_df is not None else pd.DataFrame()
         )
+        self.sql_generator = SQLGenerator(gemini_client)
+        self.query_executor = QueryExecutor()
+
+    def analyze(self, payload: SalesQueryRequest) -> Dict[str, Any]:
+        """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
+        logger.info(f"OrderingService analyze: {payload.query}")
+        
+        # 1. SQL 생성
+        generated = self.sql_generator.generate(payload.query, payload.store_id, query_type="order")
+        
+        # 2. SQL 실행
+        try:
+            rows, columns = self.query_executor.run(generated.sql, payload.store_id)
+        except Exception as e:
+            logger.error(f"Ordering SQL execution failed: {e}")
+            rows, columns = [], []
+        # 3. 결과 기반 답변 생성 (Grounded) - 날짜 규칙 재강조
+        prompt = f"""
+        당신은 베이커리 매장의 주문/발주 관리 전문가입니다.
+        다음은 사용자의 질문에 대해 DB를 조회한 결과 데이터입니다.
+        
+        [질문]
+        {payload.query}
+        
+        [조회 결과 (총 {len(rows)}건)]
+        {json.dumps(rows, ensure_ascii=False)[:2000]}
+
+        [절대 규칙 - 날짜 언급]
+        - 오늘 날짜는 2026-03-10 입니다.
+        - '최근 n일' 질문에 대한 답변 시, 반드시 오늘(3/10)을 제외하고 영업이 종료된 어제까지의 데이터임을 명시하세요.
+        - 예: "어제(3/9)까지 최근 3일간..." 또는 "3월 7일부터 3월 9일까지..."
+        
+        [답변 가이드]
+        - 데이터가 존재한다면 수치(발주량, 배송일, 미납량 등)를 반드시 포함하여 구체적으로 답변하세요.
+        - 조회 결과가 비어있다면([]), "해당 조건에 맞는 발주 데이터가 없습니다"라고 친절하게 안내하세요.
+        - 'keywords' 배열에는 사용자의 질문에서 의도를 파악하기 위한 핵심 단어들을 나열하세요.
+        - '근거' 배열에는 주요 수치를 포함하세요.
+        
+        [필수 응답 형식 (JSON)]
+        {{
+          "keywords": ["핵심단어1", "핵심단어2"],
+          "text": "점주에게 보여줄 친절한 답변 텍스트",
+          "evidence": ["조회된 수치 요약", "비교 결과 등"],
+          "actions": ["재고 확인하기", "추가 생산 고려하기"]
+        }}
+        """
+        
+        try:
+            res_raw = self.gemini.call_gemini_text(prompt, response_type="json")
+            data = json.loads(res_raw) if isinstance(res_raw, str) else res_raw
+        except Exception as e:
+            logger.error(f"Grounded response generation failed: {e}")
+            data = {"text": "데이터 조회는 완료되었으나 분석 중 오류가 발생했습니다.", "evidence": [], "actions": [], "keywords": []}
+
+        return {
+            "text": data.get("text", ""),
+            "keywords": data.get("keywords", []),
+            "evidence": data.get("evidence", []) + [f"조회 SQL: {generated.sql}"],
+            "actions": data.get("actions", []),
+            "query_type": "ORDERING",
+            "processing_route": "ordering_service_grounded",
+            "sql": generated.sql,
+            "relevant_tables": generated.relevant_tables,
+            "row_count": len(rows)
+        }
 
     def set_historical_data(self, df: pd.DataFrame):
         """과거 데이터를 외부(DataLoader 등)에서 로드하여 주입"""

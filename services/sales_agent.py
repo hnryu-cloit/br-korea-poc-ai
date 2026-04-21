@@ -27,23 +27,23 @@ class SalesAnalysisAgent:
             logger.error(f"SalesAnalysisAgent DB 연결 실패: {e}")
             self.engine = None
             
-        # 테이블 스키마 정의 (시맨틱 레이어용 컨텍스트)
+        # 테이블 스키마 정의 (시맨틱 레이어용 컨텍스트) - 표준화된 뷰(View) 중심
         self.schema_definitions = {
-            "raw_daily_store_item": {
-                "description": "일별 매장 상품별 매출. 모든 컬럼은 text 타입. 수치 집계: CAST(sale_qty AS NUMERIC). 날짜 필터: sale_dt >= '20260401' 처럼 반드시 따옴표 있는 문자열 리터럴 사용(숫자 리터럴 금지)",
-                "columns": ["sale_dt(매출일자, text YYYYMMDD, 예: '20260415')", "masked_stor_cd(매장코드, text)", "item_cd(상품코드, text)", "item_nm(상품명, text)", "sale_qty(판매수량, text→CAST AS NUMERIC)", "sale_amt(매출금액, text→CAST AS NUMERIC)", "dc_amt(할인금액, text→CAST AS NUMERIC)"]
+            "DAILY_STOR_ITEM": {
+                "description": "일별 매장 상품별 매출 집계. 매출 분석 시 최우선 사용.",
+                "columns": ["SALE_DT(매출일자, BIGINT YYYYMMDD)", "MASKED_STOR_CD(매장코드)", "ITEM_NM(상품명)", "SALE_QTY(판매수량, NUMERIC)", "SALE_AMT(매출금액, NUMERIC)"]
             },
-            "raw_daily_store_pay_way": {
-                "description": "일별 매장 결제수단(채널)별 매출. 모든 컬럼은 text 타입",
-                "columns": ["sale_dt(매출일자, text)", "masked_stor_cd(매장코드, text)", "pay_way_cd(결제수단코드 01:신용카드 08/09/11:모바일/간편결제, text)", "pay_dtl_cd(결제상세코드, text)", "pay_amt(결제금액, text→CAST(pay_amt AS NUMERIC)로 집계)"]
+            "DAILY_STOR_PAY_WAY": {
+                "description": "일별 매장 결제수단(채널)별 매출. 배달/오프라인 구분 시 사용.",
+                "columns": ["SALE_DT(매출일자, TEXT)", "MASKED_STOR_CD(매장코드)", "PAY_WAY_CD(결제수단코드)", "PAY_AMT(결제금액, NUMERIC)"]
             },
-            "raw_pay_cd": {
-                "description": "결제수단 상세 마스터 (배달의민족, 요기요 등 확인용)",
-                "columns": ["pay_dc_cd(결제상세코드, text)", "pay_dc_nm(결제수단명, text)"]
+            "PAY_CD": {
+                "description": "결제수단 상세 마스터",
+                "columns": ["PAY_DC_CD(결제상세코드)", "PAY_DC_NM(결제수단명)"]
             },
-            "raw_daily_store_item_tmzon": {
-                "description": "시간대별 매장 상품 매출 (피크 시간 분석용). 모든 컬럼은 text 타입",
-                "columns": ["sale_dt(매출일자, text)", "masked_stor_cd(매장코드, text)", "item_cd(상품코드, text)", "tmzon_div(시간대 00~23, text)", "sale_qty(판매수량, text→CAST(sale_qty AS NUMERIC)로 집계)", "sale_amt(매출금액, text→CAST(sale_amt AS NUMERIC)로 집계)"]
+            "DAILY_STOR_ITEM_TMZON": {
+                "description": "시간대별 매장 상품 매출 (피크 시간 분석용).",
+                "columns": ["SALE_DT(매출일자, BIGINT)", "MASKED_STOR_CD(매장코드)", "ITEM_NM(상품명)", "TMZON_DIV(시간대 00~23)", "SALE_QTY(판매수량, NUMERIC)"]
             }
         }
 
