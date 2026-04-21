@@ -38,61 +38,29 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 ```text
 br-korea-poc-ai/
-├── run.py                      # uvicorn 서버 실행 엔트리
-├── build_knowledge_base.py     # pgvector 지식 베이스 초기화/임베딩 스크립트
-├── generate_insights.py        # 독립 인사이트 생성 스크립트
-├── requirements.txt
-├── environment.yml
-├── Dockerfile
-├── api/                        # FastAPI 앱
-│   ├── main.py                 # 앱 초기화, 라우터 등록, lifespan 훅
-│   ├── config.py               # 환경 변수 설정 (Settings, default port: 8001)
-│   ├── dependencies.py         # 서비스 DI 팩토리, Bearer 토큰 검증
-│   ├── schemas.py              # API 전용 Pydantic 모델
-│   └── routers/
-│       ├── generation.py       # POST /generation — 파이프라인 실행
-│       ├── sales.py            # POST /sales/query, /sales/query/channel-payment
-│       └── management.py       # POST /api/production/simulation, /ordering/recommend, /management/* legacy aliases
-├── common/                     # 공통 유틸리티
-│   ├── gemini.py               # Gemini 클라이언트 (텍스트/이미지/임베딩, CSV 과금 로깅)
-│   ├── logger.py               # 구조화 로깅 및 timefn 데코레이터
-│   ├── llm_logger.py           # LLM 호출 감사 로그 (전화번호/이메일/주민번호 마스킹)
-│   ├── rate_limiter.py         # 슬라이딩 윈도우 Rate Limiter (분당 60회)
-│   ├── evaluator.py            # QualityEvaluator (LLM-as-a-Judge, 신뢰도 0~1 점수)
-│   └── prompt.py               # 프롬프트 템플릿 함수
-├── services/                   # 핵심 비즈니스 로직
-│   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → RAG → 도메인 에이전트)
-│   ├── sales_analyzer.py       # 매출 분석 에이전트 (시맨틱 캐시, 가드레일, Gemini 호출)
-│   ├── sales_agent.py          # PostgreSQL 직접 조회 엔진 (채널믹스, 수익성, 교차판매 Lift 포함)
-│   ├── query_classifier.py     # 규칙 기반 질의 분류기 (SENSITIVE/CHANNEL/COMPARISON/...)
-│   ├── query_routing.py        # 질의 유형 기반 라우팅 보조 로직
-│   ├── channel_payment_analyzer.py # 채널·결제수단 특화 분석 에이전트
-│   ├── grounded_analyzer.py    # Text-to-SQL 파이프라인 기반 근거 데이터 포함 응답 생성
-│   ├── sql_pipeline.py         # SQLGenerator + QueryExecutor (스키마 레지스트리 포함)
-│   ├── chance_loss_engine.py   # 찬스로스 정량 추정 엔진 (매출 0구간 탐지 + 인접 평균 손실 추정)
-│   ├── seasonality_engine.py   # 시즌성 가중치 엔진 (캠페인 1순위, 요일별 역사 가중치 2순위)
-│   ├── rag_service.py          # pgvector 벡터 검색 + QA 캐시 + Excel 데이터 RAG
-│   ├── semantic_layer.py       # 자연어 → 비즈니스 KPI 매핑
-│   ├── inventory_predictor.py  # InventoryPredictor (LightGBM 기반 시계열 예측)
-│   ├── inventory_reversal_engine.py # 재고 역산 엔진 (기초재고+생산-매출, 5분 단위 추정)
-│   ├── production_service.py   # 생산 알람 및 시뮬레이션 리포트 (찬스로스 감소 효과 포함)
-│   ├── production_agent.py     # 생산 관리 에이전트 보조 로직
-│   ├── ordering_service.py     # 주문 추천 (3가지 옵션, 시즌성 가중치 적용)
-│   ├── dashboard_service.py    # 홈 대시보드 집계 서비스
-│   └── data_extraction_engine.py # intent 분류(7종) + SQL/API 우선 데이터 추출 엔진
-├── pipeline/
-│   ├── run.py                  # 파이프라인 진입점 (프롬프트 → AgentOrchestrator)
-│   └── train_model.py          # InventoryPredictor 배치 학습 스크립트
-├── schemas/
-│   └── contracts.py            # 도메인 계약 모델 (생산·주문·매출 Pydantic 스키마)
-├── tests/
-│   ├── conftest.py
-│   ├── test_api_integration.py
-│   ├── test_ai_agents.py
-│   ├── test_pipeline.py
-│   └── test_quality_scenarios.py # 16개 품질 시나리오 테스트
-└── eval-data/
-    └── sample.json
+├── run.py                      # FastAPI/uvicorn 서버 실행 엔트리
+├── requirements.txt            # 파이썬 의존성 패키지 목록
+├── Dockerfile                  # 컨테이너 빌드 설정
+├── api/                        # FastAPI 웹 서버 계층
+│   ├── main.py                 # 앱 초기화 및 라우터 등록
+│   ├── routers/                # 도메인별 API 엔드포인트 (sales, management 등)
+│   └── schemas.py              # 요청/응답 Pydantic 모델
+├── scripts/                    # [핵심] AI 모델링 및 데이터 파이프라인 스크립트
+│   ├── cluster_stores.py       # 상권 분석 및 매장 클러스터링 (Champion 알고리즘 선정)
+│   ├── preprocess.py           # 데이터 마트 생성 및 고급 전처리 (OOS/신제품 보정)
+│   ├── train.py                # 실전 배포용 최종 챔피언 모델 학습 및 저장
+│   ├── train_test.py           # 모델별/시나리오별 성능 비교 테스트
+│   └── train_val.py            # 6개월 백테스팅 및 ROI(순이익) 시뮬레이션 검증
+├── services/                   # 핵심 비즈니스 로직 및 AI 에이전트
+│   ├── orchestrator.py         # 에이전트 오케스트레이터 (의도 분류 → 도메인 연결)
+│   ├── inventory_predictor.py  # LightGBM 기반 시계열 예측 엔진 (Inference)
+│   ├── production_service.py   # 생산 가이드 생성 및 찬스로스 추정 로직
+│   └── sales_analyzer.py       # 매출 분석 및 자연어 인사이트 생성 에이전트
+├── models/                     # 학습 완료된 AI 모델 및 스케일러 저장 (.joblib)
+├── pipeline/                   # 데이터 처리 및 학습 파이프라인 백엔드 로직
+├── schemas/                    # 서비스 공통 데이터 계약 모델 (contracts.py)
+├── common/                     # 공통 유틸리티 (Gemini Client, Logger 등)
+└── tests/                      # 단위/통합 테스트 코드
 ```
 
 ## 환경 변수
@@ -141,125 +109,68 @@ python run.py
 python build_knowledge_base.py
 ```
 
-### 4. ML 모델 학습 (선택)
+## 🚀 AI 모델 학습 및 데이터 파이프라인
 
-```bash
-python pipeline/train_model.py
-```
+본 시스템은 단순한 예측을 넘어 **매장의 수익성을 극대화**하기 위해 상권 분석, 고도화된 전처리, 비즈니스 특화 학습이 결합된 다단계 파이프라인을 운영합니다.
 
-### 5. 테스트 실행
+### 1. 학습 프로세스 및 실행 순서
 
-```bash
-pytest tests/
-```
+모든 학습 데이터는 정제 후 DB의 `ai_sales_data_mart` 테이블에 캐싱되어 연산 효율을 높입니다.
 
-## 코드 컨벤션 (ruff / black / mypy)
+| 단계 | 실행 스크립트 | 주요 역할 | 실행 주기 |
+|:---:|:---|:---|:---:|
+| **Step 1** | `scripts/cluster_stores.py` | 매장별 행동 패턴 분석 및 상권 군집화 (5개 그룹) | 월 1회 또는 필요 시 |
+| **Step 2** | `scripts/preprocess.py` | 마트 생성 (영업시간 필터링, OOS 보정, 신제품 가중치 전환) | 매일 (Daily Batch) |
+| **Step 3** | `scripts/train.py` | 최종 챔피언 모델(LightGBM) 전체 데이터 학습 및 저장 | 주기적 모델 갱신 시 |
 
-```bash
-# Lint
-ruff check .
+---
 
-# Format
-black .
+### 2. 스크립트별 핵심 로직 및 설계 근거
 
-# Type check
-mypy --explicit-package-bases api common services pipeline schemas
-```
+#### **[Step 1] 상권 분석 (`cluster_stores.py`)**
+*   **로직**: 매출 규모(Log 스케일링), 시간대별 매출 비중(Morning/Lunch/Afternoon/Evening), 주말 비중, 온라인 매출 비중 등 7개 행동 피처를 기반으로 매장을 그룹핑합니다.
+*   **설계 근거**:
+    *   **아키텍처 분리**: 매장의 본질적인 성격(상권)은 매일 변하지 않으므로, 무거운 군집화 연산을 일일 배치에서 분리하여 시스템 부하를 최소화했습니다.
+    *   **알고리즘 앙상블**: K-Means, DBSCAN, HDBSCAN을 동시 평가하여 **실루엣 계수(Silhouette Score)**가 가장 높은 최적의 알고리즘을 시스템이 스스로 선정합니다.
 
-`mypy`는 `pyproject.toml` 설정에 따라 `tests/`, `scripts/` 디렉터리를 제외하고 검사합니다.
+#### **[Step 2] 데이터 마트 전처리 (`preprocess.py`)**
+*   **로직**: 원본 데이터를 로드하여 비영업시간 제거, 행사 제외 4주 순수 평균 산출, 품절(OOS) 데이터 보정, 대형 예약주문(특납) 이상치 제거를 수행합니다.
+*   **설계 근거**:
+    *   **True Demand 발굴**: 품절로 인해 0으로 기록된 데이터를 과거 평균으로 복원함으로써 AI가 '못 판 수요'까지 학습하도록 유도합니다.
+    *   **신제품 Soft Transition**: 데이터가 없는 신제품 출시 초기 14일은 **동일 클러스터 평균**을 100% 참조하고, 이후 28일까지 자기 데이터 비중을 선형적으로 높여가며 예측 안정성을 확보합니다.
 
-## 주요 API 엔드포인트
+#### **[Step 3] 최종 모델 학습 (`train.py`)**
+*   **로직**: 백테스팅을 통해 검증된 최적 파라미터로 **가용한 전체 데이터(100%)를 학습**하여 실전용 모델 파일(`.joblib`)을 생성합니다.
+*   **설계 근거**: 실전 배포 모델은 가장 최신의 트렌드까지 인지해야 하므로 검증을 위한 데이터 분할 없이 전체 이력을 모두 학습에 투입합니다.
 
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| GET | `/health` | 서비스 헬스체크 |
-| POST | `/generation` | 자연어 프롬프트 기반 파이프라인 실행 |
-| POST | `/sales/query` | 매출 자연어 질의 (종합 분석) |
-| POST | `/sales/query/channel-payment` | 채널·결제수단 특화 분석 |
-| POST | `/api/production/simulation` | 생산 가이드 시뮬레이션 리포트 |
-| POST | `/ordering/recommend` | 계약 기반 주문 추천 |
+---
 
-레거시 호환용 엔드포인트도 함께 유지합니다.
+### 3. 학습 파라미터 및 전략 선정 기준 (Evaluation)
 
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| POST | `/management/production/predict` | 백엔드 호환용 생산 예측 |
-| POST | `/management/ordering/recommend` | 백엔드 호환용 주문 추천 |
+본 시스템의 학습 파라미터는 단순히 오차(MAE)를 줄이는 것이 아니라, **실질적인 매장 순이익(ROI)**을 기준으로 `train_test.py`와 `train_val.py`를 통해 결정되었습니다.
 
-`AI_SERVICE_TOKEN` 설정 시 모든 엔드포인트에 `Authorization: Bearer <token>` 헤더가 필요합니다.
+#### **① 알고리즘 선정 기준**
+*   **비교군**: LightGBM, XGBoost, RandomForest, CatBoost
+*   **평가 결과**: XGBoost가 순수 정확도(MAE)는 소폭 높았으나, **커스텀 손실 함수(Chance Loss) 적용 유연성**과 **학습 속도** 측면에서 비즈니스 최적화 모델로 **LightGBM**을 최종 선정했습니다.
 
-## 계약 스키마
+#### **② 패널티 점수(Penalty Weight) 설정 근거**
+*   **전략**: "결품으로 손님을 놓치는 비용(65%)이 폐기 비용(35%)보다 크다"는 비즈니스 가정을 수학적으로 모델에 반영했습니다.
+*   **검증 지표**: `Net Profit Index` (AI 도입 시 추가 매출 이익 - 추가 폐기 원가)
+*   **최종 설정**: 6개월간의 백테스팅을 통해 전체 매장 합계 순이익이 최고점(+60,000 이상)을 기록한 **상권별 가변 패널티(2.0 ~ 2.6)**를 적용했습니다.
+    *   *로드샵(Cluster 0)*: 매출 극대화를 위해 패널티 **2.6**
+    *   *오피스 상권(Cluster 1)*: 효율적인 재고 관리를 위해 패널티 **2.2** 등
 
-- 생산 시뮬레이션 요청/응답 계약은 [`schemas/contracts.py`](/Users/hanna/Documents/br-korea-poc/br-korea-poc-ai/schemas/contracts.py:1)의 `SimulationRequest`, `SimulationReportResponse`를 기준으로 관리합니다.
-- 백엔드가 AI 서비스를 프록시하거나 매핑할 때는 위 계약과 정합성을 유지해야 합니다.
+---
 
-## Backend 연동 메모
+## 🛠️ 모델 추론 (Inference) 아키텍처
 
-백엔드는 프론트 계약을 유지하기 위해 AI 요청/응답을 어댑팅합니다.
+실시간 API 요청(`POST /api/production/simulation`) 시의 동작 방식입니다.
 
-### Sales Query 입력 계약
+1.  **Feature Collector**: DB에서 실시간 날씨, 요일, 행사 여부, 4주 평균 등 최신 피처 수집
+2.  **Scaling**: 학습 시 사용된 `feature_scaler.joblib`을 적용하여 입력값 정규화
+3.  **Predictor**: `advanced_inventory_lgbm.joblib` 모델을 통한 1시간 뒤 예상 수요 도출
+4.  **Post-Processor**: 음수 보정 및 예약 주문(특납) 수량 합산 후 최종 추천량 반환
 
-- AI 원본 계약:
-  - `POST /sales/query`
-  - body: `{"store_id": "...", "query": "..."}`
-- 백엔드는 프론트의 `prompt`를 받아 위 형태로 변환해 호출합니다.
-
-### Sales Query 응답 계약
-
-- AI 원본 응답은 `answer`, `source_data_period`, `channel_analysis`, `profit_simulation` 중심입니다.
-- 백엔드는 이를 프론트 표시용 `text`, `evidence`, `actions`, `visual_data` 중심 구조로 변환합니다.
-- AI 서비스 자체는 도메인 분석 계약을 유지하고, 프론트 고정 계약은 백엔드에서 보장합니다.
-
-## 서비스 구조 흐름
-
-```
-클라이언트 요청
-    └── FastAPI 라우터
-            └── AgentOrchestrator
-                    ├── SemanticLayer          (비즈니스 KPI 매핑)
-                    ├── QueryClassifier        (의도 분류: SENSITIVE/CHANNEL/COMPARISON/... 가드레일)
-                    ├── RAGService             (pgvector 벡터 검색 + 시맨틱 QA 캐시)
-                    ├── QualityEvaluator       (응답 신뢰도 평가, LLM-as-a-Judge)
-                    ├── SalesAnalyzer          (매출 분석 + DB 직접 조회)
-                    │       ├── SalesAnalysisAgent
-                    │       │       ├── analyze_real_channel_mix()      (채널믹스)
-                    │       │       ├── simulate_real_profitability()   (수익성)
-                    │       │       ├── extract_cross_sell_combinations() (교차판매 Lift)
-                    │       │       ├── calculate_comparison_metrics()  (L4W vs P4W)
-                    │       │       └── extract_store_profile()         (Top Items, 피크 시간, 음료 비중)
-                    │       └── ChannelPaymentAnalyzer (채널/결제 특화)
-                    ├── ProductionService      (생산 알람, 시뮬레이션, 찬스로스 감소 효과)
-                    │       └── ChanceLossEngine (매출 0구간 기반 기회손실 정량 추정)
-                    ├── OrderingService        (주문 추천)
-                    │       └── SeasonalityEngine (캠페인 + 요일별 역사 가중치)
-                    ├── InventoryPredictor     (LightGBM 기반 시계열 예측 + 캠페인 승수 보정)
-                    └── InventoryReversalEngine (기초재고+생산-매출 역산, 5분 단위 추정)
-```
-
-## ML / 분석 모델 상세
-
-### InventoryPredictor (`services/inventory_predictor.py`)
-- **모델**: LightGBM GBDT (`objective=regression`, `metric=mae`)
-- **피처**: `hour`, `weekday`, `is_weekend`, `lag_1h`, `lag_2h`, `rolling_mean_3h`, `store_avg`, `item_avg`
-- **학습**: 판매 0 데이터를 비율 1.5:1로 다운샘플, 상위 1% 이상치 제거, 판매량 기반 샘플 가중치 적용
-- **추론**: ML 예측(70%) + 실시간 판매 속도(30%) 하이브리드 보정
-- **신뢰구간**: 과거 잔차 표준편차(±1σ) 기반, 데이터 부족 시 비율 기반 fallback
-
-### SeasonalityEngine (`services/seasonality_engine.py`)
-- **1순위**: 캠페인 마스터 날짜 범위 조회 → 캠페인 가중치 적용
-- **2순위**: 역사적 판매 데이터 기반 요일별 상대 가중치 (일별 평균 / 전체 평균)
-- **3순위**: 기본값 1.0
-
-### ChanceLossEngine (`services/chance_loss_engine.py`)
-- 영업 시간(8~22시) 중 매출 0 구간 탐지
-- 인접 ±2시간 평균으로 손실 수량 추정
-- 데이터 커버리지와 생산 기록 유무 기반 신뢰도(`high` / `medium` / `low`) 산출
-
-### 교차판매 연관규칙 (`SalesAnalysisAgent.extract_cross_sell_combinations`)
-- 동일 영수증 내 아이템 쌍을 DB CTE 쿼리로 집계
-- **Support**: 전체 영수증 중 두 상품 동반 등장 비율
-- **Confidence**: item_a 구매 시 item_b 구매 확률
-- **Lift**: 독립 구매 대비 동반 구매 상승 배율 (>1이면 시너지)
 
 ## 현재 상태 메모
 
