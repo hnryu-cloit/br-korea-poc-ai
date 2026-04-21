@@ -207,3 +207,15 @@ python pipeline/build_knowledge_base.py
 - 이번 세션의 analytics KPI 0값 보정(`STORE_DEMO`/미존재 점포ID 폴백, 프론트 점포 자동 보정) 역시 backend+frontend 범위 작업이며 AI 서비스 코드는 변경하지 않았습니다.
 - 프론트 `.env.example` 기본 점포 ID를 `POC_012`로 조정하고, backend metrics의 빈 기간 자동 폴백을 추가한 작업도 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
 - analytics `할인 결제 비중` 소수 정밀도 표시 보정(`0.1%` 미만 2자리 표기)도 backend 표시 포맷 변경이며 AI 서비스 코드는 변경하지 않았습니다.
+
+## Session Update (2026-04-21, Round 2)
+
+- `/generation` 요청 스키마에 `store_id`, `context`를 추가하고 라우터에서 파이프라인 컨텍스트로 전달하도록 확장했습니다.
+- `AgentOrchestrator`가 `context.store_id`를 사용해 `ChannelPaymentAnalyzer`/`SalesAnalyzer` 요청의 `store_id`를 `default_store` 고정값 대신 실제 매장 기준으로 전달하도록 수정했습니다.
+- RAG 품질평가 입력을 `sources` 문자열 목록이 아니라 실제 검색 컨텍스트(`retrieved_contexts`) 기반으로 평가하도록 정비했습니다.
+- `RAGService` 응답에 `retrieved_contexts`를 추가하고 파일 로드/호출 예외를 구체 타입(`OSError`, `JSONDecodeError`, `ValueError`, `TypeError`, `RuntimeError`) 중심으로 정리했습니다.
+- `home` 라우터의 동기 함수 `await` 오사용을 `asyncio.to_thread(...)`로 수정해 런타임 `TypeError` 가능성을 제거했습니다.
+- `InventoryPredictor` 모델 메타 미로딩 오류 안내 문구를 실제 학습 스크립트 경로(`scripts/train.py`) 기준으로 정정했습니다.
+- 오케스트레이터의 생산/주문 분기를 `ProductionService.generate_production_guidance()`/`OrderingService.generate_ordering_guidance()`로 위임하고, 해당 서비스 메서드를 추가했습니다.
+- `management` 라우터 연동 안정화를 위해 `normalize_payload_df()`를 `ProductionService` 모듈에 추가했습니다.
+- 주요 경로(`generation/home/router`, `orchestrator`, `rag`, `ordering guide`)에서 광범위 `except Exception`을 축소해 장애 원인 추적성을 높였습니다.
