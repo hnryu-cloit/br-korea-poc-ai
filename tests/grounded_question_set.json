@@ -1,0 +1,30 @@
+[
+  {
+    "id": "production_top_items",
+    "domain": "production",
+    "store_id": "POC_001",
+    "query": "생산량 상위 3개 품목 알려줘",
+    "expect_data": true
+  },
+  {
+    "id": "ordering_top_items",
+    "domain": "ordering",
+    "store_id": "POC_001",
+    "query": "주문 수량 상위 3개 품목 알려줘",
+    "expect_data": true
+  },
+  {
+    "id": "sales_top_items",
+    "domain": "sales",
+    "store_id": "POC_001",
+    "query": "매출 상위 3개 품목 알려줘",
+    "expect_data": true
+  },
+  {
+    "id": "channel_payment_mix",
+    "domain": "channel",
+    "store_id": "POC_001",
+    "query": "결제수단별 매출 알려줘",
+    "expect_data": true
+  }
+]
