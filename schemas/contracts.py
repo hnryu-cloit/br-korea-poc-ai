@@ -184,6 +184,7 @@ class SalesQueryRequest(BaseModel):
     store_id: str
     query: str = Field(..., description="점주 질의 (예: '어제 배달 비중이 왜 낮았지?')")
     domain: str | None = Field(None, description="질의 도메인 (production|ordering|sales)")
+    business_date: str = Field(default="2026-03-05", description="기준 영업일")
     system_instruction: str | None = Field(None, description="동적 시스템 프롬프트")
     raw_data_context: list[dict[str, Any]] | None = Field(
         None, description="DB에서 조회된 관련 매출 통계 데이터"

@@ -235,7 +235,12 @@ class SalesAnalyzer:
             return SalesQueryResponse(answer=insight, source_data_period="N/A", data_lineage=[])
 
         workflow = GroundedWorkflow(self.gemini)
-        result = workflow.run(query=user_query, store_id=store_id, domain="sales")
+        result = workflow.run(
+            query=user_query,
+            store_id=store_id,
+            domain=payload.domain or "sales",
+            reference_date=payload.business_date,
+        )
         return {
             "answer": {
                 "text": result.get("text", ""),

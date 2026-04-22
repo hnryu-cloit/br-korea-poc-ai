@@ -63,7 +63,12 @@ class ProductionService:
         """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
         logger.info(f"ProductionService analyze: {payload.query}")
         workflow = GroundedWorkflow(self.gemini)
-        result = workflow.run(query=payload.query, store_id=payload.store_id, domain="production")
+        result = workflow.run(
+            query=payload.query,
+            store_id=payload.store_id,
+            domain="production",
+            reference_date=payload.business_date,
+        )
         return result
         
         # 1. SQL 생성

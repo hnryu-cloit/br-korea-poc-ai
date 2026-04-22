@@ -17,7 +17,12 @@ class ChannelPaymentAnalyzer:
     def analyze(self, payload: SalesQueryRequest) -> dict:
         logger.info("채널/결제 분석 요청: store=%s, query=%s", payload.store_id, payload.query[:50])
         workflow = GroundedWorkflow(self.gemini)
-        result = workflow.run(query=payload.query, store_id=payload.store_id, domain="channel")
+        result = workflow.run(
+            query=payload.query,
+            store_id=payload.store_id,
+            domain="channel",
+            reference_date=payload.business_date,
+        )
         return {
             "answer": {
                 "text": result.get("text", ""),

@@ -161,11 +161,12 @@ class SQLGenerator:
         query_type: str = "general",
         table_hints_override: list[str] | None = None,
         intent_summary: str | None = None,
+        reference_date: str | None = None,
     ) -> GeneratedSQL:
         del store_id
         table_hints = table_hints_override or get_table_hints(query_type)
         schema_context = get_schema_context(table_hints)
-        today_ref = self._resolve_reference_date()
+        today_ref = self._resolve_reference_date(reference_date)
         period_hint = self._infer_period(query, query_type, today_ref)
         few_shot_examples = self._build_examples(today_ref)
 
@@ -225,8 +226,8 @@ class SQLGenerator:
             raise
 
     @staticmethod
-    def _resolve_reference_date() -> str:
-        raw = (os.getenv("SQL_REFERENCE_DATE") or "").strip()
+    def _resolve_reference_date(reference_date: str | None = None) -> str:
+        raw = (reference_date or os.getenv("SQL_REFERENCE_DATE") or "").strip()
         if raw:
             for fmt in ("%Y-%m-%d", "%Y%m%d"):
                 try:

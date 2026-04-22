@@ -212,7 +212,14 @@ class GroundedWorkflow:
         self.sql_generator = SQLGenerator(gemini)
         self.executor = QueryExecutor(db_url)
 
-    def run(self, *, query: str, store_id: str, domain: str) -> dict[str, Any]:
+    def run(
+        self,
+        *,
+        query: str,
+        store_id: str,
+        domain: str,
+        reference_date: str | None = None,
+    ) -> dict[str, Any]:
         details = self.classifier.classify_details(query)
         masked_query = str(details["masked_query"])
         if details["blocked"]:
@@ -261,6 +268,7 @@ class GroundedWorkflow:
             query_type=_DOMAIN_TO_QUERY_TYPE.get(domain, "general"),
             table_hints_override=relevant_tables,
             intent_summary=intent,
+            reference_date=reference_date,
         )
         rows, _ = self.executor.run(
             generated.sql,
