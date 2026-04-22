@@ -15,6 +15,7 @@ import pandas as pd
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_ordering_reasoning_prompt
+from .grounded_workflow import GroundedWorkflow
 from schemas.contracts import (
     DeadlineAlertResponse,
     OrderingOption,
@@ -53,6 +54,9 @@ class OrderingService:
     def analyze(self, payload: SalesQueryRequest) -> Dict[str, Any]:
         """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
         logger.info(f"OrderingService analyze: {payload.query}")
+        workflow = GroundedWorkflow(self.gemini)
+        result = workflow.run(query=payload.query, store_id=payload.store_id, domain="ordering")
+        return result
         
         # 1. SQL 생성
         generated = self.sql_generator.generate(payload.query, payload.store_id, query_type="order")

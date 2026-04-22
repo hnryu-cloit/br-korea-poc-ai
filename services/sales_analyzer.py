@@ -16,6 +16,7 @@ from schemas.contracts import (
     SalesQueryResponse,
 )
 from services.sales_agent import SalesAnalysisAgent
+from services.grounded_workflow import GroundedWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,26 @@ class SalesAnalyzer:
                 actions=["일반 매출 및 채널 현황 분석으로 다시 질문해 주세요."],
             )
             return SalesQueryResponse(answer=insight, source_data_period="N/A", data_lineage=[])
+
+        workflow = GroundedWorkflow(self.gemini)
+        result = workflow.run(query=user_query, store_id=store_id, domain="sales")
+        return {
+            "answer": {
+                "text": result.get("text", ""),
+                "evidence": result.get("evidence", []),
+                "actions": result.get("actions", []),
+            },
+            "source_data_period": "실시간 DB 연동 (Grounded Analysis)",
+            "queried_period": result.get("queried_period"),
+            "grounding": {
+                "keywords": result.get("keywords", []),
+                "intent": result.get("intent"),
+                "relevant_tables": result.get("relevant_tables", []),
+                "sql": result.get("sql"),
+                "row_count": result.get("row_count", 0),
+            },
+            "data_lineage": result.get("data_lineage", []),
+        }
 
         # 2. SemanticLayer (질의 유형 분류 및 테이블 힌트)
         # 여기서 intent를 명시적으로 가져오도록 수정

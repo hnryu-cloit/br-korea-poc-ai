@@ -30,6 +30,7 @@ from schemas.contracts import (
 from common.gemini import Gemini
 from common.logger import init_logger
 from common.prompt import create_production_alarm_prompt
+from .grounded_workflow import GroundedWorkflow
 from .production_agent import ProductionManagementAgent
 from .sql_pipeline import SQLGenerator, QueryExecutor
 
@@ -61,6 +62,9 @@ class ProductionService:
     def analyze(self, payload: SalesQueryRequest) -> Dict[str, Any]:
         """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
         logger.info(f"ProductionService analyze: {payload.query}")
+        workflow = GroundedWorkflow(self.gemini)
+        result = workflow.run(query=payload.query, store_id=payload.store_id, domain="production")
+        return result
         
         # 1. SQL 생성
         generated = self.sql_generator.generate(payload.query, payload.store_id, query_type="production")

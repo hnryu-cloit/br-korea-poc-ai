@@ -127,6 +127,11 @@ class AgentOrchestrator:
                 dumped["blocked"] = False
                 dumped["masked_fields"] = masked_fields
                 return dumped
+            if isinstance(result, dict):
+                result["query_type"] = intent
+                result["processing_route"] = "channel_agent"
+                result["blocked"] = False
+                result["masked_fields"] = masked_fields
             return result
 
         # 4. RAG(지식 검색) 시도 및 품질 평가 (범용 질의 및 매뉴얼 질의)
@@ -170,4 +175,9 @@ class AgentOrchestrator:
             dumped["blocked"] = False
             dumped["masked_fields"] = masked_fields
             return dumped
+        if isinstance(analysis_result, dict):
+            analysis_result["query_type"] = intent
+            analysis_result["processing_route"] = "sales_agent"
+            analysis_result["blocked"] = False
+            analysis_result["masked_fields"] = masked_fields
         return analysis_result
