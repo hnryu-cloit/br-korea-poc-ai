@@ -127,7 +127,7 @@ def load_behavioral_data(engine):
             SELECT masked_stor_cd, 
                    SUM(CASE WHEN UPPER(ho_chnl_nm) NOT LIKE '%%POS%%' THEN CAST(sale_amt AS FLOAT) ELSE 0 END) as online_amt,
                    SUM(CAST(sale_amt AS FLOAT)) as total_amt
-            FROM raw_daily_store_online
+            FROM raw_daily_store_channel
             GROUP BY masked_stor_cd
         """
         df_on_stats = pd.read_sql(query_online, engine)
