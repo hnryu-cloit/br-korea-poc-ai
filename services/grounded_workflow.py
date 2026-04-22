@@ -54,6 +54,97 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"Unsupported type: {type(value)}")
 
 
+def _extract_numbers(text: str) -> set[float]:
+    numbers: set[float] = set()
+    for token in re.findall(r"\d+(?:\.\d+)?", str(text)):
+        value = float(token)
+        if 20000101 <= value <= 20991231:
+            continue
+        numbers.add(value)
+    return numbers
+
+
+def _numbers_from_rows(rows: list[dict[str, Any]]) -> set[float]:
+    numbers: set[float] = set()
+    for row in rows:
+        for value in row.values():
+            if isinstance(value, bool) or value is None:
+                continue
+            if isinstance(value, Decimal):
+                value = float(value)
+            if isinstance(value, (int, float)):
+                number = float(value)
+                numbers.add(number)
+                if abs(number - round(number)) < 1e-9:
+                    numbers.add(float(int(round(number))))
+    return numbers
+
+
+def _contains_number(pool: set[float], target: float, tolerance: float = 0.05) -> bool:
+    return any(abs(number - target) <= tolerance for number in pool)
+
+
+def _format_number(value: float) -> str:
+    rounded = round(value, 1)
+    if abs(rounded - round(rounded)) < 1e-9:
+        return f"{int(round(rounded)):,}"
+    return f"{rounded:,.1f}"
+
+
+def _format_cell(column: str, value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, Decimal):
+        value = float(value)
+    if isinstance(value, bool):
+        return "Y" if value else "N"
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        if any(token in column.lower() for token in ("tmzon", "hour")) and abs(numeric - round(numeric)) < 1e-9:
+            return f"{int(round(numeric))}시"
+        return _format_number(numeric)
+
+    text = str(value).strip()
+    if re.fullmatch(r"\d{8}", text):
+        return f"{text[:4]}-{text[4:6]}-{text[6:]}"
+    if re.fullmatch(r"\d{1,2}", text) and any(token in column.lower() for token in ("tmzon", "hour")):
+        return f"{int(text)}시"
+    return text
+
+
+def _build_fallback_text(query: str, rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "조회 결과가 없습니다."
+
+    rendered_rows: list[str] = []
+    for row in rows[:5]:
+        parts: list[str] = []
+        for column, value in row.items():
+            formatted = _format_cell(column, value)
+            if formatted:
+                parts.append(formatted)
+        if parts:
+            rendered_rows.append(" | ".join(parts))
+
+    if not rendered_rows:
+        return "조회 결과가 없습니다."
+
+    if len(rendered_rows) == 1:
+        return f"{query} 조회 결과는 {rendered_rows[0]}입니다."
+    return f"{query} 조회 결과는 {', '.join(rendered_rows)}입니다."
+
+
+def _is_numeric_consistent(query: str, answer_text: str, rows: list[dict[str, Any]]) -> bool:
+    if not answer_text.strip():
+        return False
+    allowed = _extract_numbers(query)
+    allowed.update(_numbers_from_rows(rows))
+    for number in _extract_numbers(answer_text):
+        if not _contains_number(allowed, number):
+            return False
+    return True
+
+
 class GroundedWorkflow:
     """Shared grounded workflow for all LLM-backed business answers."""
 
@@ -234,15 +325,19 @@ class GroundedWorkflow:
         try:
             raw = self.gemini.call_gemini_text(prompt, response_type="application/json")
             data = json.loads(raw) if isinstance(raw, str) else raw
-            return {
+            answer = {
                 "text": data.get("text", ""),
                 "evidence": data.get("evidence", []),
                 "actions": data.get("actions", []),
             }
+            if not _is_numeric_consistent(query, str(answer["text"]), rows):
+                logger.warning("numeric consistency fallback triggered for query=%s", query)
+                answer["text"] = _build_fallback_text(query, rows)
+            return answer
         except Exception as exc:
             logger.error("answer composition failed: %s", exc)
             return {
-                "text": "데이터 조회는 완료되었으나 답변 생성 중 오류가 발생했습니다.",
+                "text": _build_fallback_text(query, rows),
                 "evidence": [f"조회 테이블: {', '.join(relevant_tables)}", f"조회 건수: {len(rows)}"],
                 "actions": ["질문을 조금 더 구체화", "동일 조건으로 재조회"],
             }

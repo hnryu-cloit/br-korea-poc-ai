@@ -94,17 +94,16 @@ class SalesAnalysisAgent:
 
     def analyze_real_channel_mix(self, store_id: str) -> Dict[str, Any]:
         """채널별(배달 vs 오프라인) 매출 비중 분석"""
-        # DAILY_STOR_PAY_WAY 뷰에는 PAY_WAY_CD, PAY_DTL_CD 만 존재하므로 PAY_CD 뷰와 JOIN하여 이름(PAY_DC_NM) 추출
         sql = """
-            SELECT 
-                CASE 
-                    WHEN m."PAY_DC_NM" LIKE '%%배달%%' OR m."PAY_DC_NM" LIKE '%%주문%%' OR m."PAY_DC_NM" LIKE '%%픽업%%' OR m."PAY_DC_NM" IN ('요기요', '배달의민족', '쿠팡이츠', '해피오더', '땡겨요', '위메프오') THEN 'Delivery'
+            SELECT
+                CASE
+                    WHEN m.pay_dc_nm LIKE '%%배달%%' OR m.pay_dc_nm LIKE '%%주문%%' OR m.pay_dc_nm LIKE '%%픽업%%' OR m.pay_dc_nm IN ('요기요', '배달의민족', '쿠팡이츠', '해피오더', '땡겨요', '위메프오') THEN 'Delivery'
                     ELSE 'Offline'
                 END as channel,
-                SUM(CAST(p."PAY_AMT" AS NUMERIC)) as total_amt
-            FROM "DAILY_STOR_PAY_WAY" p
-            LEFT JOIN "PAY_CD" m ON p."PAY_DTL_CD" = m."PAY_DC_CD"
-            WHERE p."MASKED_STOR_CD" = :store_id
+                SUM(CAST(COALESCE(NULLIF(p.pay_amt, ''), '0') AS NUMERIC)) as total_amt
+            FROM raw_daily_store_pay_way p
+            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
+            WHERE p.masked_stor_cd = :store_id
             GROUP BY 1
         """
 
@@ -120,7 +119,7 @@ class SalesAnalysisAgent:
 
                 query_logger.log_query(
                     agent_name=self.agent_name,
-                    tables=["DAILY_STOR_PAY_WAY", "PAY_CD"],
+                    tables=["raw_daily_store_pay_way", "raw_pay_cd"],
                     query=clean_sql.strip(),
                     params={"store_id": store_id}
                 )
@@ -179,11 +178,11 @@ class SalesAnalysisAgent:
         """결제 수단별 매출 비중 분석"""
         sql = """
             SELECT
-                m."PAY_DC_NM" as method,
-                SUM(CAST(p."PAY_AMT" AS NUMERIC)) as amount
-            FROM "DAILY_STOR_PAY_WAY" p
-            LEFT JOIN "PAY_CD" m ON p."PAY_DTL_CD" = m."PAY_DC_CD"
-            WHERE p."MASKED_STOR_CD" = :store_id
+                m.pay_dc_nm as method,
+                SUM(CAST(COALESCE(NULLIF(p.pay_amt, ''), '0') AS NUMERIC)) as amount
+            FROM raw_daily_store_pay_way p
+            LEFT JOIN raw_pay_cd m ON p.pay_dtl_cd = m.pay_dc_cd
+            WHERE p.masked_stor_cd = :store_id
             GROUP BY 1
             ORDER BY amount DESC
         """
@@ -200,7 +199,7 @@ class SalesAnalysisAgent:
 
                 query_logger.log_query(
                     agent_name=self.agent_name,
-                    tables=["DAILY_STOR_PAY_WAY", "PAY_CD"],
+                    tables=["raw_daily_store_pay_way", "raw_pay_cd"],
                     query=clean_sql.strip(),
                     params={"store_id": store_id}
                 )
@@ -219,11 +218,11 @@ class SalesAnalysisAgent:
         # 인기 메뉴
         item_sql = """
             SELECT item_nm, SUM(CAST(sale_qty AS NUMERIC)) as qty
-            FROM daily_stor_item
+            FROM raw_daily_store_item
             WHERE masked_stor_cd = :store_id
             GROUP BY 1 ORDER BY qty DESC LIMIT 5
         """
-        items = self.execute_dynamic_sql(store_id, item_sql, ["daily_stor_item"])
+        items = self.execute_dynamic_sql(store_id, item_sql, ["raw_daily_store_item"])
         
         # 피크 타임 (DAILY_STOR_ITEM_TMZON 테이블 활용)
         peak_sql = """
