@@ -39,12 +39,7 @@ class MarketInsightService:
             return self._normalize_response(parsed, audience=audience)
         except (json.JSONDecodeError, ValueError, TypeError, RuntimeError) as exc:
             logger.exception("상권 인사이트 생성 실패")
-            return self._fallback_response(
-                audience=audience,
-                scope=scope,
-                store_name=store_name,
-                error_message=str(exc),
-            )
+            raise RuntimeError("상권 인사이트 생성 실패") from exc
 
     @staticmethod
     def _build_prompt(
@@ -108,57 +103,4 @@ JSON 스키마:
             "evidence_refs": evidence_refs if isinstance(evidence_refs, list) else [],
             "audience": audience,
             "source": "ai",
-        }
-
-    @staticmethod
-    def _fallback_response(
-        *,
-        audience: str,
-        scope: dict[str, Any],
-        store_name: str | None,
-        error_message: str,
-    ) -> dict[str, Any]:
-        label = store_name or "대상 매장"
-        scope_text = ", ".join(f"{k}={v}" for k, v in scope.items() if v not in (None, "", "전체"))
-        summary = (
-            f"{label} 상권 인사이트를 생성하지 못해 기본 분석으로 대체했습니다."
-            if audience == "store_owner"
-            else "전체 지점 상권 인사이트를 생성하지 못해 기본 분석으로 대체했습니다."
-        )
-        return {
-            "executive_summary": summary,
-            "key_insights": [
-                {
-                    "title": "AI 인사이트 생성 실패",
-                    "description": "요청 시점에 생성 오류가 발생했습니다. 기본 지표 기반 해석만 제공합니다.",
-                    "impact": "medium",
-                }
-            ],
-            "risk_warnings": [
-                {
-                    "title": "분석 해상도 저하",
-                    "description": "서술형 분석이 fallback 처리되어 상세 문맥이 제한됩니다.",
-                    "mitigation": "잠시 후 재시도하거나 필터 범위를 축소해 주세요.",
-                }
-            ],
-            "action_plan": [
-                {
-                    "priority": 1,
-                    "title": "지표 재확인",
-                    "action": "핵심 차트의 최근 4주 추세와 피크 시간대를 먼저 확인합니다.",
-                    "expected_effect": "운영 의사결정 지연을 최소화할 수 있습니다.",
-                }
-            ],
-            "branch_scoreboard": [],
-            "report_markdown": (
-                f"# 상권 분석 리포트 (fallback)\n\n"
-                f"- audience: {audience}\n"
-                f"- 대상: {label}\n"
-                f"- scope: {scope_text or '기본'}\n"
-                f"- 상태: AI 생성 실패로 기본 분석 전환\n"
-                f"- 오류: {error_message}\n"
-            ),
-            "evidence_refs": ["fallback"],
-            "audience": audience,
-            "source": "fallback",
         }

@@ -372,5 +372,45 @@ class MarketInsightsResponse(BaseModel):
     report_markdown: str = ""
     evidence_refs: List[str] = Field(default_factory=list)
     audience: Literal["store_owner", "hq_admin"] = "store_owner"
-    source: Literal["ai", "fallback"] = "fallback"
+    source: Literal["ai"] = "ai"
+    trace_id: str | None = None
+
+
+class OrderingHistoryInsightKpi(BaseModel):
+    key: str
+    label: str
+    value: str
+    tone: Literal["default", "primary", "warning", "danger", "success"] = "default"
+
+
+class OrderingHistoryAnomalyItem(BaseModel):
+    id: str
+    severity: Literal["low", "medium", "high"] = "medium"
+    kind: str
+    message: str
+    recommended_action: str
+    related_items: List[str] = Field(default_factory=list)
+
+
+class OrderingHistoryChangedItem(BaseModel):
+    item_nm: str
+    avg_ord_qty: float
+    latest_ord_qty: int
+    change_ratio: float
+
+
+class OrderingHistoryInsightsRequest(BaseModel):
+    store_id: str
+    filters: Dict[str, Any] = Field(default_factory=dict)
+    history_items: List[Dict[str, Any]] = Field(default_factory=list)
+    summary_stats: Dict[str, Any] = Field(default_factory=dict)
+
+
+class OrderingHistoryInsightsResponse(BaseModel):
+    kpis: List[OrderingHistoryInsightKpi] = Field(default_factory=list)
+    anomalies: List[OrderingHistoryAnomalyItem] = Field(default_factory=list)
+    top_changed_items: List[OrderingHistoryChangedItem] = Field(default_factory=list)
+    sources: List[str] = Field(default_factory=list)
+    retrieved_contexts: List[str] = Field(default_factory=list)
+    confidence: float | None = None
     trace_id: str | None = None

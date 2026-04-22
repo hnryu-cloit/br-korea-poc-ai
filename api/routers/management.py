@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 
@@ -31,6 +32,7 @@ from schemas.management import (
     ProductionPredictResponse,
 )
 from services.chance_loss_service import ChanceLossService
+from services.inventory_predictor import InventoryPredictor
 from services.ordering_service import OrderingService
 from services.production_service import ProductionService, normalize_payload_df
 
@@ -462,6 +464,25 @@ def _fetch_recent_sales(store_id: str, sku: str, days: int = 7) -> list[dict]:
     return [dict(r._mapping) for r in rows]
 
 
+def _build_predictor_history_df(store_id: str, sku: str, history_rows: list[dict]) -> pd.DataFrame:
+    """InventoryPredictor 입력 형식으로 최근 판매 이력을 변환합니다."""
+    rows: list[dict[str, object]] = []
+    for row in history_rows:
+        prc_dt = str(row.get("prc_dt") or "").strip()
+        if len(prc_dt) != 8 or not prc_dt.isdigit():
+            continue
+        rows.append(
+            {
+                "MASKED_STOR_CD": store_id,
+                "ITEM_CD": sku,
+                "SALE_DT": prc_dt,
+                "TMZON_DIV": 12,
+                "SALE_QTY": float(row.get("sal_avg") or 0.0),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 @router.post(
     "/predict",
     dependencies=[Depends(verify_token)],
@@ -490,11 +511,42 @@ async def predict_ml_format(
                 ),
             )
 
-        current_stock = float(snapshot.get("stk_avg") or 0)
-        recent_sales = [float(r.get("sal_avg") or 0) for r in history]
-        avg_sales = sum(recent_sales) / len(recent_sales) if recent_sales else 0.0
-        predicted_stock_after_1h = round(max(current_stock - avg_sales / 8.0, 0.0), 1)
-        predicted_sales_next_1h = round(avg_sales / 8.0, 1)
+        current_stock = float(snapshot.get("stk_avg") or 0.0)
+        predicted_sales_next_1h: float | None = None
+
+        # 1) 학습 모델(InventoryPredictor) 우선 사용
+        try:
+            predictor = InventoryPredictor()
+            history_df = _build_predictor_history_df(payload.store_id, payload.sku, history)
+            predicted_sales_next_1h = float(
+                predictor.predict_next_hour_sales(
+                    payload.store_id,
+                    payload.sku,
+                    datetime.now(),
+                    history_df,
+                )
+            )
+            logger.info(
+                "predict_ml_format: model prediction applied store_id=%s sku=%s sales_1h=%.2f",
+                payload.store_id,
+                payload.sku,
+                predicted_sales_next_1h,
+            )
+        except (RuntimeError, ValueError, TypeError) as exc:
+            logger.warning(
+                "predict_ml_format: model prediction unavailable, fallback applied store_id=%s sku=%s error=%s",
+                payload.store_id,
+                payload.sku,
+                exc,
+            )
+
+        # 2) 모델 실패/미로딩 시 기존 휴리스틱 폴백
+        if predicted_sales_next_1h is None:
+            recent_sales = [float(r.get("sal_avg") or 0.0) for r in history]
+            avg_sales = sum(recent_sales) / len(recent_sales) if recent_sales else 0.0
+            predicted_sales_next_1h = round(avg_sales / 8.0, 1)
+
+        predicted_stock_after_1h = round(max(current_stock - predicted_sales_next_1h, 0.0), 1)
         risk_detected = predicted_stock_after_1h <= max(1.0, current_stock * 0.3)
         last_updated = snapshot.get("prc_dt", datetime.now().strftime("%Y%m%d"))
         if len(last_updated) == 8:

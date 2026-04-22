@@ -121,7 +121,12 @@ for module_name, class_name in [
         sys.modules[module_name] = module
 
 from api.config import Settings, get_settings
-from api.dependencies import get_ordering_service, get_production_service, get_sales_analyzer
+from api.dependencies import (
+    get_ordering_history_insight_service,
+    get_ordering_service,
+    get_production_service,
+    get_sales_analyzer,
+)
 from api.main import app
 from schemas.contracts import (
     ChartDataPoint,
@@ -436,3 +441,67 @@ def test_production_simulation_success(client: TestClient) -> None:
     assert body["metadata"]["item_name"] == "초코 도넛"
     assert body["summary_metrics"]["net_profit_change"] == 16600
     assert len(body["time_series_data"]) == 2
+
+
+def test_ordering_history_insights_success(client: TestClient) -> None:
+    mock_service = MagicMock()
+    mock_service.generate.return_value = {
+        "kpis": [
+            {"key": "auto_rate", "label": "자동 발주 비율", "value": "67.0%", "tone": "primary"},
+            {"key": "manual_rate", "label": "수동 발주 비율", "value": "33.0%", "tone": "warning"},
+        ],
+        "anomalies": [
+            {
+                "id": "anomaly-1",
+                "severity": "high",
+                "kind": "확정 편차",
+                "message": "주요 품목 확정량 편차가 큽니다.",
+                "recommended_action": "전일 POS 추세를 반영해 발주량을 보정하세요.",
+                "related_items": ["초코링"],
+            }
+        ],
+        "top_changed_items": [
+            {"item_nm": "초코링", "avg_ord_qty": 16.2, "latest_ord_qty": 28, "change_ratio": 0.7284}
+        ],
+        "sources": ["operations_guide:ordering", "ordering_history"],
+        "retrieved_contexts": ["주문 마감 2시간 전 확정 편차 상위 품목 재점검"],
+        "confidence": 0.86,
+    }
+    app.dependency_overrides[get_ordering_history_insight_service] = lambda: mock_service
+
+    try:
+        res = client.post(
+            "/analytics/ordering/history/insights",
+            json={
+                "store_id": "POC_002",
+                "filters": {"date_from": "2026-04-01", "date_to": "2026-04-22"},
+                "history_items": [
+                    {
+                        "item_nm": "초코링",
+                        "dlv_dt": "2026-04-22",
+                        "ord_qty": 28,
+                        "confrm_qty": 19,
+                        "is_auto": False,
+                    }
+                ],
+                "summary_stats": {"auto_rate": 0.67, "manual_rate": 0.33, "total_count": 21},
+            },
+            headers=auth_headers(),
+        )
+    finally:
+        app.dependency_overrides.pop(get_ordering_history_insight_service, None)
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert len(payload["kpis"]) >= 1
+    assert len(payload["anomalies"]) >= 1
+    assert "trace_id" in payload
+    assert payload["confidence"] == pytest.approx(0.86)
+
+
+def test_ordering_history_insights_requires_token(client: TestClient) -> None:
+    res = client.post(
+        "/analytics/ordering/history/insights",
+        json={"store_id": "POC_002", "filters": {}, "history_items": [], "summary_stats": {}},
+    )
+    assert res.status_code == 403
