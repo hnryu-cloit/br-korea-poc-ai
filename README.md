@@ -2,7 +2,37 @@
 
 BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로 실행되며, Google Gemini를 활용한 매출 분석, 생산/주문 가이드, 지식 검색(RAG) 기능을 제공합니다. 현재 백엔드가 프론트 계약을 기준으로 AI 응답을 어댑팅합니다.
 
+## 최근 업데이트 (2026-04-23)
+
+- 프론트 사이드바 상단 `AgentGo Biz` 로고 클릭 동선이 대문(`/`)으로 변경되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 화면 셸이 `Settings v3` 원본 HTML 기준으로 정렬되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 내부 패널/모달이 `Settings v3` 원본 마크업 기준으로 재작성되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 settings 코드가 `VIBE_CODING_GUIDE` 기준으로 로직 분리(hooks/mockdata) 리팩토링되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 스타일 파일이 feature 전용 CSS에서 전역 스타일 엔트리로 통합되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 일부 패널의 인라인 스타일이 Tailwind 클래스 기반으로 정리되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 2차 정리로 `Agents/Connectors/RBAC` 패널 인라인 스타일이 추가 정비되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+- 프론트 `/settings` 전체 화면 비율 보정(AppLayout padding 해제 + settings 셸 full-viewport)이 반영되었습니다.
+  - 이번 세션에서 AI 서비스 코드/계약 변경은 없습니다.
+
 ## 최근 업데이트 (2026-04-22)
+
+- Plan 구현(explainability 병렬 보강 + 기준일시 실사용) 작업은 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
+
+- `POC 010` 기본 점포 및 `기준 일시(기본 2026-03-05 00:00)` UI 추가 작업은 frontend+backend 범위이며 AI 서비스 코드/계약 변경은 없습니다.
+
+- 본사 Settings v3 UI 개편 연계
+  - 이번 세션의 코드 변경은 프론트(`/settings`) 화면 개편 중심이며, AI 서비스 코드/계약 변경은 없습니다.
+
+- QA 운영 자산 동기화
+  - 기준 QA 마스터 참조 파일을 `../docs/reference/qa-master.csv`로 추가했습니다.
+  - QA 실행 이력 기록 도구 `../docs/qa/qa-run-log.py`를 기준 경로로 문서화했습니다.
 
 - QA 안정화 패치 반영
   - `DataExtractionEngine`의 기본 응답 계약을 보강해 `total_sales/peak_hours/top_items/profitability` 질의에서 필수 필드(`total_revenue`, `peak_start`, `peak_revenue_ratio`, `items`, `margin_rate`)를 항상 반환하도록 수정했습니다.
@@ -285,3 +315,13 @@ python pipeline/build_knowledge_base.py
 ## Session Update (2026-04-22)
 
 - 이번 라운드는 Docker backend 이미지 경로 연결 수정 작업이며 AI 서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-23, sales metrics incident scope)
+
+- `/sales/metrics` 데이터 미노출 이슈는 backend(`sales/insights` 부분 응답 처리)와 frontend(벤치마킹 에러 완화) 영역에서 수정되었습니다.
+- AI 서비스 코드/라우터/스키마 변경은 없으며, 본 세션은 영향도 기록만 수행했습니다.
+
+## Session Update (2026-04-23, signals/sidebar removal scope)
+
+- `/signals` 페이지 제거 및 사이드바 `본사` 메뉴 정리는 프론트엔드 영역 작업입니다.
+- AI 서비스 코드/라우터/스키마 변경은 없습니다.
