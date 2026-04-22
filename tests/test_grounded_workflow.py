@@ -40,21 +40,30 @@ class _FakeGemini:
     def call_gemini_text(self, prompt: str, *args, **kwargs):
         self.calls += 1
         if self.calls == 1:
-            return json.dumps({
-                "intent": "어제 생산 상위 품목 확인",
-                "relevant_tables": ["PROD_DTL"],
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "intent": "어제 생산 상위 품목 확인",
+                    "relevant_tables": ["PROD_DTL"],
+                },
+                ensure_ascii=False,
+            )
         if self.calls == 2:
-            return json.dumps({
-                "sql": 'SELECT "ITEM_NM", SUM(COALESCE("PROD_QTY",0)) AS "TOTAL_PROD" FROM "PROD_DTL" WHERE "MASKED_STOR_CD" = :store_id GROUP BY "ITEM_NM"',
-                "description": "생산 수량 집계",
-                "relevant_tables": ["PROD_DTL"],
-            }, ensure_ascii=False)
-        return json.dumps({
-            "text": "어제 생산량 기준으로 A 상품이 가장 높았습니다.",
-            "evidence": ["A 상품 생산량 15개", "B 상품 생산량 10개"],
-            "actions": ["상위 품목 재고 확인"],
-        }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "sql": 'SELECT "ITEM_NM", SUM(COALESCE("PROD_QTY",0)) AS "TOTAL_PROD" FROM "PROD_DTL" WHERE "MASKED_STOR_CD" = :store_id GROUP BY "ITEM_NM"',
+                    "description": "생산 수량 집계",
+                    "relevant_tables": ["PROD_DTL"],
+                },
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            {
+                "text": "어제 생산 기준으로 A 상품이 가장 많습니다.",
+                "evidence": ["A 상품 생산량 15개", "B 상품 생산량 10개"],
+                "actions": ["상위 품목 재고 확인"],
+            },
+            ensure_ascii=False,
+        )
 
 
 class _InconsistentAnswerGemini:
@@ -64,21 +73,65 @@ class _InconsistentAnswerGemini:
     def call_gemini_text(self, prompt: str, *args, **kwargs):
         self.calls += 1
         if self.calls == 1:
-            return json.dumps({
-                "intent": "상위 품목 조회",
-                "relevant_tables": ["PROD_DTL"],
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "intent": "상위 품목 조회",
+                    "relevant_tables": ["PROD_DTL"],
+                },
+                ensure_ascii=False,
+            )
         if self.calls == 2:
-            return json.dumps({
-                "sql": 'SELECT "ITEM_NM", SUM(COALESCE("PROD_QTY",0)) AS "TOTAL_PROD" FROM "PROD_DTL" WHERE "MASKED_STOR_CD" = :store_id GROUP BY "ITEM_NM" ORDER BY "TOTAL_PROD" DESC LIMIT 2',
-                "description": "생산 수량 상위 집계",
-                "relevant_tables": ["PROD_DTL"],
-            }, ensure_ascii=False)
-        return json.dumps({
-            "text": "1위는 A 15개, 2위는 B 10개입니다.",
-            "evidence": ["A 15", "B 10"],
-            "actions": ["상위 품목 확인"],
-        }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "sql": 'SELECT "ITEM_NM", SUM(COALESCE("PROD_QTY",0)) AS "TOTAL_PROD" FROM "PROD_DTL" WHERE "MASKED_STOR_CD" = :store_id GROUP BY "ITEM_NM" ORDER BY "TOTAL_PROD" DESC LIMIT 2',
+                    "description": "생산 수량 상위 집계",
+                    "relevant_tables": ["PROD_DTL"],
+                },
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            {
+                "text": "1위는 A 99개, 2위는 B 88개입니다.",
+                "evidence": ["A 99", "B 88"],
+                "actions": ["상위 품목 확인"],
+            },
+            ensure_ascii=False,
+        )
+
+
+class _OrderingPolicyGemini:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.prompts: list[str] = []
+
+    def call_gemini_text(self, prompt: str, *args, **kwargs):
+        self.calls += 1
+        self.prompts.append(prompt)
+        if self.calls == 1:
+            return json.dumps(
+                {
+                    "intent": "오늘 납품 예정으로 등록된 발주 수량 조회",
+                    "relevant_tables": ["raw_order_extract"],
+                },
+                ensure_ascii=False,
+            )
+        if self.calls == 2:
+            return json.dumps(
+                {
+                    "sql": "SELECT 4236 AS inbound_qty",
+                    "description": "납품예정일 기준 발주 수량 조회",
+                    "relevant_tables": ["raw_order_extract"],
+                },
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            {
+                "text": "오늘 입고 예정 발주 수량은 4,236개입니다.",
+                "evidence": ["dlv_dt 기준 4,236개"],
+                "actions": ["품목별 상세 확인"],
+            },
+            ensure_ascii=False,
+        )
 
 
 def test_grounded_workflow_keeps_trace_metadata(monkeypatch):
@@ -89,7 +142,7 @@ def test_grounded_workflow_keeps_trace_metadata(monkeypatch):
 
     monkeypatch.setattr("services.grounded_workflow.QueryExecutor.run", _fake_run)
 
-    result = workflow.run(query="어제 생산량 상위 품목 알려줘", store_id="POC_001", domain="production")
+    result = workflow.run(query="어제 생산 상위 품목 알려줘", store_id="POC_001", domain="production")
 
     assert result["keywords"]
     assert result["intent"] == "어제 생산 상위 품목 확인"
@@ -106,15 +159,41 @@ def test_grounded_workflow_falls_back_when_llm_adds_unexpected_numbers(monkeypat
 
     monkeypatch.setattr("services.grounded_workflow.QueryExecutor.run", _fake_run)
 
-    result = workflow.run(query="생산량 상위 2개 품목 알려줘", store_id="POC_001", domain="production")
+    result = workflow.run(query="생산 상위 2개 품목 알려줘", store_id="POC_001", domain="production")
 
-    assert result["text"] == "생산량 상위 2개 품목 알려줘 조회 결과는 A | 15, B | 10입니다."
+    assert result["text"] == "생산 상위 2개 품목 알려줘 조회 결과는 A | 15, B | 10입니다."
 
 
 def test_build_fallback_text_formats_hour_columns():
     text = _build_fallback_text(
-        "어제 매출 피크 시간대 몇 시야",
+        "어제 매출 피크 시간대가 몇 시야",
         [{"tmzon_div": "17", "revenue": 74600}],
     )
 
-    assert text == "어제 매출 피크 시간대 몇 시야 조회 결과는 17시 | 74,600입니다."
+    assert text == "어제 매출 피크 시간대가 몇 시야 조회 결과는 17시 | 74,600입니다."
+
+
+def test_ordering_policy_rewrites_inbound_question(monkeypatch):
+    gemini = _OrderingPolicyGemini()
+    workflow = GroundedWorkflow(gemini)
+
+    def _fake_run(self, sql, store_id, agent_name=None, target_tables=None, params=None):
+        return ([{"inbound_qty": 4236}], ["inbound_qty"])
+
+    monkeypatch.setattr("services.grounded_workflow.QueryExecutor.run", _fake_run)
+
+    result = workflow.run(query="오늘 입고 예정 발주 수량 몇 개야?", store_id="POC_001", domain="ordering")
+
+    assert "오늘 납품 예정으로 등록된 발주 수량" in gemini.prompts[0]
+    assert result["text"].startswith("질문이 애매할 수 있어 '오늘 납품 예정으로 등록된 발주 수량' 기준으로 안내드립니다.")
+    assert result["evidence"][0] == "입고 예정 질의는 납품예정일(dlv_dt) 기준으로 해석했습니다."
+
+
+def test_ordering_policy_blocks_order_date_question():
+    workflow = GroundedWorkflow(_FakeGemini())
+
+    result = workflow.run(query="오늘 발주한 수량 몇 개야?", store_id="POC_001", domain="ordering")
+
+    assert result["processing_route"] == "ordering_policy_guard"
+    assert result["sql"] is None
+    assert "발주일 정보가 없어" in result["text"]
