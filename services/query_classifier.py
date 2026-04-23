@@ -106,6 +106,7 @@ class QueryClassifier:
         return masked_query, masked_fields
 
     def classify_details(self, query: str) -> dict[str, object]:
+        # Produces routing metadata used before grounded SQL generation.
         """질의 분류 결과와 마스킹 메타데이터를 함께 반환합니다."""
         masked_query, masked_fields = self.mask_sensitive_fields(query)
 
@@ -136,5 +137,6 @@ class QueryClassifier:
         }
 
     def classify(self, query: str) -> QueryType:
+        # Convenience wrapper when only the top-level query type is needed.
         """질의를 분류해 QueryType 문자열 반환."""
         return self.classify_details(query)["query_type"]  # type: ignore[return-value]

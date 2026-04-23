@@ -49,12 +49,14 @@ _DOMAIN_TO_AGENT = {
 }
 
 
+# Serializes Decimal values when rows are rendered into JSON.
 def _json_default(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     raise TypeError(f"Unsupported type: {type(value)}")
 
 
+# Extracts numeric tokens from text for grounded answer consistency checks.
 def _extract_numbers(text: str) -> set[float]:
     numbers: set[float] = set()
     for token in re.findall(r"\d+(?:\.\d+)?", str(text)):
@@ -65,6 +67,7 @@ def _extract_numbers(text: str) -> set[float]:
     return numbers
 
 
+# Collects numeric values that actually appeared in SQL result rows.
 def _numbers_from_rows(rows: list[dict[str, Any]]) -> set[float]:
     numbers: set[float] = set()
     for row in rows:
@@ -113,6 +116,7 @@ def _format_cell(column: str, value: Any) -> str:
     return text
 
 
+# Builds a deterministic fallback sentence when the LLM answer cannot be trusted.
 def _build_fallback_text(query: str, rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "조회 결과가 없습니다."
@@ -146,6 +150,7 @@ def _is_numeric_consistent(query: str, answer_text: str, rows: list[dict[str, An
     return True
 
 
+# Resolves ambiguous ordering questions before SQL generation.
 @dataclass(frozen=True)
 class _OrderingQueryPolicy:
     query_for_sql: str
@@ -220,6 +225,8 @@ class GroundedWorkflow:
         domain: str,
         reference_date: str | None = None,
     ) -> dict[str, Any]:
+        # Main grounded path:
+        # classify -> choose tables -> generate SQL -> execute -> compose answer.
         details = self.classifier.classify_details(query)
         masked_query = str(details["masked_query"])
         if details["blocked"]:
@@ -307,6 +314,7 @@ class GroundedWorkflow:
         return answer
 
     def extract_keywords(self, query: str) -> list[str]:
+        # Keeps compact domain keywords for trace and prompting.
         tokens = re.findall(r"[0-9A-Za-z_]+|[가-힣]{2,}", query)
         keywords: list[str] = []
         for token in tokens:
@@ -320,6 +328,7 @@ class GroundedWorkflow:
         return keywords
 
     def analyze_intent(self, query: str, keywords: list[str], domain: str) -> tuple[str, list[str]]:
+        # Combines rule-based business intent with LLM table selection.
         query_type = _DOMAIN_TO_QUERY_TYPE.get(domain, "general")
         schema_context = get_schema_context(get_table_hints(query_type))
         target_data_type, business_logic = self.semantic_layer.parse_query_intent(query)
@@ -373,6 +382,7 @@ class GroundedWorkflow:
         answer_prefix: str = "",
         evidence_note: str | None = None,
     ) -> dict[str, Any]:
+        # Converts grounded rows into answer, evidence, and actions.
         serialized_rows = json.dumps(rows[:30], ensure_ascii=False, default=_json_default)
         prompt = f"""
 당신은 매장 운영 데이터를 설명하는 분석가입니다.

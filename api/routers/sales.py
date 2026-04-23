@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sales", tags=["sales"])
 
 
-@router.post("/query", response_model=SalesQueryResponse, dependencies=[Depends(verify_token)])
+@router.post("/query", dependencies=[Depends(verify_token)])
 async def query_sales(
     payload: SalesQueryRequest,
     request: Request,
@@ -109,7 +109,6 @@ async def get_profitability_simulation(
 
 @router.post(
     "/query/channel-payment",
-    response_model=SalesQueryResponse,
     dependencies=[Depends(verify_token)],
 )
 async def query_channel_payment(

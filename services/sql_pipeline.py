@@ -122,6 +122,7 @@ Rules:
 """
 
 
+# Renders only the schema snippets relevant to the current question.
 def get_schema_context(table_names: list[str] | None = None) -> str:
     targets = table_names or list(_SCHEMA.keys())
     lines: list[str] = []
@@ -138,6 +139,7 @@ def get_schema_context(table_names: list[str] | None = None) -> str:
     return "\n".join(lines)
 
 
+# Returns the default table set for each agent/domain query type.
 def get_table_hints(query_type: str) -> list[str]:
     return _TABLE_HINTS.get(query_type, _TABLE_HINTS["general"])
 
@@ -163,6 +165,7 @@ class SQLGenerator:
         intent_summary: str | None = None,
         reference_date: str | None = None,
     ) -> GeneratedSQL:
+        # Builds the SQL-generation prompt and normalizes the model output.
         del store_id
         table_hints = table_hints_override or get_table_hints(query_type)
         schema_context = get_schema_context(table_hints)
@@ -227,6 +230,7 @@ class SQLGenerator:
 
     @staticmethod
     def _resolve_reference_date(reference_date: str | None = None) -> str:
+        # Resolves the "today" reference used for relative-date questions.
         raw = (reference_date or os.getenv("SQL_REFERENCE_DATE") or "").strip()
         if raw:
             for fmt in ("%Y-%m-%d", "%Y%m%d"):
@@ -239,6 +243,7 @@ class SQLGenerator:
 
     @staticmethod
     def _build_examples(reference_date: str) -> str:
+        # Provides a few-shot prompt with date-safe SQL examples.
         ref = datetime.strptime(reference_date, "%Y-%m-%d")
         yesterday = (ref - timedelta(days=1)).strftime("%Y%m%d")
         recent3_start = (ref - timedelta(days=3)).strftime("%Y%m%d")
@@ -263,6 +268,7 @@ class SQLGenerator:
 
     @staticmethod
     def _infer_period(query: str, query_type: str, reference_date: str) -> dict[str, str]:
+        # Converts relative date expressions into an explicit query period.
         ref = datetime.strptime(reference_date, "%Y-%m-%d")
         yesterday = ref - timedelta(days=1)
         normalized = query.replace(" ", "")
@@ -351,6 +357,7 @@ class QueryExecutor:
         target_tables: list[str] | None = None,
         params: dict[str, object] | None = None,
     ) -> tuple[list[dict], list[str]]:
+        # Executes the generated read-only SQL and records trace metadata.
         if not self.engine:
             raise RuntimeError("Database engine is not initialized.")
         try:

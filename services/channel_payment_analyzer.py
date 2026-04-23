@@ -30,6 +30,13 @@ class ChannelPaymentAnalyzer:
                 "actions": result.get("actions", []),
             },
             "source_data_period": "실시간 DB 연동 (Grounded Analysis)",
+            "request_context": {
+                "store_id": payload.store_id,
+                "business_date": payload.business_date,
+                "business_time": getattr(payload, "business_time", None),
+                "prompt": payload.query,
+                "domain": "channel",
+            },
             "queried_period": result.get("queried_period"),
             "grounding": {
                 "keywords": result.get("keywords", []),
