@@ -177,6 +177,10 @@ class SalesInsight(BaseModel):
     text: str = Field(..., description="자연어 분석 요약")
     evidence: List[str] = Field(..., description="분석 근거 데이터 포인트 (전주 대비, 채널 비중 등)")
     actions: List[str] = Field(..., description="점주가 즉시 실행 가능한 액션 아이템")
+    follow_up_questions: List[str] = Field(
+        default_factory=list,
+        description="골든쿼리 유도용 후속 예상 질문 3개",
+    )
 
 
 class SalesQueryRequest(BaseModel):
@@ -223,6 +227,17 @@ class SalesQueryResponse(BaseModel):
     channel_analysis: Optional[Dict[str, Any]] = Field(None, description="채널별 매출 비중 분석 데이터")
     profit_simulation: Optional[Dict[str, Any]] = Field(None, description="표준 마진 기반 수익성 시뮬레이션 데이터")
     data_lineage: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="AI가 생성 및 실행한 쿼리 히스토리 (투명성 검증용)")
+    text: Optional[str] = Field("", description="answer.text 미러 필드")
+    evidence: List[str] = Field(default_factory=list, description="answer.evidence 미러 필드")
+    actions: List[str] = Field(default_factory=list, description="answer.actions 미러 필드")
+    follow_up_questions: List[str] = Field(default_factory=list, description="후속 예상 질문 3개")
+    query_type: Optional[str] = None
+    processing_route: Optional[str] = None
+    queried_period: Optional[Dict[str, Any]] = None
+    grounding: Optional[Dict[str, Any]] = None
+    overlap_candidates: List[Dict[str, Any]] = Field(default_factory=list)
+    masked_fields: List[str] = Field(default_factory=list)
+    blocked: bool = False
 
 
 # --- 공통 응답 구조 ---

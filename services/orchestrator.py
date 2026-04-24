@@ -16,6 +16,16 @@ from services.semantic_layer import SemanticLayer
 
 logger = init_logger(__name__)
 
+DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION = """
+당신은 점주 운영 보조 AI다.
+- 단순 데이터 요약이 아니라 질문 맥락에 맞는 실행 가능한 인사이트를 제시한다.
+- 모든 응답과 알림에는 점주가 즉시 할 수 있는 Action을 포함한다.
+- 수치 제안은 과거 데이터 또는 예측 모델 근거를 evidence로 제시한다.
+- 매장 맞춤형 답변을 제공한다.
+- 재고/생산 답변은 1시간 후 예측 오차 허용범위(±10%)와 찬스 로스 방지 알림 시점 근거를 포함한다.
+- 출력은 설명(text), 출처/근거(evidence), 후속 액션(actions), 추가 예상질문 3개(follow_up_questions)를 포함한다.
+""".strip()
+
 
 class AgentOrchestrator:
     """
@@ -41,7 +51,7 @@ class AgentOrchestrator:
         """
         사용자 질문을 통합 처리하여 검증된 응답을 반환합니다.
         """
-        logger.info(f"오케스트레이션 요청 시작: '{prompt[:50]}'")
+        logger.info("오케스트레이션 요청 시작: '%s'", prompt[:50])
         store_id = "default_store"
         if context and isinstance(context.get("store_id"), str):
             candidate = context["store_id"].strip()
@@ -56,10 +66,14 @@ class AgentOrchestrator:
         # POS 기기 등에서 넘어온 컨텍스트에서 매장 ID 추출 (기본값 POC_001)
         context = context or {}
         store_id = context.get("store_id", "POC_001")
+        system_instruction = str(
+            context.get("system_instruction") or DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION
+        ).strip()
+        allow_rag_fallback = bool(context.get("allow_rag_fallback", False))
 
         # 1. 시맨틱 비즈니스 로직 매핑 (Semantic Layer)
         _, business_logic = self.semantic_layer.parse_query_intent(safe_prompt)
-        logger.info(f"적용될 비즈니스 로직: {business_logic}, 요청 매장: {store_id}")
+        logger.info("적용될 비즈니스 로직: %s, 요청 매장: %s", business_logic, store_id)
 
         # 2. 의도 분류 및 가드레일 (Predictor Layer)
         if intent == "SENSITIVE":
@@ -86,13 +100,18 @@ class AgentOrchestrator:
             try:
                 # payload에 주입되는 질문은 시스템 지침을 제외한 순수 질문(safe_prompt) 사용
                 result = self.prod_agent.analyze(
-                    payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+                    payload=SalesQueryRequest(
+                        store_id=store_id,
+                        query=safe_prompt,
+                        system_instruction=system_instruction,
+                    )
                 )
                 if isinstance(result, dict):
                     result["query_type"] = "PRODUCTION"
                     result["processing_route"] = "production_agent_grounded"
                     result["blocked"] = False
                     result["masked_fields"] = masked_fields
+                    result.setdefault("follow_up_questions", [])
                     return result
             except Exception as exc:
                 logger.error("생산 에이전트 분석 실패: %s", exc)
@@ -103,13 +122,18 @@ class AgentOrchestrator:
             logger.info("주문 관리 에이전트 호출 (Prioritized by Keyword)")
             try:
                 result = self.order_agent.analyze(
-                    payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+                    payload=SalesQueryRequest(
+                        store_id=store_id,
+                        query=safe_prompt,
+                        system_instruction=system_instruction,
+                    )
                 )
                 if isinstance(result, dict):
                     result["query_type"] = "ORDERING"
                     result["processing_route"] = "ordering_agent_grounded"
                     result["blocked"] = False
                     result["masked_fields"] = masked_fields
+                    result.setdefault("follow_up_questions", [])
                     return result
             except Exception as exc:
                 logger.error("주문 에이전트 분석 실패: %s", exc)
@@ -118,7 +142,11 @@ class AgentOrchestrator:
         if intent == "CHANNEL":
             logger.info("Channel/Payment 전용 분석 에이전트 호출")
             result = self.channel_agent.analyze(
-                payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+                payload=SalesQueryRequest(
+                    store_id=store_id,
+                    query=safe_prompt,
+                    system_instruction=system_instruction,
+                )
             )
             if hasattr(result, "model_dump"):
                 dumped = result.model_dump()
@@ -126,45 +154,57 @@ class AgentOrchestrator:
                 dumped["processing_route"] = "channel_agent"
                 dumped["blocked"] = False
                 dumped["masked_fields"] = masked_fields
+                dumped.setdefault("follow_up_questions", [])
                 return dumped
             if isinstance(result, dict):
                 result["query_type"] = intent
                 result["processing_route"] = "channel_agent"
                 result["blocked"] = False
                 result["masked_fields"] = masked_fields
+                result.setdefault("follow_up_questions", [])
             return result
 
-        # 4. RAG(지식 검색) 시도 및 품질 평가 (범용 질의 및 매뉴얼 질의)
-        rag_result = self.rag_service.generate_with_rag(safe_prompt)
+        # 4. RAG(지식 검색) 시도 및 품질 평가 (옵션)
+        if allow_rag_fallback:
+            rag_result = self.rag_service.generate_with_rag(safe_prompt)
 
-        if rag_result.get("text") and "가이드를 찾을 수 없습니다" not in str(rag_result["text"]):
-            # 품질 평가 (실시간 신뢰도 측정)
-            confidence_score = self.evaluator.evaluate_response(
-                query=safe_prompt,
-                response=str(rag_result["text"]),
-                context=rag_result.get("sources", []),
-            )
-
-            if confidence_score >= 0.7:
-                logger.info("신뢰할 수 있는 RAG 응답으로 판명됨.")
-                return {
-                    "text": rag_result["text"],
-                    "evidence": [f"출처: {s}" for s in rag_result["sources"]]
-                    + [f"신뢰도 지수: {confidence_score:.2f}"],
-                    "actions": ["매뉴얼 상세 보기", "관리자 추가 문의"],
-                    "query_type": intent,
-                    "processing_route": "rag",
-                    "blocked": False,
-                    "masked_fields": masked_fields,
-                }
-            else:
-                logger.warning(
-                    f"신뢰도 저하 ({confidence_score:.2f}). 데이터 분석 에이전트로 전환."
+            if rag_result.get("text") and "가이드를 찾을 수 없습니다" not in str(rag_result["text"]):
+                # 품질 평가 (실시간 신뢰도 측정)
+                confidence_score = self.evaluator.evaluate_response(
+                    query=safe_prompt,
+                    response=str(rag_result["text"]),
+                    context=rag_result.get("sources", []),
                 )
+
+                if confidence_score >= 0.7:
+                    logger.info("신뢰할 수 있는 RAG 응답으로 판명됨.")
+                    return {
+                        "text": rag_result["text"],
+                        "evidence": [f"출처: {s}" for s in rag_result["sources"]]
+                        + [f"신뢰도 지수: {confidence_score:.2f}"],
+                        "actions": ["매뉴얼 상세 보기", "관리자 추가 문의"],
+                        "follow_up_questions": [
+                            "최근 7일 기준으로 같은 지표를 다시 보여줘",
+                            "우리 매장 기준으로 바로 실행할 액션 3가지를 제안해줘",
+                            "이 수치의 근거 테이블과 기간을 다시 정리해줘",
+                        ],
+                        "query_type": intent,
+                        "processing_route": "rag",
+                        "blocked": False,
+                        "masked_fields": masked_fields,
+                    }
+                else:
+                    logger.warning(
+                        f"신뢰도 저하 ({confidence_score:.2f}). 데이터 분석 에이전트로 전환."
+                    )
 
         # 5. 최종 매출 분석 및 가드레일 적용
         analysis_result = self.sales_agent.analyze(
-            payload=SalesQueryRequest(store_id=store_id, query=safe_prompt)
+            payload=SalesQueryRequest(
+                store_id=store_id,
+                query=safe_prompt,
+                system_instruction=system_instruction,
+            )
         )
 
         # SalesQueryResponse 형태를 유지하여 프론트엔드 연동에 문제없게 함
@@ -174,10 +214,15 @@ class AgentOrchestrator:
             dumped["processing_route"] = "sales_agent"
             dumped["blocked"] = False
             dumped["masked_fields"] = masked_fields
+            dumped.setdefault("follow_up_questions", dumped.get("answer", {}).get("follow_up_questions", []))
             return dumped
         if isinstance(analysis_result, dict):
             analysis_result["query_type"] = intent
             analysis_result["processing_route"] = "sales_agent"
             analysis_result["blocked"] = False
             analysis_result["masked_fields"] = masked_fields
+            analysis_result.setdefault(
+                "follow_up_questions",
+                analysis_result.get("answer", {}).get("follow_up_questions", []),
+            )
         return analysis_result

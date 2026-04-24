@@ -248,6 +248,8 @@ class SalesAnalyzer:
             store_id=store_id,
             domain=payload.domain or "sales",
             reference_date=payload.business_date,
+            system_instruction=system_instruction,
+            golden_query_only=True,
         )
         # Normalize grounded workflow output into the public API contract.
         return {
@@ -255,7 +257,12 @@ class SalesAnalyzer:
                 "text": result.get("text", ""),
                 "evidence": result.get("evidence", []),
                 "actions": result.get("actions", []),
+                "follow_up_questions": result.get("follow_up_questions", []),
             },
+            "text": result.get("text", ""),
+            "evidence": result.get("evidence", []),
+            "actions": result.get("actions", []),
+            "follow_up_questions": result.get("follow_up_questions", []),
             "source_data_period": "실시간 DB 연동 (Grounded Analysis)",
             "request_context": {
                 "store_id": payload.store_id,
@@ -271,8 +278,12 @@ class SalesAnalyzer:
                 "relevant_tables": result.get("relevant_tables", []),
                 "sql": result.get("sql"),
                 "row_count": result.get("row_count", 0),
+                "matched_query_id": result.get("matched_query_id"),
+                "match_score": result.get("match_score"),
+                "overlap_candidates": result.get("overlap_candidates", []),
             },
             "data_lineage": result.get("data_lineage", []),
+            "overlap_candidates": result.get("overlap_candidates", []),
         }
 
         # 2. SemanticLayer (질의 유형 분류 및 테이블 힌트)

@@ -9,6 +9,7 @@ from typing import Any
 
 from common.gemini import Gemini
 from common.query_logger import query_logger
+from services.golden_query_resolver import get_default_resolver
 from services.query_classifier import QueryClassifier
 from services.semantic_layer import SemanticLayer
 from services.sql_pipeline import QueryExecutor, SQLGenerator, get_schema_context, get_table_hints
@@ -48,12 +49,53 @@ _DOMAIN_TO_AGENT = {
     "channel": "ChannelPaymentAnalyzer",
 }
 
+_DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION = """
+당신은 매장 운영 AI 비서다.
+반드시 아래 원칙을 지킨다.
+1) 단순 요약 금지. 질문 맥락에 맞는 실행 가능한 인사이트를 제공한다.
+2) 모든 응답은 점주가 즉시 수행할 Action을 포함한다.
+3) 수치 제안은 반드시 과거 데이터 또는 예측 모델 근거를 함께 제시한다.
+4) 매장 맞춤형 답변을 제공한다.
+5) 재고/생산 관련 질문은 1시간 이후 예측 오차 허용범위(±10%)와 찬스 로스 방지 알림 근거를 함께 제시한다.
+6) 출력은 설명(text) + 출처/근거(evidence) + 추가 예상질문 3개(follow_up_questions) 형태를 유지한다.
+""".strip()
+
+_MAX_PROMPT_ROWS = 60
+_MAX_PROMPT_REFERENCE_CHARS = 18000
+
 
 # JSON 직렬화 시 Decimal 값을 float으로 변환
 def _json_default(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     raise TypeError(f"Unsupported type: {type(value)}")
+
+
+def _limit_rows_for_prompt(
+    rows: list[dict[str, Any]],
+    *,
+    max_rows: int = _MAX_PROMPT_ROWS,
+    max_reference_chars: int = _MAX_PROMPT_REFERENCE_CHARS,
+) -> tuple[list[dict[str, Any]], bool]:
+    if not rows:
+        return [], False
+
+    capped_rows = rows[:max_rows]
+    limited_rows: list[dict[str, Any]] = []
+    current_chars = 2
+    for row in capped_rows:
+        row_json = json.dumps(row, ensure_ascii=False, default=_json_default)
+        extra_chars = len(row_json) + (1 if limited_rows else 0)
+        if limited_rows and current_chars + extra_chars > max_reference_chars:
+            break
+        limited_rows.append(row)
+        current_chars += extra_chars
+
+    if not limited_rows:
+        limited_rows = capped_rows[:1]
+
+    was_truncated = len(limited_rows) < len(rows)
+    return limited_rows, was_truncated
 
 
 # 텍스트에서 숫자 토큰을 추출해 응답 일관성 검증에 사용
@@ -216,6 +258,7 @@ class GroundedWorkflow:
         self.semantic_layer = SemanticLayer()
         self.sql_generator = SQLGenerator(gemini)
         self.executor = QueryExecutor(db_url)
+        self.golden_resolver = get_default_resolver(gemini)
 
     def run(
         self,
@@ -224,18 +267,26 @@ class GroundedWorkflow:
         store_id: str,
         domain: str,
         reference_date: str | None = None,
+        system_instruction: str | None = None,
+        golden_query_only: bool = False,
     ) -> dict[str, Any]:
         # Main grounded path:
         # classify -> choose tables -> generate SQL -> execute -> compose answer.
         details = self.classifier.classify_details(query)
         masked_query = str(details["masked_query"])
         if details["blocked"]:
+            follow_ups = self.golden_resolver.suggest_follow_up_queries(
+                query=masked_query,
+                domain=domain,
+                limit=3,
+            )
             return {
                 "text": "민감 정보가 포함된 질문으로 분류되어 직접 답변할 수 없습니다.",
                 "keywords": [],
                 "intent": "sensitive",
                 "evidence": [f"masked_fields={details['masked_fields']}"],
                 "actions": ["민감 정보를 제거하고 다시 질문", "운영 지침 기준으로 재문의"],
+                "follow_up_questions": follow_ups,
                 "query_type": "SENSITIVE",
                 "processing_route": "policy_block",
                 "relevant_tables": [],
@@ -251,12 +302,18 @@ class GroundedWorkflow:
             else _OrderingQueryPolicy(query_for_sql=masked_query)
         )
         if ordering_policy.unavailable_text:
+            follow_ups = self.golden_resolver.suggest_follow_up_queries(
+                query=masked_query,
+                domain=domain,
+                limit=3,
+            )
             return {
                 "text": ordering_policy.unavailable_text,
                 "keywords": self.extract_keywords(masked_query),
                 "intent": "ordering policy clarification",
                 "evidence": ["발주일 기준 컬럼이 현재 raw_order_extract에 없습니다."],
                 "actions": list(ordering_policy.unavailable_actions),
+                "follow_up_questions": follow_ups,
                 "query_type": domain.upper(),
                 "processing_route": "ordering_policy_guard",
                 "relevant_tables": ["raw_order_extract"],
@@ -264,6 +321,70 @@ class GroundedWorkflow:
                 "row_count": 0,
                 "data_lineage": [],
                 "masked_fields": details["masked_fields"],
+            }
+
+        golden_result = self.golden_resolver.resolve_and_execute(
+            query=masked_query,
+            domain=domain,
+            store_id=store_id,
+            reference_date=reference_date,
+            executor=self.executor,
+        )
+        if golden_result:
+            if ordering_policy.answer_prefix:
+                golden_result["text"] = f"{ordering_policy.answer_prefix}{golden_result.get('text', '')}".strip()
+            if ordering_policy.evidence_note:
+                evidence = golden_result.get("evidence", [])
+                if ordering_policy.evidence_note not in evidence:
+                    golden_result["evidence"] = [ordering_policy.evidence_note, *evidence]
+            golden_result["follow_up_questions"] = self.golden_resolver.suggest_follow_up_queries(
+                query=masked_query,
+                domain=domain,
+                exclude_query_id=golden_result.get("matched_query_id"),
+                limit=3,
+            )
+
+            golden_result.update(
+                {
+                    "keywords": self.extract_keywords(masked_query),
+                    "query_type": domain.upper(),
+                    "processing_route": "golden_query_hit",
+                    "data_lineage": query_logger.get_history(f"{domain}_golden_query"),
+                    "masked_fields": details["masked_fields"],
+                }
+            )
+            query_logger.clear_history()
+            return golden_result
+
+        if golden_query_only:
+            ranked = self.golden_resolver.rank_candidates(masked_query, domain, limit=3)
+            overlap = [
+                {
+                    "query_id": item.candidate.query_id,
+                    "intent_id": item.candidate.intent_id,
+                    "question": item.candidate.question,
+                    "score": round(item.final_score, 4),
+                }
+                for item in ranked
+            ]
+            return {
+                "text": "죄송합니다. 현재 문의주신 답변에 대해서는 준비된 골든쿼리가 없습니다. 유사 질문을 참고해 다시 문의해 주세요.",
+                "keywords": self.extract_keywords(masked_query),
+                "intent": "golden_query_miss",
+                "evidence": [
+                    "현재 질문은 골든쿼리 유사도 임계치 미달입니다.",
+                    f"도메인: {domain}",
+                ],
+                "actions": ["유사 질문 중 하나를 선택해 다시 질문", "기간/상품/지표 조건을 더 구체화"],
+                "follow_up_questions": [item["question"] for item in overlap][:3],
+                "query_type": domain.upper(),
+                "processing_route": "golden_query_miss_block",
+                "relevant_tables": [],
+                "sql": None,
+                "row_count": 0,
+                "data_lineage": [],
+                "masked_fields": details["masked_fields"],
+                "overlap_candidates": overlap,
             }
 
         effective_query = ordering_policy.query_for_sql
@@ -295,6 +416,12 @@ class GroundedWorkflow:
             rows=rows,
             answer_prefix=ordering_policy.answer_prefix,
             evidence_note=ordering_policy.evidence_note,
+            system_instruction=system_instruction,
+        )
+        answer["follow_up_questions"] = self.golden_resolver.suggest_follow_up_queries(
+            query=masked_query,
+            domain=domain,
+            limit=3,
         )
         answer.update(
             {
@@ -381,54 +508,71 @@ class GroundedWorkflow:
         rows: list[dict[str, Any]],
         answer_prefix: str = "",
         evidence_note: str | None = None,
+        system_instruction: str | None = None,
     ) -> dict[str, Any]:
         # Converts grounded rows into answer, evidence, and actions.
-        serialized_rows = json.dumps(rows[:30], ensure_ascii=False, default=_json_default)
+        active_system_instruction = system_instruction or _DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION
+        prompt_rows, was_truncated = _limit_rows_for_prompt(rows)
+        reference_columns = list(prompt_rows[0].keys()) if prompt_rows else []
+        request_payload = {
+            "system_prompt": active_system_instruction,
+            "user_query": query,
+            "sql_query": sql,
+            "reference_data": {
+                "columns": reference_columns,
+                "rows": prompt_rows,
+                "row_count": len(rows),
+                "included_row_count": len(prompt_rows),
+                "truncated": was_truncated,
+                "omitted_row_count": max(len(rows) - len(prompt_rows), 0),
+            },
+            "metadata": {
+                "domain": domain,
+                "keywords": keywords,
+                "intent": intent,
+                "relevant_tables": relevant_tables,
+                "queried_period": queried_period or {},
+            },
+        }
+        request_payload_json = json.dumps(request_payload, ensure_ascii=False, default=_json_default)
         prompt = f"""
 당신은 매장 운영 데이터를 설명하는 분석가입니다.
-아래 집계 결과만 근거로 자연어 답변을 만드세요.
+아래 JSON 입력만 근거로 답변 JSON을 생성하세요.
 
-[질문]
-{query}
-
-[핵심 키워드]
-{keywords}
-
-[분석 의도]
-{intent}
-
-[조회 테이블]
-{relevant_tables}
-
-[실행 SQL]
-{sql}
-
-[조회 기간]
-{json.dumps(queried_period or {}, ensure_ascii=False)}
-
-[조회 결과]
-{serialized_rows}
+[입력 JSON]
+{request_payload_json}
 
 규칙:
 - 조회 결과에 없는 수치나 사실은 추가하지 마세요.
 - 값이 없으면 데이터가 없다고 명확히 말하세요.
-- queried_period가 별도 필드로 제공되므로 답변 본문에서 기간을 반복하지 마세요.
-- 날짜나 기간 자체가 답변 핵심일 때만 본문에서 언급하세요.
+- 답변에는 반드시 실행 가능한 액션을 포함하세요.
+- evidence에는 데이터 출처(테이블, 기간, 수치)를 포함하세요.
+- follow_up_questions는 골든쿼리 스타일의 추가 질문 3개를 반환하세요.
 
 반드시 JSON으로만 답하세요.
 {{
   "text": "사용자에게 보여줄 자연어 답변",
   "evidence": ["근거 1", "근거 2"],
-  "actions": ["후속 액션 1", "후속 액션 2"]
+  "actions": ["후속 액션 1", "후속 액션 2"],
+  "follow_up_questions": ["추가 질문 1", "추가 질문 2", "추가 질문 3"]
 }}
 """
         try:
-            raw = self.gemini.call_gemini_text(prompt, response_type="application/json")
+            raw = self.gemini.call_gemini_text(
+                prompt,
+                system_instruction=active_system_instruction,
+                response_type="application/json",
+            )
             data = json.loads(raw) if isinstance(raw, str) else raw
+            follow_ups = data.get("follow_up_questions", [])
+            if not isinstance(follow_ups, list):
+                follow_ups = []
+            follow_ups = [str(item).strip() for item in follow_ups if str(item).strip()][:3]
             answer = {
                 "text": f"{answer_prefix}{data.get('text', '')}".strip(),
                 "evidence": data.get("evidence", []),
                 "actions": data.get("actions", []),
+                "follow_up_questions": follow_ups,
             }
             if evidence_note and evidence_note not in answer["evidence"]:
                 answer["evidence"] = [evidence_note, *answer["evidence"]]
@@ -445,4 +589,5 @@ class GroundedWorkflow:
                 "text": f"{answer_prefix}{_build_fallback_text(query, rows)}".strip(),
                 "evidence": evidence,
                 "actions": ["질문 조건을 더 구체화", "같은 조건으로 재조회"],
+                "follow_up_questions": [],
             }
