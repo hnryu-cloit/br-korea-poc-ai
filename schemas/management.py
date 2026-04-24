@@ -30,6 +30,7 @@ class OrderingRecommendRequest(BaseModel):
     current_date: str
     is_campaign: bool = False
     is_holiday: bool = False
+    current_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class OrderingOption(BaseModel):

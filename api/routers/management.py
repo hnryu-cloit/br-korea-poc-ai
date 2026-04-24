@@ -170,6 +170,7 @@ async def recommend_ordering_compat(
             store_id=payload.store_id,
             target_date=payload.current_date,
             current_context={
+                **(payload.current_context or {}),
                 "is_campaign": payload.is_campaign,
                 "is_holiday": payload.is_holiday,
             },

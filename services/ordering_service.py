@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Dict
 
 try:
     import pytz as _pytz
@@ -55,72 +55,14 @@ class OrderingService:
         """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
         logger.info(f"OrderingService analyze: {payload.query}")
         workflow = GroundedWorkflow(self.gemini)
-        result = workflow.run(
+        return workflow.run(
             query=payload.query,
             store_id=payload.store_id,
             domain="ordering",
             reference_date=payload.business_date,
+            system_instruction=payload.system_instruction,
+            golden_query_only=True,
         )
-        return result
-        
-        # 1. SQL 생성
-        generated = self.sql_generator.generate(payload.query, payload.store_id, query_type="order")
-        
-        # 2. SQL 실행
-        try:
-            rows, columns = self.query_executor.run(generated.sql, payload.store_id)
-        except Exception as e:
-            logger.error(f"Ordering SQL execution failed: {e}")
-            rows, columns = [], []
-        # 3. 결과 기반 답변 생성 (Grounded) - 날짜 규칙 재강조
-        prompt = f"""
-        당신은 베이커리 매장의 주문/발주 관리 전문가입니다.
-        다음은 사용자의 질문에 대해 DB를 조회한 결과 데이터입니다.
-        
-        [질문]
-        {payload.query}
-        
-        [조회 결과 (총 {len(rows)}건)]
-        {json.dumps(rows, ensure_ascii=False)[:2000]}
-
-        [절대 규칙 - 날짜 언급]
-        - 오늘 날짜는 2026-03-10 입니다.
-        - '최근 n일' 질문에 대한 답변 시, 반드시 오늘(3/10)을 제외하고 영업이 종료된 어제까지의 데이터임을 명시하세요.
-        - 예: "어제(3/9)까지 최근 3일간..." 또는 "3월 7일부터 3월 9일까지..."
-        
-        [답변 가이드]
-        - 데이터가 존재한다면 수치(발주량, 배송일, 미납량 등)를 반드시 포함하여 구체적으로 답변하세요.
-        - 조회 결과가 비어있다면([]), "해당 조건에 맞는 발주 데이터가 없습니다"라고 친절하게 안내하세요.
-        - 'keywords' 배열에는 사용자의 질문에서 의도를 파악하기 위한 핵심 단어들을 나열하세요.
-        - '근거' 배열에는 주요 수치를 포함하세요.
-        
-        [필수 응답 형식 (JSON)]
-        {{
-          "keywords": ["핵심단어1", "핵심단어2"],
-          "text": "점주에게 보여줄 친절한 답변 텍스트",
-          "evidence": ["조회된 수치 요약", "비교 결과 등"],
-          "actions": ["재고 확인하기", "추가 생산 고려하기"]
-        }}
-        """
-        
-        try:
-            res_raw = self.gemini.call_gemini_text(prompt, response_type="json")
-            data = json.loads(res_raw) if isinstance(res_raw, str) else res_raw
-        except Exception as e:
-            logger.error(f"Grounded response generation failed: {e}")
-            data = {"text": "데이터 조회는 완료되었으나 분석 중 오류가 발생했습니다.", "evidence": [], "actions": [], "keywords": []}
-
-        return {
-            "text": data.get("text", ""),
-            "keywords": data.get("keywords", []),
-            "evidence": data.get("evidence", []) + [f"조회 SQL: {generated.sql}"],
-            "actions": data.get("actions", []),
-            "query_type": "ORDERING",
-            "processing_route": "ordering_service_grounded",
-            "sql": generated.sql,
-            "relevant_tables": generated.relevant_tables,
-            "row_count": len(rows)
-        }
 
     def set_historical_data(self, df: pd.DataFrame):
         """과거 데이터를 외부(DataLoader 등)에서 로드하여 주입"""
@@ -317,6 +259,33 @@ class OrderingService:
         return f"추천 옵션 간 수량 편차는 {top_qty - low_qty}건이며 최근 패턴 변동성을 함께 반영했습니다."
 
     @staticmethod
+    def _build_option_context_summary(context: dict[str, Any]) -> str:
+        segments: list[str] = []
+        trend_summary = context.get("trend_summary")
+        if trend_summary:
+            segments.append(f"트렌드: {trend_summary}")
+        option_summaries = context.get("option_summaries")
+        if isinstance(option_summaries, list):
+            for option in option_summaries:
+                if not isinstance(option, dict):
+                    continue
+                title = str(option.get("title") or option.get("option_id") or "옵션")
+                metrics = option.get("reasoning_metrics") or []
+                metric_texts: list[str] = []
+                for metric in metrics:
+                    if not isinstance(metric, dict):
+                        continue
+                    key = str(metric.get("key") or "").strip()
+                    value = str(metric.get("value") or "").strip()
+                    if key and value:
+                        metric_texts.append(f"{key}:{value}")
+                if metric_texts:
+                    segments.append(f"{title} 지표({', '.join(metric_texts[:6])})")
+        if not segments:
+            return "추가 운영 컨텍스트 없음"
+        return " | ".join(segments)
+
+    @staticmethod
     def _build_purpose_text(notification_entry: bool) -> str:
         if notification_entry:
             return "알림 기준으로 주문 추천안을 확인하고 누락 없이 최종 수량을 결정하세요."
@@ -361,6 +330,7 @@ class OrderingService:
         if top_qty:
             ratio = round((option.recommended_qty / top_qty) * 100)
             metrics.append({"key": "relative_level", "value": f"상위안 대비 {ratio}%"})
+        metrics.append({"key": "recommended_qty_kr", "value": f"{option.recommended_qty}개"})
         return metrics
 
     def _build_special_factors(self, context: dict[str, Any], option: OrderingOption) -> list[str]:
@@ -485,9 +455,32 @@ class OrderingService:
         self, store_id: str, target_date: str, context: dict, options: list[OrderingOption]
     ) -> tuple[list[OrderingOption], str]:
         """STEP 4: 선택 옵션에 따른 특이사항 표기 및 AI 분석 (Gemini 활용)"""
-        options_summary = "\n".join(
-            [f"- {o.option_type.name}: {o.recommended_qty}건" for o in options]
-        )
+        option_summaries_from_context = context.get("option_summaries")
+        options_summary_lines: list[str] = []
+        if isinstance(option_summaries_from_context, list) and option_summaries_from_context:
+            for option in option_summaries_from_context:
+                if not isinstance(option, dict):
+                    continue
+                option_type = str(option.get("option_id") or "").replace("-", "_").upper()
+                if option_type == "OPT_A":
+                    option_type = "LAST_WEEK"
+                elif option_type == "OPT_B":
+                    option_type = "TWO_WEEKS_AGO"
+                elif option_type == "OPT_C":
+                    option_type = "LAST_MONTH"
+                metrics = option.get("reasoning_metrics") or []
+                metrics_text = ", ".join(
+                    f"{m.get('key')}={m.get('value')}"
+                    for m in metrics
+                    if isinstance(m, dict) and m.get("key") and m.get("value")
+                )
+                options_summary_lines.append(
+                    f"- {option_type or 'OPTION'}: {option.get('total_qty', 0)}건 ({metrics_text})"
+                )
+        if not options_summary_lines:
+            options_summary_lines = [f"- {o.option_type.name}: {o.recommended_qty}건" for o in options]
+        options_summary = "\n".join(options_summary_lines)
+        context_summary = self._build_option_context_summary(context)
 
         campaign_status = "캠페인 적용 중" if context.get("is_campaign") else "캠페인 없음"
         holiday_status = "휴일" if context.get("is_holiday") else "평일"
@@ -497,6 +490,7 @@ class OrderingService:
             campaign_status=campaign_status,
             holiday_status=holiday_status,
             options_summary=options_summary,
+            context_summary=context_summary,
         )
 
         try:
@@ -514,7 +508,18 @@ class OrderingService:
 
             for opt in options:
                 for detail in ai_data.get("option_details", []):
-                    if detail.get("option_type") == opt.option_type.name:
+                    detail_type = str(detail.get("option_type") or "").strip().upper()
+                    if detail_type in {"OPT_A", "LAST_WEEK"} and opt.option_type == OrderOptionType.LAST_WEEK:
+                        opt.reasoning = (
+                            f"[{detail.get('impact_factor')}] {detail.get('description')}"
+                        )
+                        break
+                    if detail_type in {"OPT_B", "TWO_WEEKS_AGO"} and opt.option_type == OrderOptionType.TWO_WEEKS_AGO:
+                        opt.reasoning = (
+                            f"[{detail.get('impact_factor')}] {detail.get('description')}"
+                        )
+                        break
+                    if detail_type in {"OPT_C", "LAST_MONTH"} and opt.option_type == OrderOptionType.LAST_MONTH:
                         opt.reasoning = (
                             f"[{detail.get('impact_factor')}] {detail.get('description')}"
                         )
