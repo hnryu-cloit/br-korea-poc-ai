@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -9,12 +10,14 @@ from sqlalchemy.orm import sessionmaker
 # Load env
 load_dotenv()
 
-# Add AI folder to path to import common modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+# Add AI project root to path to import common modules
+AI_ROOT = Path(__file__).resolve().parents[1]
+if str(AI_ROOT) not in sys.path:
+    sys.path.insert(0, str(AI_ROOT))
 
 try:
     from common.gemini import Gemini
-    from services.rag_service import Base, KnowledgeDocument
+    from pipeline.db_models import Base, KnowledgeDocument
 except ImportError as e:
     print(f"Import Error: {e}")
     sys.exit(1)
@@ -196,8 +199,14 @@ def main():
     init_db()
     session = SessionLocal()
 
-    # Root path data directory
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/data"))
+    # 리소스 폴더 후보 경로를 순서대로 탐색
+    data_candidates = [
+        AI_ROOT / "resources" / "data",
+        AI_ROOT.parent / "resource",
+        AI_ROOT.parent / "resources",
+    ]
+    data_dir = next((str(path) for path in data_candidates if path.exists()), str(data_candidates[0]))
+    print(f"Using data_dir: {data_dir}")
 
     build_store_vectors(gemini_client, session, data_dir)
     build_campaign_vectors(gemini_client, session, data_dir)

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
+
+AI_ROOT = Path(__file__).resolve().parents[1]
+if str(AI_ROOT) not in sys.path:
+    sys.path.insert(0, str(AI_ROOT))
 
 from common.gemini import Gemini
 from common.logger import init_logger

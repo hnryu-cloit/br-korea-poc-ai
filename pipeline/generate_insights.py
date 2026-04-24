@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -8,10 +9,14 @@ from sqlalchemy.orm import sessionmaker
 
 # Load env
 load_dotenv()
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+# Add AI project root to path to import common/services modules
+AI_ROOT = Path(__file__).resolve().parents[1]
+if str(AI_ROOT) not in sys.path:
+    sys.path.insert(0, str(AI_ROOT))
 
 from common.gemini import Gemini
-from services.rag_service import KnowledgeDocument
+from pipeline.db_models import Base, KnowledgeDocument
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5435/br_korea_poc")
 engine = create_engine(DB_URL)
@@ -27,7 +32,14 @@ def generate_insights():
     # 전체 33개 점포이므로 모두 가져옴
     try:
         stor_df = pd.read_sql(
-            'SELECT DISTINCT "MASKED_STOR_CD", "MAKED_STOR_NM" FROM "STOR_MST" WHERE "MASKED_STOR_CD" IS NOT NULL LIMIT 33',
+            """
+            SELECT DISTINCT
+                NULLIF(masked_stor_cd, '') AS masked_stor_cd,
+                NULLIF(maked_stor_nm, '') AS maked_stor_nm
+            FROM raw_store_master
+            WHERE NULLIF(masked_stor_cd, '') IS NOT NULL
+            LIMIT 33
+            """,
             engine,
         )
     except Exception as e:
@@ -37,8 +49,8 @@ def generate_insights():
     docs_to_insert = []
 
     for idx, row in stor_df.iterrows():
-        store_cd = row["MASKED_STOR_CD"]
-        store_nm = row["MAKED_STOR_NM"]
+        store_cd = row["masked_stor_cd"]
+        store_nm = row["maked_stor_nm"]
 
         if pd.isna(store_cd) or store_cd == "nan":
             continue
@@ -46,20 +58,21 @@ def generate_insights():
         print(f"[{idx+1}/{len(stor_df)}] 점포 분석 중: {store_nm}({store_cd})")
 
         # 2. 해당 점포의 총 매출 및 판매수량 상위 3개 상품 집계 (SQL)
-        query = f"""
-        SELECT 
-            "ITEM_NM", 
-            SUM("SALE_QTY") as total_qty, 
-            SUM("ACTUAL_SALE_AMT") as total_amt
-        FROM "DAILY_STOR_ITEM"
-        WHERE "MASKED_STOR_CD" = '{store_cd}'
-        GROUP BY "ITEM_NM"
+        query = """
+        SELECT
+            NULLIF(item_nm, '') AS item_nm,
+            SUM(COALESCE(NULLIF(sale_qty, '')::numeric, 0)) AS total_qty,
+            SUM(COALESCE(NULLIF(actual_sale_amt, '')::numeric, 0)) AS total_amt
+        FROM raw_daily_store_item
+        WHERE masked_stor_cd = %(store_cd)s
+          AND NULLIF(item_nm, '') IS NOT NULL
+        GROUP BY NULLIF(item_nm, '')
         ORDER BY total_qty DESC
         LIMIT 3
         """
 
         try:
-            sales_df = pd.read_sql(query, engine)
+            sales_df = pd.read_sql(query, engine, params={"store_cd": store_cd})
 
             if sales_df.empty:
                 print("  -> 매출 데이터가 없습니다. 건너뜁니다.")
@@ -69,7 +82,7 @@ def generate_insights():
             total_store_amt = sales_df["total_amt"].sum()
             top_items = []
             for _, item_row in sales_df.iterrows():
-                top_items.append(f"{item_row['ITEM_NM']}({int(item_row['total_qty'])}개)")
+                top_items.append(f"{item_row['item_nm']}({int(item_row['total_qty'])}개)")
 
             data_context = f"점포명: {store_nm}, 총매출규모(상위3품목합): {int(total_store_amt):,}원, 가장 많이 팔린 3가지 상품: {', '.join(top_items)}"
 
