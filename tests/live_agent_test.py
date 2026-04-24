@@ -84,7 +84,12 @@ def compact_response(response: dict[str, Any]) -> dict[str, Any]:
             "text": str(response.get("text", "")),
             "evidence": response.get("evidence", []) if isinstance(response.get("evidence"), list) else [],
             "actions": response.get("actions", []) if isinstance(response.get("actions"), list) else [],
+            "follow_up_questions": response.get("follow_up_questions", [])
+            if isinstance(response.get("follow_up_questions"), list)
+            else [],
         }
+    elif not isinstance(answer.get("follow_up_questions"), list):
+        answer["follow_up_questions"] = []
 
     grounding = response.get("grounding")
     if not isinstance(grounding, dict):
@@ -106,6 +111,7 @@ def compact_response(response: dict[str, Any]) -> dict[str, Any]:
         "grounding": grounding,
         "blocked": bool(response.get("blocked", False)),
         "masked_fields": response.get("masked_fields", []),
+        "overlap_candidates": response.get("overlap_candidates", []),
     }
     source_data_period = response.get("source_data_period")
     if source_data_period:

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import sys
 import types
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 if "google" not in sys.modules:
     google_module = types.ModuleType("google")
@@ -31,6 +36,39 @@ if "colorlog" not in sys.modules:
     sys.modules["colorlog"] = colorlog_module
 
 from services.grounded_workflow import GroundedWorkflow, _build_fallback_text
+
+
+class _NoopGoldenResolver:
+    def resolve_and_execute(self, **kwargs):  # noqa: ANN003
+        return None
+
+    def suggest_follow_up_queries(self, **kwargs):  # noqa: ANN003
+        return ["추가 질문 1", "추가 질문 2", "추가 질문 3"]
+
+    def rank_candidates(self, *args, **kwargs):  # noqa: ANN003
+        return []
+
+
+class _HitGoldenResolver:
+    def resolve_and_execute(self, **kwargs):  # noqa: ANN003
+        return {
+            "text": "골든쿼리 매칭 응답입니다.",
+            "evidence": ["골든쿼리 매칭: 005-001- (score=0.93)"],
+            "actions": ["재조회"],
+            "intent": "golden query match: 005-001-",
+            "relevant_tables": ["core_channel_sales"],
+            "sql": "SELECT 1",
+            "queried_period": {"date_from": "20260301", "date_to": "20260305"},
+            "row_count": 1,
+            "matched_query_id": "005-001-",
+            "match_score": 0.93,
+        }
+
+    def suggest_follow_up_queries(self, **kwargs):  # noqa: ANN003
+        return ["후속 질문 A", "후속 질문 B", "후속 질문 C"]
+
+    def rank_candidates(self, *args, **kwargs):  # noqa: ANN003
+        return []
 
 
 class _FakeGemini:
@@ -136,6 +174,7 @@ class _OrderingPolicyGemini:
 
 def test_grounded_workflow_keeps_trace_metadata(monkeypatch):
     workflow = GroundedWorkflow(_FakeGemini())
+    workflow.golden_resolver = _NoopGoldenResolver()
 
     def _fake_run(self, sql, store_id, agent_name=None, target_tables=None, params=None):
         return ([{"ITEM_NM": "A", "TOTAL_PROD": 15}, {"ITEM_NM": "B", "TOTAL_PROD": 10}], ["ITEM_NM", "TOTAL_PROD"])
@@ -153,6 +192,7 @@ def test_grounded_workflow_keeps_trace_metadata(monkeypatch):
 
 def test_grounded_workflow_falls_back_when_llm_adds_unexpected_numbers(monkeypatch):
     workflow = GroundedWorkflow(_InconsistentAnswerGemini())
+    workflow.golden_resolver = _NoopGoldenResolver()
 
     def _fake_run(self, sql, store_id, agent_name=None, target_tables=None, params=None):
         return ([{"ITEM_NM": "A", "TOTAL_PROD": 15}, {"ITEM_NM": "B", "TOTAL_PROD": 10}], ["ITEM_NM", "TOTAL_PROD"])
@@ -176,6 +216,7 @@ def test_build_fallback_text_formats_hour_columns():
 def test_ordering_policy_rewrites_inbound_question(monkeypatch):
     gemini = _OrderingPolicyGemini()
     workflow = GroundedWorkflow(gemini)
+    workflow.golden_resolver = _NoopGoldenResolver()
 
     def _fake_run(self, sql, store_id, agent_name=None, target_tables=None, params=None):
         return ([{"inbound_qty": 4236}], ["inbound_qty"])
@@ -191,9 +232,36 @@ def test_ordering_policy_rewrites_inbound_question(monkeypatch):
 
 def test_ordering_policy_blocks_order_date_question():
     workflow = GroundedWorkflow(_FakeGemini())
+    workflow.golden_resolver = _NoopGoldenResolver()
 
     result = workflow.run(query="오늘 발주한 수량 몇 개야?", store_id="POC_001", domain="ordering")
 
     assert result["processing_route"] == "ordering_policy_guard"
     assert result["sql"] is None
     assert "발주일 정보가 없어" in result["text"]
+
+
+def test_grounded_workflow_returns_golden_query_hit():
+    workflow = GroundedWorkflow(_FakeGemini())
+    workflow.golden_resolver = _HitGoldenResolver()
+
+    result = workflow.run(query="오늘 시간대 매출 보여줘", store_id="POC_001", domain="sales")
+
+    assert result["processing_route"] == "golden_query_hit"
+    assert result["matched_query_id"] == "005-001-"
+    assert result["match_score"] == 0.93
+
+
+def test_grounded_workflow_blocks_when_golden_query_only_and_no_match():
+    workflow = GroundedWorkflow(_FakeGemini())
+    workflow.golden_resolver = _NoopGoldenResolver()
+
+    result = workflow.run(
+        query="아무 관련 없는 자유 질문",
+        store_id="POC_001",
+        domain="sales",
+        golden_query_only=True,
+    )
+
+    assert result["processing_route"] == "golden_query_miss_block"
+    assert "죄송합니다. 현재 문의주신 답변" in result["text"]

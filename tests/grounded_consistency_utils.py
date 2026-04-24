@@ -4,10 +4,15 @@ import asyncio
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from evaluators.hallucination_detector import HallucinationDetector
 from schemas.contracts import SalesQueryRequest, SalesQueryResponse
