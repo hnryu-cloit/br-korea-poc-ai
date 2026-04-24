@@ -4375,3 +4375,3817 @@ call_gemini_text,gemini-3-flash-preview,2026-04-21 14:44:20,"
   ],
   ""final_strategy"": ""현재 별도의 캠페인이 진행되지 않는 평범한 평일이므로, 데이터 공백으로 인한 과다 발주를 지양하고 매장 운영에 반드시 필요한 필수 식자재 위주로 소량 주문하시는 전략을 추천드립니다.""
 }",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:21,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+005-001-
+
+[질문]
+오늘 시간대 매출 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:22,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+005-001-
+
+[질문]
+오늘 시간대 매출 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:24,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+005-001-
+
+[질문]
+오늘 시간대 매출 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:24,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+006-001-
+
+[질문]
+지난달 대비 객단가 변화 뭐부터 보면 돼?
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:25,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+006-001-
+
+[질문]
+지난달 대비 객단가 변화 뭐부터 보면 돼?
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:27,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+006-001-
+
+[질문]
+지난달 대비 객단가 변화 뭐부터 보면 돼?
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:28,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+지난주 대비 품절 자주 나는 품목 바로 볼 포인트 뭐야?
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:29,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+지난주 대비 품절 자주 나는 품목 바로 볼 포인트 뭐야?
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:31,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+지난주 대비 품절 자주 나는 품목 바로 볼 포인트 뭐야?
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:31,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+ordering
+
+[질문번호]
+016-001-
+
+[질문]
+지난주 대비 수동 발주 많은 품목 핵심만 짚어줘
+
+[테이블/컬럼]
+raw_order_extract, ordering_selections
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:32,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+ordering
+
+[질문번호]
+016-001-
+
+[질문]
+지난주 대비 수동 발주 많은 품목 핵심만 짚어줘
+
+[테이블/컬럼]
+raw_order_extract, ordering_selections
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:34,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+ordering
+
+[질문번호]
+016-001-
+
+[질문]
+지난주 대비 수동 발주 많은 품목 핵심만 짚어줘
+
+[테이블/컬럼]
+raw_order_extract, ordering_selections
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:34,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+017-001-
+
+[질문]
+지난달 대비 재고 부족 품목 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:35,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+017-001-
+
+[질문]
+지난달 대비 재고 부족 품목 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:37,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+017-001-
+
+[질문]
+지난달 대비 재고 부족 품목 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:38,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+018-001-
+
+[질문]
+이번 주 요일별 매출 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:39,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+018-001-
+
+[질문]
+이번 주 요일별 매출 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:41,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+018-001-
+
+[질문]
+이번 주 요일별 매출 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:41,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+019-001-
+
+[질문]
+요즘 폐기 많은 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:42,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+019-001-
+
+[질문]
+요즘 폐기 많은 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:44,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+019-001-
+
+[질문]
+요즘 폐기 많은 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:44,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+020-001-
+
+[질문]
+요즘 생산 늦는 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:45,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+020-001-
+
+[질문]
+요즘 생산 늦는 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:47,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+020-001-
+
+[질문]
+요즘 생산 늦는 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:48,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+이번 주 재고 부족 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:49,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+이번 주 재고 부족 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:51,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+이번 주 재고 부족 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:51,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+022-001-
+
+[질문]
+오늘 저마진 상품 핵심만 짚어줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:52,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+022-001-
+
+[질문]
+오늘 저마진 상품 핵심만 짚어줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+022-001-
+
+[질문]
+오늘 저마진 상품 핵심만 짚어줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+001-001-
+
+[질문]
+오늘 품목별 폐기 수량을 판매 수량으로 나눈 폐기율 높은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:55,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+001-001-
+
+[질문]
+오늘 품목별 폐기 수량을 판매 수량으로 나눈 폐기율 높은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:57,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+001-001-
+
+[질문]
+오늘 품목별 폐기 수량을 판매 수량으로 나눈 폐기율 높은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:58,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+002-001-
+
+[질문]
+어제 폐기율이 가장 높았던 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:47:59,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+002-001-
+
+[질문]
+어제 폐기율이 가장 높았던 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:01,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+002-001-
+
+[질문]
+어제 폐기율이 가장 높았던 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:01,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+008-001-
+
+[질문]
+오늘 재고율 구간별(0~20%, 20~50%, 50~80%, 80~100%) 품목 수 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:02,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+008-001-
+
+[질문]
+오늘 재고율 구간별(0~20%, 20~50%, 50~80%, 80~100%) 품목 수 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:04,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+008-001-
+
+[질문]
+오늘 재고율 구간별(0~20%, 20~50%, 50~80%, 80~100%) 품목 수 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:04,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+009-001-
+
+[질문]
+어제 기준 재고율이 50% 미만인 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:05,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+009-001-
+
+[질문]
+어제 기준 재고율이 50% 미만인 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:07,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+009-001-
+
+[질문]
+어제 기준 재고율이 50% 미만인 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:08,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+010-001-
+
+[질문]
+이번 주 재고율 80% 이상으로 유지된 품목은 뭐야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:09,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+010-001-
+
+[질문]
+이번 주 재고율 80% 이상으로 유지된 품목은 뭐야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:11,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+010-001-
+
+[질문]
+이번 주 재고율 80% 이상으로 유지된 품목은 뭐야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:11,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+012-001-
+
+[질문]
+최근 30일 동안 재고율 분포가 어떻게 변했어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:12,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+012-001-
+
+[질문]
+최근 30일 동안 재고율 분포가 어떻게 변했어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:14,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+012-001-
+
+[질문]
+최근 30일 동안 재고율 분포가 어떻게 변했어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:14,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+013-001-
+
+[질문]
+오늘 재고 회전이 가장 빠른 품목 10개 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:15,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+013-001-
+
+[질문]
+오늘 재고 회전이 가장 빠른 품목 10개 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:17,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+013-001-
+
+[질문]
+오늘 재고 회전이 가장 빠른 품목 10개 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:18,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+이번 달 재고 회전율 상위 품목과 하위 품목 비교해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:19,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+이번 달 재고 회전율 상위 품목과 하위 품목 비교해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:21,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+이번 달 재고 회전율 상위 품목과 하위 품목 비교해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:21,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+오늘 재고율이 하루 중 변동이 가장 큰 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:22,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+오늘 재고율이 하루 중 변동이 가장 큰 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:24,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+오늘 재고율이 하루 중 변동이 가장 큰 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:24,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+022-001-
+
+[질문]
+이번 주 재고율이 안정적으로 유지된 품목은?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:25,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+022-001-
+
+[질문]
+이번 주 재고율이 안정적으로 유지된 품목은?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:27,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+022-001-
+
+[질문]
+이번 주 재고율이 안정적으로 유지된 품목은?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:28,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+023-001-
+
+[질문]
+이번 달 재고 안정성이 가장 높은 품목과 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:29,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+023-001-
+
+[질문]
+이번 달 재고 안정성이 가장 높은 품목과 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:31,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+023-001-
+
+[질문]
+이번 달 재고 안정성이 가장 높은 품목과 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:31,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+024-001-
+
+[질문]
+지난달 재고 불안정했던 품목이 이번 달 개선됐어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:32,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+024-001-
+
+[질문]
+지난달 재고 불안정했던 품목이 이번 달 개선됐어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:34,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+024-001-
+
+[질문]
+지난달 재고 불안정했던 품목이 이번 달 개선됐어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:34,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-0021
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:35,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-0021
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:37,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-0021
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:38,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-002
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목에 대해서 나열해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:39,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-002
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목에 대해서 나열해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:41,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-002
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목에 대해서 나열해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:41,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+034-001-
+
+[질문]
+이번 주 매일 적정 재고(30~70%)를 유지한 품목 비율이 얼마야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:42,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+034-001-
+
+[질문]
+이번 주 매일 적정 재고(30~70%)를 유지한 품목 비율이 얼마야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:44,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+034-001-
+
+[질문]
+이번 주 매일 적정 재고(30~70%)를 유지한 품목 비율이 얼마야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:44,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+035-001-
+
+[질문]
+이번 달 재고율 30~70% 구간을 가장 오래 유지한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:45,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+035-001-
+
+[질문]
+이번 달 재고율 30~70% 구간을 가장 오래 유지한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:48,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+035-001-
+
+[질문]
+이번 달 재고율 30~70% 구간을 가장 오래 유지한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:48,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+039-001-
+
+[질문]
+이번 달 도넛류와 베이커리류 재고율 차이 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:49,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+039-001-
+
+[질문]
+이번 달 도넛류와 베이커리류 재고율 차이 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:51,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+039-001-
+
+[질문]
+이번 달 도넛류와 베이커리류 재고율 차이 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:51,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+040-001-
+
+[질문]
+최근 30일 품목 카테고리별 폐기 수량 순위 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:52,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+040-001-
+
+[질문]
+최근 30일 품목 카테고리별 폐기 수량 순위 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+040-001-
+
+[질문]
+최근 30일 품목 카테고리별 폐기 수량 순위 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+041-001-
+
+[질문]
+이번 달 판매수량은 많은데 재고율이 계속 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:55,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+041-001-
+
+[질문]
+이번 달 판매수량은 많은데 재고율이 계속 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:57,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+041-001-
+
+[질문]
+이번 달 판매수량은 많은데 재고율이 계속 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:58,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+042-001-
+
+[질문]
+지난달 재고율이 높았는데 판매는 저조한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:48:59,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+042-001-
+
+[질문]
+지난달 재고율이 높았는데 판매는 저조한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:01,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+042-001-
+
+[질문]
+지난달 재고율이 높았는데 판매는 저조한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:25,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+005-001-
+
+[질문]
+오늘 시간대 매출 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_today_hourly_sales_report"",
+  ""synonyms"": [
+    ""오늘 시간대별 매출 보여줘"",
+    ""지금까지 시간대별 판매 현황 알려줘"",
+    ""오늘 [날짜] 시간대별 매출액 확인해줘"",
+    ""현재 시간 기준 오늘 매출 추이 말해줘"",
+    ""오늘 [상품] 시간대별 판매량 얼마야?"",
+    ""오늘 시간대별로 매출 데이터 뽑아줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:31,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+006-001-
+
+[질문]
+지난달 대비 객단가 변화 뭐부터 보면 돼?
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""analyze_atv_change_previous_month"",
+  ""synonyms"": [
+    ""전월 대비 객단가 변동 추이 알려줘"",
+    ""[상품명]의 지난달 대비 객단가 변화 확인해줘"",
+    ""지난달이랑 비교해서 객단가 어떻게 변했어?"",
+    ""객단가 변화 분석할 때 뭐부터 확인해야 해?"",
+    ""전월이랑 이번 달 객단가 차이 좀 보여줘"",
+    ""[날짜] 기준 객단가 변화 원인이 뭐야?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:37,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+지난주 대비 품절 자주 나는 품목 바로 볼 포인트 뭐야?
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""compare_weekly_stockout_frequency_items"",
+  ""synonyms"": [
+    ""지난주랑 비교해서 품절 잦은 상품들 확인하는 방법 알려줘"",
+    ""전주 대비 품절 빈도가 높은 품목 리스트 보여줘"",
+    ""[날짜] 기준으로 지난주보다 품절 많이 된 거 뭐야?"",
+    ""[상품명] 중에서 지난주 대비 품절 잦은 거 있어?"",
+    ""저번 주보다 품절 심해진 품목들 뭐야?"",
+    ""전주 대비 품절 발생 빈도가 급증한 품목의 주요 지표를 조회해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:43,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+ordering
+
+[질문번호]
+016-001-
+
+[질문]
+지난주 대비 수동 발주 많은 품목 핵심만 짚어줘
+
+[테이블/컬럼]
+raw_order_extract, ordering_selections
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""compare_manual_order_volume_by_item"",
+  ""synonyms"": [
+    ""어제보다 수동 발주가 급증한 상품 알려줘"",
+    ""[상품명]의 지난달 대비 수동 발주 건수 비교해줘"",
+    ""수동 발주 수량이 전주 대비 [수량] 이상 늘어난 품목 뭐야?"",
+    ""최근 수동 발주가 눈에 띄게 많은 품목 리스트 뽑아줘"",
+    ""지난주랑 비교해서 수동 발주 비중이 높아진 품목 확인해줘"",
+    ""[날짜] 기준으로 수동 발주가 가장 많은 품목 핵심 요약해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:48,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+017-001-
+
+[질문]
+지난달 대비 재고 부족 품목 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_stock_shortage_priority_comparison"",
+  ""synonyms"": [
+    ""전월 대비 품절 위험 품목 우선순위대로 보여줘"",
+    ""[상품명] 재고 부족한 거 지난달이랑 비교해서 급한 순으로 알려줘"",
+    ""지금 당장 발주 필요한 재고 부족 리스트 지난달 기준으로 뽑아줘"",
+    ""지난달보다 재고 상황 안 좋은 품목들 조치 필요한 순서로 나열해줘"",
+    ""[날짜] 대비 재고 부족한 [상품명] 중 조치 시급한 것 확인해줘"",
+    ""재고 부족 품목 중 우선 조치 대상 알려줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+018-001-
+
+[질문]
+이번 주 요일별 매출 바로 조치할 것부터 알려줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_weekly_daily_sales_action_priority"",
+  ""synonyms"": [
+    ""이번 주 요일별 매출 바로 조치할 것부터 알려줘"",
+    ""금주 요일별 매출 현황 중 긴급한 것부터 보여줘"",
+    ""이번 주 일자별 판매 실적 보고 조치가 필요한 품목 알려줘"",
+    ""이번 주 요일별 매출 데이터에서 우선순위 높은 조치 사항 확인해줘"",
+    ""이번 주 일별 매출액 확인하고 문제 있는 부분부터 리스트업해줘"",
+    ""이번 주 요일별 실적 중 급한 것부터 정렬해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:49:59,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+019-001-
+
+[질문]
+요즘 폐기 많은 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""check_high_disposal_items_recently"",
+  ""synonyms"": [
+    ""최근 폐기율 높은 품목 알려줘"",
+    ""요즘 폐기 많이 나오는 상품 뭐야?"",
+    ""지금 바로 확인해야 할 폐기 품목 리스트"",
+    ""최근 {date} 동안 폐기량 많은 품목 확인해줘"",
+    ""폐기 수량 {quantity}개 이상인 품목 리스트"",
+    ""생산 등록 대비 폐기 많은 품목 조회""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:04,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+020-001-
+
+[질문]
+요즘 생산 늦는 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""check_current_delayed_production_items"",
+  ""synonyms"": [
+    ""현재 생산 지연되고 있는 품목 리스트 보여줘"",
+    ""지금 바로 확인해야 할 생산 지연 품목 뭐야?"",
+    ""최근 [상품명] 생산 늦어지는 거 있는지 확인해줘"",
+    ""생산 일정 늦어지는 품목들 지금 체크해줘"",
+    ""지연 중인 생산 품목 알려줘"",
+    ""[날짜] 기준으로 생산 지연 발생한 품목 뭐야?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:10,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+이번 주 재고 부족 품목 지금 확인할 것만 말해줘
+
+[테이블/컬럼]
+core_stock_rate, core_stockout_time, core_hourly_item_sales, production_registrations
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""check_weekly_stock_shortage_items"",
+  ""synonyms"": [
+    ""이번 주 재고 부족한 거 뭐 있어?"",
+    ""금주 품절 위험 품목 리스트 보여줘"",
+    ""지금 바로 확인해야 할 재고 부족 상품 알려줘"",
+    ""이번 주에 수량 부족한 품목들만 골라줘"",
+    ""현재 재고가 모자란 아이템 확인해줘"",
+    ""이번 주 재고 부족 품목 현황 보고해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:15,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+sales
+
+[질문번호]
+022-001-
+
+[질문]
+오늘 저마진 상품 핵심만 짚어줘
+
+[테이블/컬럼]
+core_channel_sales, core_hourly_item_sales, core_daily_item_sales
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""summarize_daily_low_margin_product_performance"",
+  ""synonyms"": [
+    ""오늘 저마진 상품 핵심만 짚어줘"",
+    ""금일 마진 낮은 품목 요약해줘"",
+    ""오늘 수익성 낮은 상품들 주요 현황 알려줘"",
+    ""이번 달 저마진 제품 리스트 요약 보고서 보여줘"",
+    ""현재 마진율 낮은 상품들 핵심 요약"",
+    ""오늘 판매된 저마진 상품들 요점 정리해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:20,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+001-001-
+
+[질문]
+오늘 품목별 폐기 수량을 판매 수량으로 나눈 폐기율 높은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_high_disposal_rate_items"",
+  ""synonyms"": [
+    ""오늘 폐기율이 가장 높은 품목은 뭐야?"",
+    ""[날짜] 기준 판매량 대비 폐기 수량 비율이 높은 상품 알려줘"",
+    ""품목별로 폐기 수량을 판매 수량으로 나눈 비율 높은 순서대로 보여줘"",
+    ""어제 폐기율 높은 품목 리스트 확인해줘"",
+    ""[상품명]의 오늘자 폐기율 순위가 어떻게 돼?"",
+    ""금일 판매 대비 폐기 비중이 큰 항목 조회해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:26,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+002-001-
+
+[질문]
+어제 폐기율이 가장 높았던 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_highest_disposal_rate_item"",
+  ""synonyms"": [
+    ""어제 폐기율이 가장 높았던 품목 알려줘"",
+    ""[날짜]에 폐기율이 제일 높았던 품목이 뭐야?"",
+    ""지난달 폐기율 1위 품목 조회해줘"",
+    ""어제 어떤 품목의 폐기율이 가장 높았니?"",
+    ""[날짜] 기준으로 폐기율이 가장 높은 상품 알려줘"",
+    ""폐기율이 가장 높게 나타난 품목 확인해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:32,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+008-001-
+
+[질문]
+오늘 재고율 구간별(0~20%, 20~50%, 50~80%, 80~100%) 품목 수 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_item_count_by_stock_rate_range"",
+  ""synonyms"": [
+    ""오늘 재고율 구간별로 품목이 몇 개씩 있는지 보여줘"",
+    ""현재 재고율 범위에 따른 상품 수 집계해줘"",
+    ""재고율 0%에서 100% 사이 구간별 품목 현황 알려줘"",
+    ""금일 재고율 구간별 품목 수량 확인해줘"",
+    ""재고율 구간별로 아이템 개수 알려줄래?"",
+    ""오늘 재고율 분포에 따른 품목 수 조회해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:37,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+009-001-
+
+[질문]
+어제 기준 재고율이 50% 미만인 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""count_items_below_stock_rate_threshold"",
+  ""synonyms"": [
+    ""어제 기준 재고율이 50% 미만인 품목 몇 개야?"",
+    ""지난주 재고율 30% 이하인 상품 수 알려줘"",
+    ""재고율이 40%보다 낮은 품목은 총 몇 건인가요?"",
+    ""특정 날짜에 재고율 20% 미만인 제품 개수 확인해줘"",
+    ""50% 미만 재고율 품목 수"",
+    ""어제 날짜로 재고율이 10% 미만인 품목의 수량을 조회해줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:43,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+010-001-
+
+[질문]
+이번 주 재고율 80% 이상으로 유지된 품목은 뭐야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_items_maintaining_high_stock_rate"",
+  ""synonyms"": [
+    ""이번 주 재고율 80% 이상으로 유지된 품목은 뭐야?"",
+    ""지난달 재고율이 90% 넘게 유지된 제품 알려줘."",
+    ""재고율 70% 이상인 품목 리스트 뽑아봐."",
+    ""이번 주에 재고율 85% 이상을 기록한 품목을 확인하고 싶어."",
+    ""{날짜} 동안 {수치}% 이상의 재고율을 보인 품목은?"",
+    ""재고율이 {수치}% 밑으로 안 떨어진 품목이 뭐야?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:48,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+012-001-
+
+[질문]
+최근 30일 동안 재고율 분포가 어떻게 변했어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""analyze_stock_rate_distribution_trend"",
+  ""synonyms"": [
+    ""지난 한 달간 재고율 분포 추이를 보여줘"",
+    ""최근 30일간 재고율이 어떤 분포로 변화했는지 알려줘"",
+    ""{date_range} 동안의 재고율 분포 변화를 확인하고 싶어"",
+    ""{item_name}의 최근 30일 재고율 분포 변동 내역은?"",
+    ""최근 30일 재고율 분포 변화 그래프 보여줘"",
+    ""지난 30일 사이 재고율 분포가 어떻게 달라졌니?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:54,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+013-001-
+
+[질문]
+오늘 재고 회전이 가장 빠른 품목 10개 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_top_fastest_stock_rotation_items"",
+  ""synonyms"": [
+    ""오늘 재고 회전이 가장 빠른 품목 10개 알려줘"",
+    ""금일 재고 회전율 높은 상품 10개 보여줘"",
+    ""오늘 회전이 제일 빠른 품목 5개 리스트업해줘"",
+    ""현재 재고가 가장 빨리 도는 아이템 10개 뭐야?"",
+    ""오늘자 재고 회전율 우수 품목 10종을 조회해줘"",
+    ""재고 회전 빠른 순으로 10개 알려줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:50:59,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+015-001-
+
+[질문]
+이번 달 재고 회전율 상위 품목과 하위 품목 비교해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""compare_top_bottom_inventory_turnover_rate"",
+  ""synonyms"": [
+    ""이번 달 재고 회전율 상위 품목과 하위 품목 비교해줘"",
+    ""금월 재고 회전율 높은 품목이랑 낮은 품목 비교해줘"",
+    ""이번 달의 재고 회전율 상하위 품목 리스트를 대조해줘"",
+    ""지난달 재고 회전율 베스트와 워스트 품목 비교해줄래?"",
+    ""이달의 재고 회전율이 가장 좋은 것과 나쁜 것 비교해줘"",
+    ""특정 기간 재고 회전율 상위권과 하위권 품목 차이 보여줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:05,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+021-001-
+
+[질문]
+오늘 재고율이 하루 중 변동이 가장 큰 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""find_item_max_stock_rate_fluctuation"",
+  ""synonyms"": [
+    ""오늘 재고율 변동폭이 제일 큰 거 뭐야?"",
+    ""금일 재고율 변화가 가장 심한 품목 확인해줘"",
+    ""하루 동안 재고율 수치 차이가 가장 많이 나는 상품 알려줘"",
+    ""오늘 중 재고율 등락이 가장 컸던 품목은?"",
+    ""재고율 변동이 가장 다이나믹한 제품 보여줘"",
+    ""오늘 재고율 변동성 1위 품목이 뭐야?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:10,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+022-001-
+
+[질문]
+이번 주 재고율이 안정적으로 유지된 품목은?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""find_items_with_stable_stock_rate"",
+  ""synonyms"": [
+    ""{date} 재고율이 안정적인 품목 알려줘"",
+    ""{date} 동안 재고율 변동이 적은 상품은 뭐야?"",
+    ""{item}의 이번 주 재고율 추이가 안정적이야?"",
+    ""재고율이 일정하게 유지되고 있는 품목 리스트 보여줘"",
+    ""{date}에 재고율이 안정적으로 관리된 품목 확인해줘"",
+    ""이번 주에 재고율 수치가 안정적인 품목은?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:16,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+023-001-
+
+[질문]
+이번 달 재고 안정성이 가장 높은 품목과 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""get_highest_lowest_stock_stability_items"",
+  ""synonyms"": [
+    ""이번 달 재고 안정성이 가장 높은 품목과 낮은 품목 알려줘"",
+    ""지난달 재고 안정성 상위 품목이랑 하위 품목 뭐야?"",
+    ""재고 안정성 수치가 제일 좋은 거랑 안 좋은 거 리스트 보여줘"",
+    ""{date} 기준 재고 안정성 최고 및 최저 품목 확인해줘"",
+    ""재고 안정성이 가장 우수한 품목과 취약한 품목은?"",
+    ""이번 달 재고 안정성 베스트랑 워스트 품목은?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:21,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+024-001-
+
+[질문]
+지난달 재고 불안정했던 품목이 이번 달 개선됐어?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""check_monthly_stock_stability_improvement"",
+  ""synonyms"": [
+    ""지난달 재고 불안정했던 품목이 이번 달 개선됐어?"",
+    ""전월 재고율 낮았던 상품들 이번 달에 수급 괜찮아졌니?"",
+    ""지난달에 품절 위험 있었던 품목들 이번 달 재고 현황 알려줘."",
+    ""지난달 재고 불안정 품목의 이번 달 재고율 개선 여부 확인해줘."",
+    ""전월 대비 이번 달 재고 안정화된 품목 리스트 보여줘."",
+    ""지난달에 수급 불안정했던 제품들 이번 달에는 재고율 올라갔어?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:27,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-0021
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목 몇 개야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""count_items_within_stock_rate_range"",
+  ""synonyms"": [
+    ""금일 재고율 30%에서 70% 사이인 상품 수 알려줘"",
+    ""현재 재고율이 40%에서 60% 구간에 있는 품목 개수 확인해줘"",
+    ""오늘 자 재고율이 30% 이상 70% 이하인 품목은 총 몇 건인가요?"",
+    ""재고율 30~70% 수준인 품목 수 조회해줘"",
+    ""오늘 적정 재고율인 30%~70% 범위의 상품이 몇 개인지 궁금해"",
+    ""금일 기준으로 재고율이 30%에서 70% 사이인 품목 개수""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:33,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+033-001-002
+
+[질문]
+오늘 재고율이 30~70% 사이로 적정한 품목에 대해서 나열해줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""list_items_by_stock_rate_range"",
+  ""synonyms"": [
+    ""금일 재고율이 {min}%에서 {max}% 사이인 상품들 보여줘"",
+    ""재고율 {min}~{max}% 수준으로 적정하게 유지 중인 품목 리스트"",
+    ""{date} 기준 재고율 {min}%에서 {max}% 사이의 품목 확인해줘"",
+    ""재고 비중이 {min}% 이상 {max}% 이하인 제품 목록"",
+    ""현재 재고율이 {min}에서 {max} 범위에 있는 품목들 알려줘"",
+    ""{date} 재고율 {min}~{max}% 품목 조회""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:39,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+034-001-
+
+[질문]
+이번 주 매일 적정 재고(30~70%)를 유지한 품목 비율이 얼마야?
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""calculate_daily_appropriate_stock_ratio"",
+  ""synonyms"": [
+    ""이번 주 매일 적정 재고(30~70%)를 유지한 품목 비율이 얼마야?"",
+    ""지난주 내내 적정 재고 수준을 지킨 상품 비중 알려줘."",
+    ""특정 기간 동안 재고율 20%에서 80% 사이를 유지한 품목의 비율은?"",
+    ""금주 매일 적정 재고 범위를 충족한 품목의 백분율을 계산해줘."",
+    ""이번 달 재고 적정 수준 유지 품목 비율 확인해줘."",
+    ""최근 7일간 재고율이 30~70% 이내였던 제품들의 비율이 어떻게 돼?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:44,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+035-001-
+
+[질문]
+이번 달 재고율 30~70% 구간을 가장 오래 유지한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""find_item_longest_stock_rate_duration"",
+  ""synonyms"": [
+    ""이번 달 재고율 30~70% 구간을 가장 오래 유지한 품목 알려줘"",
+    ""올해 재고율 20%에서 50% 사이를 가장 길게 유지한 제품 뭐야?"",
+    ""특정 기간 동안 재고율 40~60% 범위를 가장 오래 지속한 품목 리스트"",
+    ""이번 분기 재고율이 30%에서 80% 구간에 가장 오래 머무른 품목을 확인해줘"",
+    ""재고율 50~70% 유지 시간이 가장 긴 품목"",
+    ""지난달 재고율 10~40% 구간 유지 시간 1위 품목 알려줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:50,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+039-001-
+
+[질문]
+이번 달 도넛류와 베이커리류 재고율 차이 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""compare_category_stock_rate_difference"",
+  ""synonyms"": [
+    ""금월 도넛과 베이커리 품목의 재고율 차이가 어떻게 돼?"",
+    ""[카테고리A]와 [카테고리B]의 이번 달 재고율 편차 확인해줘"",
+    ""이번 달 도넛류 대비 베이커리류 재고율이 얼마나 차이나?"",
+    ""당월 기준 도넛 및 베이커리 카테고리별 재고율 격차를 알려주세요"",
+    ""[기간] 동안 [상품군1]과 [상품군2]의 재고율 차이 비교해줘"",
+    ""도넛이랑 베이커리 재고율 차이 이번 달 거 보여줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:51:56,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+040-001-
+
+[질문]
+최근 30일 품목 카테고리별 폐기 수량 순위 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""rank_item_category_disposal_quantity"",
+  ""synonyms"": [
+    ""지난 한 달간 카테고리별 폐기량 순위 보여줘"",
+    ""품목 분류별로 폐기 수량 높은 순서대로 나열해줘"",
+    ""최근 {기간} 동안 카테고리별 폐기 수량 순위는?"",
+    ""최근 30일간의 품목 카테고리별 폐기 수량 랭킹을 확인하고 싶어"",
+    ""카테고리별 폐기 수량 순위 (최근 30일)"",
+    ""어떤 카테고리에서 폐기가 가장 많이 발생했는지 순위 알려줘""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:52:01,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+041-001-
+
+[질문]
+이번 달 판매수량은 많은데 재고율이 계속 낮은 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""find_high_sales_low_stock_items"",
+  ""synonyms"": [
+    ""이번 달 판매수량은 많은데 재고율이 계속 낮은 품목 알려줘"",
+    ""금월 판매량은 높은데 재고율이 낮은 상품 리스트 보여줘"",
+    ""판매는 잘 되는데 재고율이 계속 떨어지는 품목 뭐야?"",
+    ""최근 한 달간 판매량 대비 재고율이 부족한 제품 알려줘"",
+    ""이번 달 판매 실적은 우수하나 재고율이 저조한 품목을 조회해줘"",
+    ""판매량 높고 재고율 낮은 품목 확인""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:52:07,"다음 골든쿼리 문항을 패턴 매칭용 메타데이터로 변환하세요.
+
+[도메인]
+production
+
+[질문번호]
+042-001-
+
+[질문]
+지난달 재고율이 높았는데 판매는 저조한 품목 알려줘
+
+[테이블/컬럼]
+core_stock_rate.stk_rt, core_hourly_item_sales.sale_qty
+
+출력 규칙:
+- intent_id: 영문 snake_case, 3~6 토큰
+- synonyms: 사용자 표현 다양화용 한국어 문장/구 6개 이하
+- synonyms에는 날짜/상품/수량 변수 치환 가능한 표현 포함
+- JSON으로만 출력
+
+출력 형식:
+{
+  ""intent_id"": ""example_intent_id"",
+  ""synonyms"": [""동의어1"", ""동의어2"", ""동의어3""]
+}","{
+  ""intent_id"": ""find_high_stock_low_sales_items"",
+  ""synonyms"": [
+    ""지난달에 재고는 많은데 안 팔린 물건 뭐야?"",
+    ""전월 기준 재고율은 높으나 판매량이 낮은 품목 리스트 보여줘"",
+    ""{date} 재고율 {rate} 이상이면서 판매량 {qty} 이하인 품목 조회"",
+    ""재고만 쌓이고 판매 실적 안 좋은 품목 알려줘"",
+    ""지난달 재고율 대비 판매 저조 품목 확인해줘"",
+    ""지난달에 재고는 쌓여있는데 판매가 안 된 제품은?""
+  ]
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 20:53:26,"다음 운영 가이드 내용을 참고하여 질문에 답변하세요.
+
+[운영 가이드]
+관련 운영 가이드를 찾을 수 없습니다.
+
+[질문] 우리 매장 와이파이 비밀번호 알려줘
+
+간결하고 실행 가능한 답변을 한국어로 작성하세요.","{
+  ""answer"": ""현재 운영 가이드에 와이파이 비밀번호 정보가 등록되어 있지 않습니다. 매장 내 공유기 본체의 라벨이나 포스(POS) 단말기 주변의 안내 문구를 확인해 주세요.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:01,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:02,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:04,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:04,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:05,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,2
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:44:07,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.261}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.1843}, {""query_id"": ""047-001-"", ""intent_id"": ""047"", ""question"": ""이번 달 발주 수량 변동이 가장 큰 품목 알려줘"", ""score"": 0.1532}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","오류: [Errno 8] nodename nor servname provided, or not known",실패,3
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:45:48,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.4947}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.4228}, {""query_id"": ""059-001-"", ""intent_id"": ""059"", ""question"": ""이번 달 미확정 수량이 가장 많았던 품목 상위 5개 알려줘"", ""score"": 0.4137}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","{
+  ""query_id"": ""016-001-"",
+  ""confidence"": 0.85
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:45:53,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.4947}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.4228}, {""query_id"": ""059-001-"", ""intent_id"": ""059"", ""question"": ""이번 달 미확정 수량이 가장 많았던 품목 상위 5개 알려줘"", ""score"": 0.4137}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","{
+  ""query_id"": ""016-001-"",
+  ""confidence"": 0.85
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:51:35,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.4947}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.4228}, {""query_id"": ""059-001-"", ""intent_id"": ""059"", ""question"": ""이번 달 미확정 수량이 가장 많았던 품목 상위 5개 알려줘"", ""score"": 0.4137}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","{""query_id"": ""016-001-"", ""confidence"": 0.4947}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 21:51:39,"다음 사용자 질문에 가장 적합한 골든쿼리 후보 1개를 선택하세요.
+
+[도메인]
+ordering
+
+[질문]
+전주 수동 주문이 많은 품목 알려줘
+
+[후보]
+[{""query_id"": ""016-001-"", ""intent_id"": ""ordering_compare_manual_order_volume_by_item"", ""question"": ""지난주 대비 수동 발주 많은 품목 핵심만 짚어줘"", ""score"": 0.4947}, {""query_id"": ""054-001-"", ""intent_id"": ""054"", ""question"": ""이번 달 수동발주 품목의 확정률이 수동 발주 품목보다 높아?"", ""score"": 0.4228}, {""query_id"": ""059-001-"", ""intent_id"": ""059"", ""question"": ""이번 달 미확정 수량이 가장 많았던 품목 상위 5개 알려줘"", ""score"": 0.4137}]
+
+규칙:
+- 의미적으로 가장 가까운 후보 1개를 고르세요.
+- 모두 부적합하면 query_id를 빈 문자열로 반환하세요.
+- confidence는 0~1 범위.
+
+JSON:
+{""query_id"":""..."",""confidence"":0.0}","{
+  ""query_id"": ""016-001-"",
+  ""confidence"": 0.85
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:20,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 청주시01, 총매출규모(상위3품목합): 405,992,453원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(60336개), 아이스아메리카노(41901개), 아메리카노(30462개)
+            ","{
+  ""insight"": ""청주시01 매장은 상위 3개 품목만으로 약 4억 원의 매출을 달성하고 있으며, 특히 시그니처 도넛인 페이머스글레이즈드와 아메리카노의 조합이 매출의 핵심 동력으로 작용하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:25,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 연제구01, 총매출규모(상위3품목합): 50,540,875원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(13876개), 스트로베리필드(8803개), 카카오후로스티드(8421개)
+            ","{
+  ""insight"": ""연제구01 매장은 상위 3개 품목만으로 약 5,054만 원의 매출을 달성하고 있으며, 특히 시그니처인 페이머스글레이즈드를 필두로 한 클래식 도넛 라인업이 강력한 매출 견인차 역할을 하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:30,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 경산시01, 총매출규모(상위3품목합): 98,546,274원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(19028개), 아이스아메리카노(11470개), 올리브츄이스티(8675개)
+            ","{
+  ""insight"": ""경산시01 매장은 상위 3개 품목만으로 약 9,854만 원의 매출을 달성하고 있으며, 특히 페이머스 글레이즈드를 필두로 한 도넛류와 아이스 아메리카노의 조합이 강력한 매출 견인차 역할을 하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:34,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 안양시01, 총매출규모(상위3품목합): 95,171,580원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(35832개), 스트로베리먼치킨(16826개), 스트로베리필드(13190개)
+            ","{
+  ""insight"": ""안양시01 매장은 상위 3개 품목만으로 약 9,500만 원의 매출을 기록하고 있으며, 특히 페이머스글레이즈드를 필두로 한 도넛류의 판매가 압도적인 비중을 차지하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:39,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 부산진구01, 총매출규모(상위3품목합): 77,047,395원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(33935개), 스트로베리먼치킨(27867개), 카카오하니딥먼치킨(22566개)
+            ","{
+  ""insight"": ""부산진구01 매장은 상위 3개 품목만으로 약 7,700만 원의 매출을 기록하고 있으며, 특히 페이머스글레이즈드와 먼치킨류 등 도넛 제품군이 압도적인 판매량을 기록하며 매장 성장을 주도하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:44,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 중구01, 총매출규모(상위3품목합): 77,700,925원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(24120개), 올리브츄이스티(13565개), 스트로베리필드(12440개)
+            ","{
+  ""insight"": ""중구01 매장은 상위 3개 품목만으로 약 7,770만 원의 매출을 달성하고 있으며, 특히 시그니처인 페이머스글레이즈드가 압도적인 판매량을 기록하며 기본 도넛 제품군이 매출 성장을 강력하게 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:47,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 포항시01, 총매출규모(상위3품목합): 114,079,600원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(22465개), 올리브츄이스티(12248개), 해피먼치킨컵(10개입)(11854개)
+            ","{
+  ""insight"": ""포항시01 매장은 상위 3개 품목만으로 약 1억 1,400만 원의 매출을 달성하고 있으며, 특히 페이머스글레이즈드와 같은 시그니처 도넛 제품군이 압도적인 판매량을 기록하며 전체 매출 성장을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:53,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 용인시01, 총매출규모(상위3품목합): 129,412,442원, 가장 많이 팔린 3가지 상품: 아이스아메리카노(16534개), 페이머스글레이즈드(13120개), 아이스아메리카노(킹)(9234개)
+            ","{
+  ""insight"": ""용인시01 매장은 상위 3개 품목만으로 약 1억 3천만 원의 매출을 창출하고 있으며, 특히 두 가지 규격의 아이스 아메리카노와 대표 디저트인 페이머스 글레이즈드가 매출의 핵심 축을 담당하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:15:58,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 마포구02, 총매출규모(상위3품목합): 92,728,064원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(34019개), 스트로베리필드(17621개), 스트로베리먼치킨(14129개)
+            ","{
+  ""insight"": ""마포구02 매장은 상위 3개 품목만으로 약 9,270만 원의 매출을 달성하고 있으며, 특히 페이머스글레이즈드와 스트로베리 계열 도넛에 대한 고객 선호도가 압도적으로 높게 나타납니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:03,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 김천시01, 총매출규모(상위3품목합): 157,640,800원, 가장 많이 팔린 3가지 상품: 아이스아메리카노(16002개), 아메리카노(15087개), 페이머스글레이즈드(14093개)
+            ","{
+  ""store_name"": ""김천시01"",
+  ""insight"": ""김천시01 매장은 상위 3개 품목에서 약 1억 5,700만 원의 매출을 달성하고 있으며, 특히 아메리카노 계열의 압도적인 판매량과 함께 대표 디저트인 페이머스글레이즈드가 동반 소비되는 강력한 '커피 앤 도넛' 구매 특성을 보입니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:08,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 정읍시01, 총매출규모(상위3품목합): 154,667,897원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(31542개), 아이스아메리카노(21883개), 레귤러 사이즈UP(ICE)(16062개)
+            ","{
+  ""insight"": ""정읍시01 매장은 상위 3개 품목만으로 약 1억 5,400만 원의 매출을 달성하고 있으며, 시그니처 도넛인 페이머스글레이즈드와 아이스 커피류의 강력한 결합 판매를 통해 높은 수익을 창출하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:13,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 성남시01, 총매출규모(상위3품목합): 34,999,263원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(10210개), 올리브츄이스티(4589개), 스트로베리필드(4589개)
+            ","{
+  ""insight"": ""성남시01 매장은 상위 3개 품목만으로 약 3,500만 원의 매출을 달성하고 있으며, 특히 페이머스글레이즈드가 차순위 품목 대비 2배 이상의 압도적인 판매량을 기록하며 매장 전체 실적을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:18,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 광명시01, 총매출규모(상위3품목합): 114,435,570원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(20499개), 아이스아메리카노(16794개), 스트로베리먼치킨(16473개)
+            ","{
+  ""store_name"": ""광명시01"",
+  ""insight"": ""광명시01 매장은 상위 3개 품목만으로 약 1억 1,400만 원의 매출을 기록하고 있으며, 시그니처 도넛인 페이머스글레이즈드와 아이스 아메리카노를 중심으로 한 디저트 및 음료의 결합 판매가 강력한 매출 동력으로 작용하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:22,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 동구01, 총매출규모(상위3품목합): 121,908,656원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(37360개), 스트로베리먼치킨(30165개), 올리브츄이스티(22970개)
+            ","{
+  ""insight"": ""동구01 매장은 상위 3개 품목만으로 약 1억 2천만 원의 매출을 기록하고 있으며, 페이머스글레이즈드와 먼치킨 등 대중적인 인기 도넛류 제품이 전체 판매 실적을 강력하게 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:27,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 천안시01, 총매출규모(상위3품목합): 77,348,157원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(16670개), 아이스아메리카노(9286개), 스트로베리필드(6602개)
+            ","{
+  ""insight"": ""천안시01 매장은 상위 3개 품목만으로 약 7,700만 원의 매출을 달성하고 있으며, 특히 시그니처인 페이머스글레이즈드를 필두로 한 도넛류의 압도적인 판매량과 아이스 아메리카노의 높은 동반 수요가 특징입니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:31,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 시흥시01, 총매출규모(상위3품목합): 88,560,772원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(29361개), 스트로베리필드(13040개), 카푸치노츄이스티(9101개)
+            ","{
+  ""insight"": ""시흥시01 매장은 상위 3개 품목만으로 약 8,856만 원의 매출을 기록하고 있으며, 특히 페이머스글레이즈드를 중심으로 한 스테디셀러 도넛 제품군이 전체 판매 실적을 강력하게 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:37,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 고양시02, 총매출규모(상위3품목합): 44,765,077원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(15690개), 카카오하니딥먼치킨(10992개), 스트로베리필드(6437개)
+            ","{
+  ""insight"": ""고양시02 매장은 상위 3개 품목만으로 약 4,476만 원의 매출을 달성하고 있으며, 페이머스 글레이즈드와 먼치킨 등 대중적인 도넛 제품군이 압도적인 판매량을 기록하며 전체 실적을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:43,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 서구01, 총매출규모(상위3품목합): 80,393,348원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(21179개), 스트로베리필드(10240개), 아이스아메리카노(9145개)
+            ","{
+  ""insight"": ""서구01 매장은 상위 3개 품목 합산 약 8,000만 원의 매출을 달성 중이며, 특히 페이머스글레이즈드를 필두로 한 도넛 제품군이 아이스 아메리카노 대비 3배 이상의 압도적인 판매량을 기록하며 강력한 디저트 수요를 보이고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:47,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 영등포구01, 총매출규모(상위3품목합): 130,201,115원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(19731개), 아이스아메리카노(16671개), 스트로베리필드(12911개)
+            ","{
+  ""store_name"": ""영등포구01"",
+  ""insight"": ""영등포구01 매장은 상위 3개 품목만으로 약 1억 3천만 원의 높은 매출을 달성하고 있으며, 특히 페이머스글레이즈드를 필두로 한 도넛류와 아이스 아메리카노의 강력한 동반 구매가 매출 성장을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:53,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 익산시01, 총매출규모(상위3품목합): 223,935,160원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(55236개), 스트로베리먼치킨(43109개), 아이스아메리카노(25434개)
+            ","{
+  ""insight"": ""익산시01 매장은 상위 3개 품목 합산 약 2억 2천만 원의 매출을 달성 중이며, 특히 페이머스글레이즈드와 스트로베리먼치킨의 판매량이 압도적으로 높아 커피류보다 도넛 제품군이 매출을 견인하는 핵심 동력으로 작용하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:16:57,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 춘천시01, 총매출규모(상위3품목합): 129,056,791원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(24153개), 아이스아메리카노(13113개), 아메리카노(10441개)
+            ","{
+  ""insight"": ""춘천시01 매장은 상위 3개 품목만으로 약 1억 2,900만 원의 매출을 기록하고 있으며, 대표 메뉴인 페이머스글레이즈드와 커피류의 압도적인 판매량을 바탕으로 디저트와 음료의 동반 소비가 매출의 핵심 동력으로 작용하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:02,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 해운대구01, 총매출규모(상위3품목합): 66,771,154원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(19726개), 카카오후로스티드(9825개), 스트로베리필드(8951개)
+            ","{
+  ""insight"": ""해운대구01 매장은 상위 3개 품목만으로 약 6,677만 원의 매출을 달성하고 있으며, 특히 페이머스글레이즈드가 압도적인 판매량을 기록하며 시그니처 메뉴 중심의 안정적인 매출 구조를 형성하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:08,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 강남구01, 총매출규모(상위3품목합): 201,733,300원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(44314개), 올리브츄이스티(21902개), 아이스아메리카노(21553개)
+            ","{
+  ""insight"": ""강남구01 매장은 상위 3개 품목만으로 약 2억 원의 매출을 달성하고 있으며, 페이머스글레이즈드와 올리브츄이스티 같은 도넛 제품군이 아이스 아메리카노 대비 3배 이상의 높은 판매량을 기록하며 강력한 디저트 수요를 보이고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:12,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 강릉시01, 총매출규모(상위3품목합): 137,648,421원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(39988개), 카푸치노츄이스티(19488개), 스트로베리필드(19296개)
+            ","{
+  ""store_name"": ""강릉시01"",
+  ""insight"": ""강릉시01 매장은 상위 3개 품목만으로 약 1억 3,765만 원의 매출을 달성하고 있으며, 특히 시그니처 메뉴인 페이머스글레이즈드가 압도적인 판매량을 기록하며 전체 성장을 주도하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:17,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 마포구01, 총매출규모(상위3품목합): 147,827,084원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(47455개), 스트로베리필드(18920개), 올리브츄이스티(18308개)
+            ","{
+  ""insight"": ""마포구01 매장은 상위 3개 품목만으로 약 1억 4,800만 원의 매출을 기록하고 있으며, 특히 시그니처 메뉴인 페이머스글레이즈드가 타 품목 대비 2배 이상의 압도적인 판매량을 보이며 전체 실적을 강력하게 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:21,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 수원시01, 총매출규모(상위3품목합): 42,009,339원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(12388개), 올리브츄이스티(5445개), 카푸치노츄이스티(5119개)
+            ","{
+  ""insight"": ""수원시01 매장은 상위 3개 품목만으로 약 4,200만 원의 매출을 기록하고 있으며, 특히 페이머스 글레이즈드의 압도적인 판매량을 중심으로 츄이스티류 도넛이 매출의 핵심을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:26,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 나주시01, 총매출규모(상위3품목합): 192,511,000원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(21456개), 아이스아메리카노(20961개), 아메리카노(15955개)
+            ","{
+  ""insight"": ""나주시01 매장은 상위 3개 품목만으로 약 1억 9천만 원 이상의 매출을 달성하고 있으며, 특히 페이머스글레이즈드와 아메리카노 계열의 판매량이 고르게 높아 디저트와 커피를 함께 즐기는 고객층이 두텁게 형성되어 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:31,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 강서구01, 총매출규모(상위3품목합): 84,451,205원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(24575개), 스트로베리필드(14091개), 올리브츄이스티(12270개)
+            ","{
+  ""insight"": ""강서구01 매장은 상위 3개 품목만으로 약 8,445만 원의 매출을 달성하고 있으며, 특히 페이머스 글레이즈드의 압도적인 판매량을 바탕으로 대중적인 도넛 메뉴가 전체 실적을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:36,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 남구01, 총매출규모(상위3품목합): 90,233,733원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(29096개), 카카오후로스티드(12180개), 스트로베리필드(11694개)
+            ","{
+  ""insight"": ""남구01 매장은 상위 3개 품목만으로 약 9천만 원의 매출을 달성하고 있으며, 특히 페이머스 글레이즈드의 판매량이 다른 인기 품목 대비 2배 이상 압도적으로 높아 시그니처 도넛 중심의 강력한 목적 구매가 이루어지고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:41,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 노원구01, 총매출규모(상위3품목합): 29,645,492원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(12996개), 카카오하니딥먼치킨(8026개), 스트로베리먼치킨(7460개)
+            ","{
+  ""store_name"": ""노원구01"",
+  ""insight"": ""노원구01 매장은 상위 3개 품목만으로 약 2,964만 원의 매출을 달성하고 있으며, 시그니처 메뉴인 페이머스글레이즈드와 취식 편의성이 높은 먼치킨류가 압도적인 판매량을 기록하며 전체 매출 성장을 견인하고 있습니다.""
+}",성공,1
+call_gemini_text,gemini-3-flash-preview,2026-04-24 23:17:47,"
+            당신은 프랜차이즈 매출 분석가입니다.
+            다음은 특정 매장의 매출 상위 3개 상품과 그 합산 매출 규모 데이터입니다.
+            이 데이터를 바탕으로, 이 매장의 판매 특성을 설명하는 ""자연스러운 비즈니스 인사이트 1문장""을 작성해주세요.
+            (예시: ""이 매장은 총 5백만원 규모의 매출을 내고 있으며, 특히 아이스 아메리카노와 카페라떼 같은 커피 음료의 판매 비중이 압도적으로 높습니다."")
+            
+            데이터: 점포명: 영등포구02, 총매출규모(상위3품목합): 64,128,759원, 가장 많이 팔린 3가지 상품: 페이머스글레이즈드(19619개), 스트로베리먼치킨(14609개), 스트로베리필드(12066개)
+            ","{
+  ""insight"": ""영등포구02 매장은 상위 3개 품목에서만 약 6,400만 원의 매출을 창출하고 있으며, 특히 페이머스글레이즈드와 스트로베리 계열 도넛의 판매량이 매우 높아 스테디셀러 중심의 강력한 디저트 수요를 보여줍니다.""
+}",성공,1

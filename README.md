@@ -483,3 +483,23 @@ python pipeline/build_knowledge_base.py
 - 테스트 추가/통과:
   - `tests/test_golden_query_resolver.py`
   - `pytest -q tests/test_golden_query_resolver.py tests/test_grounded_workflow.py` → 8 passed
+
+## Session Update (2026-04-25, settings logo alignment 영향도)
+
+- 프론트 `/settings` 로고 정렬 작업(점주 유입 헤더와 동일 자산 적용)이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, production table JSX tag fix 영향도)
+
+- 프론트 `ProductionTableSection` JSX 태그 정합성 수정이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, dashboard alert summary prop type fix 영향도)
+
+- 프론트 `DashboardScreen` prop 타입 정리 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, settings logo click navigation 영향도)
+
+- 프론트 `/settings` 로고 클릭 이동(`/`) 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
