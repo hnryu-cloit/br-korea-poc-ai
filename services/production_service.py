@@ -68,6 +68,8 @@ class ProductionService:
             store_id=payload.store_id,
             domain="production",
             reference_date=payload.business_date,
+            system_instruction=payload.system_instruction,
+            golden_query_only=True,
         )
         return result
         

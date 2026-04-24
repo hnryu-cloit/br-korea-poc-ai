@@ -15,6 +15,7 @@ from common.query_logger import query_logger
 logger = logging.getLogger(__name__)
 
 _DEFAULT_DB_URL = "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc"
+_MAX_FETCH_ROWS = 300
 
 _SCHEMA: dict[str, dict[str, object]] = {
     "core_daily_item_sales": {
@@ -360,17 +361,22 @@ class QueryExecutor:
         # Executes the generated read-only SQL and records trace metadata.
         if not self.engine:
             raise RuntimeError("Database engine is not initialized.")
+        bound_params: dict[str, object] = {"store_id": store_id}
+        if params:
+            bound_params.update(params)
+        bound_params["store_id"] = store_id
         try:
             with self.engine.connect() as conn:
-                result = conn.execute(text(sql), {"store_id": store_id})
+                result = conn.execute(text(sql), bound_params)
                 columns = list(result.keys())
-                rows = [dict(zip(columns, row)) for row in result.fetchmany(200)]
+                fetched_rows = result.fetchmany(_MAX_FETCH_ROWS)
+                rows = [dict(zip(columns, row)) for row in fetched_rows]
             if agent_name:
                 query_logger.log_query(
                     agent_name=agent_name,
                     tables=target_tables or [],
                     query=sql,
-                    params=params or {"store_id": store_id},
+                    params=bound_params,
                 )
             return rows, columns
         except Exception as exc:
