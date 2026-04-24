@@ -4,6 +4,66 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 ## 최근 업데이트 (2026-04-24)
 
+- Gemini grounded 입력 안정화(행 상한 + 프롬프트 예산)를 반영했습니다.
+  - `services/sql_pipeline.py` SQL 실행 결과를 `fetchmany(300)`으로 제한해 런타임 메모리/지연 급증을 방지했습니다.
+  - `services/grounded_workflow.py`에서 Gemini 프롬프트에 포함하는 `reference_data.rows`를 기본 60행으로 제한하고, JSON 길이 예산(18,000자) 초과 시 추가 절단하도록 보강했습니다.
+  - `reference_data`에 `included_row_count`, `truncated`, `omitted_row_count` 메타정보를 추가해 응답 근거를 유지했습니다.
+  - 검증: `python3 -m py_compile br-korea-poc-ai/services/sql_pipeline.py br-korea-poc-ai/services/grounded_workflow.py`
+
+- 전체 스크립트 경로 리스크 점검을 추가 반영했습니다.
+  - 모노레포 루트 실행 기준으로 `pipeline/run.py`, `tests/grounded_consistency_utils.py`, `tests/test_golden_query_resolver.py`, `tests/test_grounded_workflow.py`에 프로젝트 루트 경로 부트스트랩을 추가했습니다.
+  - 검증: `pytest -q br-korea-poc-ai/tests/test_golden_query_resolver.py br-korea-poc-ai/tests/test_grounded_workflow.py` (9 passed)
+
+- 주문 추천 인터페이스 정책을 현재 코드 기준으로 재명시했습니다.
+  - 추천 수량 계산은 backend 하이브리드(통계/규칙) 로직이 담당합니다.
+  - AI(Gemini)는 옵션별 근거 문장(`reasoning_text`) 생성 전용이며 수량을 덮어쓰지 않습니다.
+  - 현재 세션에서 AI 라우터/스키마 계약 변경은 없습니다.
+
+- 골든쿼리 테스트 자산의 Git 추적 제외 정책을 적용했습니다.
+  - `br-korea-poc-ai/.gitignore`에 `tests/*golden_query*` 패턴을 추가했습니다.
+  - 기존 추적 파일은 `git rm --cached`로 인덱스에서만 제거했습니다.
+
+- 실행 스크립트 경로 안정화를 보강했습니다.
+  - `tests/benchmark_golden_query_match.py`, `tests/benchmark_golden_query_holdout.py`에 프로젝트 루트 경로 자동 주입과 상대경로 해석 함수를 추가했습니다.
+  - `tests/test_qa_common_035.py`를 모노레포 루트 실행에서도 동작하도록 경로 보강했습니다.
+  - `pipeline/build_knowledge_base.py`, `pipeline/generate_insights.py`의 sys.path 기준을 pipeline 폴더가 아닌 AI 프로젝트 루트로 수정했습니다.
+  - `pipeline/build_knowledge_base.py`, `pipeline/generate_insights.py`가 `services.rag_service`의 제거된 심볼(`Base`, `KnowledgeDocument`)에 의존하지 않도록 스크립트 내부 ORM 모델로 분리했습니다.
+
+- 골든쿼리 홀드아웃 100건을 추가해 재검증했습니다.
+  - 파일: `tests/golden_query_holdout_cases_extra_100.json` (양성 50 / 음성 50)
+  - 실행: `PYTHONPATH=. python tests/benchmark_golden_query_holdout.py --cases tests/golden_query_holdout_cases_extra_100.json --use-gemini`
+  - 결과: precision 100.00%, recall 20.00%, specificity 100.00%, f1 33.33%
+  - 해석: 관련없는 질문 차단은 강하지만 재현율 개선이 추가로 필요합니다.
+
+- 골든쿼리 매칭 벤치마크를 추가했습니다.
+  - `tests/golden_query_benchmark_cases.json`에 양성/음성 44개 케이스를 정의했습니다.
+  - `tests/benchmark_golden_query_match.py`로 precision/recall/specificity/f1을 계산합니다.
+- 임계치 기본값을 재현율 중심으로 조정했습니다.
+  - `GOLDEN_QUERY_MIN_SCORE` 기본 `0.45`, `GOLDEN_QUERY_MIN_MARGIN` 기본 `0.0`
+  - Gemini 실호출 벤치마크 기준(44건) precision 100%, recall 100%, specificity 100%
+
+- 프론트 `/settings/connectors`의 DB 기준 안내 보강 작업이 반영되었습니다.
+  - 이번 세션에서 AI 서비스 라우터/스키마/서비스 코드는 변경하지 않았고, 운영 문서에 영향 범위만 동기화했습니다.
+
+- 골든쿼리 매칭 파이프라인을 의도카드 기반 하이브리드 검색으로 고도화했습니다.
+  - `services/golden_query_resolver.py`에 토큰 정규화 조사 제거 슬롯 신호 KPI 태그 임베딩 유사도 LLM 재랭크를 결합한 점수화를 적용했습니다.
+  - `GOLDEN_QUERY_MIN_SCORE` `GOLDEN_QUERY_MIN_MARGIN` 환경변수로 오탐 방지 임계치를 운영 조정할 수 있습니다.
+- 도메인 경로의 골든쿼리 우선 정책을 강화했습니다.
+  - 주문 생산 분석 경로는 `golden_query_only=True`로 동작해 미매칭 시 사과문구 + 유사 후보(`overlap_candidates`)를 반환합니다.
+  - 매칭 시 응답 근거에 `matched_query_id` `match_score`와 테이블 라인리지를 포함합니다.
+- Gemini 실호출 기반 골든쿼리 보강 스크립트를 추가했습니다.
+  - `scripts/enrich_golden_queries_with_gemini.py`로 CSV의 `의도ID` `동의어`를 자동 보강합니다.
+  - 테스트 스크립트 `tests/live_agent_test.py` 출력에 `follow_up_questions`와 `overlap_candidates`를 포함해 고도화 검증을 지원합니다.
+- 공통 시스템 프롬프트 규칙을 반영해 응답 구조를 고정했습니다.
+  - 답변은 설명 근거 액션 추가 예상질문 3개를 기본 포함하고 단순 요약 답변을 피하도록 보강했습니다.
+
+- 주문 추천 근거 생성 컨텍스트를 실데이터 기반으로 확장했습니다.
+  - `OrderingRecommendRequest`에 `current_context`를 추가하고, compat 라우터가 해당 값을 `OrderingRecommendationRequest.current_context`로 전달합니다.
+  - `ORDERING_REASONING_PROMPT_TEMPLATE`에 옵션 지표/트렌드 컨텍스트 입력을 추가해 Gemini 근거가 옵션별 수치 근거를 직접 참조하도록 보강했습니다.
+  - `option_details.option_type` 파싱에서 `OPT_A/B/C`와 `LAST_WEEK/TWO_WEEKS_AGO/LAST_MONTH`를 모두 수용하도록 정비했습니다.
+- 주문 도메인 서비스 정리 리팩토링을 반영했습니다.
+  - `services/ordering_service.py`의 `analyze()`에 남아 있던 도달 불가능 레거시 분기 코드를 제거해 실행 경로를 단일화했습니다.
+
 - backend `load` 단계 안정화 마이그레이션(`store_clusters` 컬럼 보강)이 반영되었습니다.
   - AI 서비스 코드/계약 변경은 없습니다.
 
@@ -385,3 +445,41 @@ python pipeline/build_knowledge_base.py
 - 백엔드 문서 자산 `../br-korea-poc-backend/docs/golden-queries-new-02.csv`가 추가되었습니다.
   - AI 코드/계약 변경 없이 운영 검증용 질문셋(공통조건+에이전트별 필수/파생 질문) 연동만 반영했습니다.
 - `golden-queries-new-02.csv` 운영 참조셋이 112건으로 확장되었습니다.
+
+## Session Update (2026-04-24, golden query hybrid routing v1)
+
+- `services/golden_query_resolver.py`를 추가해 `br-korea-poc-backend/docs/golden-queries.csv`를 런타임 로드하고, 도메인(생산/주문/매출)별 골든쿼리 후보를 구성합니다.
+- 골든 매칭은 하이브리드 방식으로 동작합니다.
+  - 규칙 점수: 토큰/슬롯 유사도
+  - 임베딩 점수: Gemini 임베딩 코사인 유사도 (실패 시 자동 비활성)
+  - 최종 점수 가중합으로 골든쿼리 우선 경로를 선택합니다.
+- `GroundedWorkflow`에 골든쿼리 우선 실행 경로를 연결했습니다.
+  - 경로: `policy guard -> golden query hit -> (miss 시) 기존 NL2SQL/grounded`
+  - 응답 메타에 `matched_query_id`, `match_score`, `processing_route=golden_query_hit`를 포함합니다.
+- SQL 실행기(`services/sql_pipeline.py`)를 확장해 `date_from/date_to/start_date/end_date` 등 파라미터 바인딩을 지원합니다.
+- 테스트: `pytest -q tests/test_grounded_workflow.py` (6 passed)
+
+## Session Update (2026-04-24, floating-chat system prompt + follow-up questions)
+
+- 플로팅 챗 공통 품질 규칙을 시스템 프롬프트로 강제하도록 오케스트레이터/워크플로우를 업데이트했습니다.
+  - 단순 요약 금지, 실행 가능한 액션 필수
+  - 수치 제안 시 데이터/모델 근거(evidence) 필수
+  - 매장 맞춤형 답변 유지
+  - 재고/생산 질의 시 1시간 후 예측 오차(±10%)와 찬스 로스 방지 근거 포함
+- 골든쿼리 응답 및 grounded 응답에 `follow_up_questions` 3개를 포함해 다음 질문을 골든쿼리 방향으로 유도합니다.
+- `SalesInsight` 계약에 `follow_up_questions` 필드를 추가했습니다.
+
+## Session Update (2026-04-24, golden query pattern matching)
+
+- 골든쿼리 매칭을 질문 원문 일치가 아닌 패턴 매칭으로 강화했습니다.
+  - 동의어/문장 정규화(`지난주→전주`, `지난달→전월` 등)
+  - 토큰 표준화(`판매→매출`, `주문수량→발주수량` 등)
+  - 슬롯/추상 시그니처 기반 매칭(날짜·기간·상품·수량 변수 치환)
+- CSV 옵션 컬럼을 지원합니다.
+  - `의도ID(intent_id)`
+  - `동의어(synonyms)`
+  - 미기재 시 기존 컬럼만으로 자동 추론
+- 임베딩 사용 불가 시에도 규칙 점수만으로 매칭되도록 점수 계산을 보정했습니다.
+- 테스트 추가/통과:
+  - `tests/test_golden_query_resolver.py`
+  - `pytest -q tests/test_golden_query_resolver.py tests/test_grounded_workflow.py` → 8 passed

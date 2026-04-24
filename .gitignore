@@ -10,3 +10,6 @@ __pycache__/
 models/
 *.pkl
 *.joblib
+
+# Golden query benchmark/test artifacts
+tests/*golden_query*
