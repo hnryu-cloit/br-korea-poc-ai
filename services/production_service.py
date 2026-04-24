@@ -37,7 +37,7 @@ from .sql_pipeline import SQLGenerator, QueryExecutor
 logger = init_logger(__name__)
 
 def normalize_payload_df(data: list[dict] | None) -> pd.DataFrame:
-    """Helper to safely convert payload list of dicts to a pandas DataFrame."""
+    """payload 리스트를 안전하게 DataFrame으로 변환"""
     if not data:
         return pd.DataFrame()
     return pd.DataFrame(data)

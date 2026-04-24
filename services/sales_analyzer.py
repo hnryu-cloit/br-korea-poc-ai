@@ -21,7 +21,7 @@ from services.grounded_workflow import GroundedWorkflow
 logger = logging.getLogger(__name__)
 
 
-# Legacy helper kept for the sales analyzer-specific blocking path.
+# 매출 분석기 전용 차단 경로에서 사용하는 레거시 헬퍼
 class QueryClassifier:
     """민감 키워드를 식별하여 차단하는 역할"""
 
@@ -35,7 +35,7 @@ class QueryClassifier:
         return False
 
 
-# Legacy helper that asks the model which tables are likely needed.
+# 모델에 필요한 테이블을 질의하는 레거시 헬퍼
 class SemanticLayer:
     """질의 유형을 분류하고 관련 테이블 힌트를 선택하는 역할"""
 
@@ -73,7 +73,7 @@ class SemanticLayer:
             return ["DAILY_STOR_ITEM"]
 
 
-# Legacy SQL generator used by the older analyzer path.
+# 구형 분석기 경로에서 사용하는 레거시 SQL 생성기
 class SQLGenerator:
     """LLM + 스키마 컨텍스트를 활용하여 SELECT SQL을 생성하는 역할"""
 
@@ -126,7 +126,7 @@ class SQLGenerator:
             return "SELECT item_nm, SUM(CAST(sale_qty AS NUMERIC)) AS total_qty FROM raw_daily_store_item WHERE masked_stor_cd = :store_id GROUP BY item_nm ORDER BY total_qty DESC LIMIT 5"
 
 
-# Executes validated read-only SQL through the sales agent.
+# 매출 에이전트를 통해 검증된 읽기 전용 SQL 실행
 class QueryExecutor:
     """실제 PostgreSQL 조회를 담당하는 역할 (안전성 검증 포함)"""
 
@@ -142,7 +142,7 @@ class QueryExecutor:
         return self.agent.execute_dynamic_sql(store_id, sql, target_tables)
 
 
-# Turns grounded rows into user-facing summary, evidence, and actions.
+# 실제 조회 행을 바탕으로 사용자 대상 요약·근거·액션 생성
 class GroundedAnalyzer:
     """LLM이 실제 조회된 데이터(Row)를 바탕으로 답변을 생성하는 역할"""
 

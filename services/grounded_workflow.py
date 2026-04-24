@@ -49,14 +49,14 @@ _DOMAIN_TO_AGENT = {
 }
 
 
-# Serializes Decimal values when rows are rendered into JSON.
+# JSON 직렬화 시 Decimal 값을 float으로 변환
 def _json_default(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     raise TypeError(f"Unsupported type: {type(value)}")
 
 
-# Extracts numeric tokens from text for grounded answer consistency checks.
+# 텍스트에서 숫자 토큰을 추출해 응답 일관성 검증에 사용
 def _extract_numbers(text: str) -> set[float]:
     numbers: set[float] = set()
     for token in re.findall(r"\d+(?:\.\d+)?", str(text)):
@@ -67,7 +67,7 @@ def _extract_numbers(text: str) -> set[float]:
     return numbers
 
 
-# Collects numeric values that actually appeared in SQL result rows.
+# SQL 결과 행에 실제로 등장한 숫자 값 수집
 def _numbers_from_rows(rows: list[dict[str, Any]]) -> set[float]:
     numbers: set[float] = set()
     for row in rows:
@@ -116,7 +116,7 @@ def _format_cell(column: str, value: Any) -> str:
     return text
 
 
-# Builds a deterministic fallback sentence when the LLM answer cannot be trusted.
+# LLM 응답을 신뢰할 수 없을 때 결정론적 폴백 문장 생성
 def _build_fallback_text(query: str, rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "조회 결과가 없습니다."
@@ -150,7 +150,7 @@ def _is_numeric_consistent(query: str, answer_text: str, rows: list[dict[str, An
     return True
 
 
-# Resolves ambiguous ordering questions before SQL generation.
+# SQL 생성 전 모호한 순위 질의를 명확화
 @dataclass(frozen=True)
 class _OrderingQueryPolicy:
     query_for_sql: str
@@ -208,7 +208,7 @@ def _apply_ordering_query_policy(query: str) -> _OrderingQueryPolicy:
 
 
 class GroundedWorkflow:
-    """Shared grounded workflow for all LLM-backed business answers."""
+    """LLM 기반 비즈니스 응답을 위한 공통 grounded 워크플로우"""
 
     def __init__(self, gemini: Gemini, db_url: str | None = None) -> None:
         self.gemini = gemini

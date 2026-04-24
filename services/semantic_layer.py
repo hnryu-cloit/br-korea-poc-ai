@@ -12,7 +12,7 @@ class SemanticLayer:
     """
 
     def __init__(self):
-        # Maps recurring business keywords to data categories before SQL generation.
+        # SQL 생성 전 비즈니스 키워드를 데이터 카테고리로 매핑
         self.data_routing_rules = {
             "결제": "payment",
             "페이": "payment",
@@ -31,11 +31,7 @@ class SemanticLayer:
         }
 
     def parse_query_intent(self, query: str) -> tuple[str, str]:
-        # Returns both the target data category and the business logic note
-        # used by downstream table selection and SQL prompting.
-        """
-        질의를 분석하여 조회할 타겟 데이터와 비즈니스 로직을 반환합니다.
-        """
+        """질의를 분석하여 조회할 타겟 데이터와 비즈니스 로직을 반환합니다."""
         target_data_type = "general_sales"
         applied_logic = "[표준 매출 분석 로직 적용]\n단순 요약을 피하고, 반드시 점주 매장에 맞춤화된 구체적이고 실행 가능한(Actionable) 인사이트를 도출하세요."
 

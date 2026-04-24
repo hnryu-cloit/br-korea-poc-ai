@@ -9,7 +9,7 @@ logger = init_logger(__name__)
 
 
 class ChannelPaymentAnalyzer:
-    """Channel and payment questions routed through the shared grounded workflow."""
+    """채널·결제수단 질의를 공통 grounded 워크플로우로 라우팅"""
 
     def __init__(self, gemini_client: Gemini):
         self.gemini = gemini_client

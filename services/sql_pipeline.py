@@ -122,7 +122,7 @@ Rules:
 """
 
 
-# Renders only the schema snippets relevant to the current question.
+# 현재 질의에 필요한 스키마 스니펫만 렌더링
 def get_schema_context(table_names: list[str] | None = None) -> str:
     targets = table_names or list(_SCHEMA.keys())
     lines: list[str] = []
@@ -139,7 +139,7 @@ def get_schema_context(table_names: list[str] | None = None) -> str:
     return "\n".join(lines)
 
 
-# Returns the default table set for each agent/domain query type.
+# 에이전트/도메인 질의 유형별 기본 테이블 목록 반환
 def get_table_hints(query_type: str) -> list[str]:
     return _TABLE_HINTS.get(query_type, _TABLE_HINTS["general"])
 
@@ -165,7 +165,7 @@ class SQLGenerator:
         intent_summary: str | None = None,
         reference_date: str | None = None,
     ) -> GeneratedSQL:
-        # Builds the SQL-generation prompt and normalizes the model output.
+        # SQL 생성 프롬프트 구성 및 모델 출력 정규화
         del store_id
         table_hints = table_hints_override or get_table_hints(query_type)
         schema_context = get_schema_context(table_hints)
@@ -230,7 +230,7 @@ class SQLGenerator:
 
     @staticmethod
     def _resolve_reference_date(reference_date: str | None = None) -> str:
-        # Resolves the "today" reference used for relative-date questions.
+        # 상대적 날짜 질의에 사용되는 기준일(오늘) 결정
         raw = (reference_date or os.getenv("SQL_REFERENCE_DATE") or "").strip()
         if raw:
             for fmt in ("%Y-%m-%d", "%Y%m%d"):
@@ -243,7 +243,7 @@ class SQLGenerator:
 
     @staticmethod
     def _build_examples(reference_date: str) -> str:
-        # Provides a few-shot prompt with date-safe SQL examples.
+        # 날짜 안전 SQL 예시를 포함한 few-shot 프롬프트 구성
         ref = datetime.strptime(reference_date, "%Y-%m-%d")
         yesterday = (ref - timedelta(days=1)).strftime("%Y%m%d")
         recent3_start = (ref - timedelta(days=3)).strftime("%Y%m%d")
@@ -268,7 +268,7 @@ class SQLGenerator:
 
     @staticmethod
     def _infer_period(query: str, query_type: str, reference_date: str) -> dict[str, str]:
-        # Converts relative date expressions into an explicit query period.
+        # 상대적 날짜 표현을 명시적 조회 기간으로 변환
         ref = datetime.strptime(reference_date, "%Y-%m-%d")
         yesterday = ref - timedelta(days=1)
         normalized = query.replace(" ", "")

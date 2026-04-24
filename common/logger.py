@@ -43,7 +43,7 @@ def init_logger(
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
 
-    # If logger already has handlers, return it (prevents duplicate logs)
+    # 핸들러가 이미 존재하면 중복 로그 방지를 위해 그대로 반환
     if logger.handlers:
         return logger
 
