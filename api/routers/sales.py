@@ -1,10 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request
 
 from api.dependencies import get_channel_payment_analyzer, get_sales_analyzer, verify_token
-from api.error_contract import build_error_detail
+from api.error_contract import router_error_handler
 from schemas.contracts import (
     ProfitabilitySimulationRequest,
     ProfitabilitySimulationResponse,
@@ -27,21 +27,14 @@ async def query_sales(
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> SalesQueryResponse:
     """자연어 매출 질의를 SalesAnalyzer에 위임해 분석 응답을 반환합니다."""
-    try:
+    async with router_error_handler(
+        request,
+        error_code="SALES_QUERY_FAILED",
+        message="매출 분석에 실패했습니다.",
+        log_message="매출 분석 중 오류 발생",
+    ):
         logger.info("매출 분석 요청: %s", payload.query[:50])
-        result = await asyncio.to_thread(analyzer.analyze, payload)
-        return result
-    except Exception as exc:
-        logger.exception("매출 분석 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="SALES_QUERY_FAILED",
-                message="매출 분석에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        return await asyncio.to_thread(analyzer.analyze, payload)
 
 
 @router.post(
@@ -54,20 +47,15 @@ async def suggest_sales_prompts(
     request: Request,
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> SalesPromptSuggestResponse:
-    try:
+    """추천 질문 생성 요청을 SalesAnalyzer에 위임해 결과를 반환합니다."""
+    async with router_error_handler(
+        request,
+        error_code="SALES_PROMPTS_FAILED",
+        message="추천 질문 생성에 실패했습니다.",
+        log_message="추천 질문 생성 오류",
+    ):
         logger.info("추천 질문 생성 요청: store=%s domain=%s", payload.store_id, payload.domain)
         return await asyncio.to_thread(analyzer.suggest_prompts, payload)
-    except Exception as exc:
-        logger.exception("추천 질문 생성 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="SALES_PROMPTS_FAILED",
-                message="추천 질문 생성에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
 
 
 @router.post(
@@ -81,7 +69,12 @@ async def get_profitability_simulation(
     analyzer: SalesAnalyzer = Depends(get_sales_analyzer),
 ) -> ProfitabilitySimulationResponse:
     """수익성 시뮬레이션 요청을 SalesAnalyzer에 위임해 결과를 반환합니다."""
-    try:
+    async with router_error_handler(
+        request,
+        error_code="SALES_PROFITABILITY_FAILED",
+        message="수익성 시뮬레이션에 실패했습니다.",
+        log_message="수익성 시뮬레이션 오류",
+    ):
         logger.info(
             "수익성 시뮬레이션 요청: 매장 %s (%s ~ %s)",
             payload.store_id,
@@ -94,17 +87,6 @@ async def get_profitability_simulation(
             payload.date_from,
             payload.date_to,
         )
-    except Exception as exc:
-        logger.exception("수익성 시뮬레이션 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="SALES_PROFITABILITY_FAILED",
-                message="수익성 시뮬레이션에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
 
 
 @router.post(
@@ -117,18 +99,11 @@ async def query_channel_payment(
     analyzer: ChannelPaymentAnalyzer = Depends(get_channel_payment_analyzer),
 ) -> SalesQueryResponse:
     """채널·결제수단 특화 분석 질의를 ChannelPaymentAnalyzer에 위임해 응답을 반환합니다."""
-    try:
+    async with router_error_handler(
+        request,
+        error_code="CHANNEL_PAYMENT_QUERY_FAILED",
+        message="채널 및 결제수단 분석에 실패했습니다.",
+        log_message="채널 및 결제수단 분석 중 오류 발생",
+    ):
         logger.info("채널 및 결제수단 분석 요청: %s", payload.query[:50])
-        result = await asyncio.to_thread(analyzer.analyze, payload)
-        return result
-    except Exception as exc:
-        logger.exception("채널 및 결제수단 분석 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="CHANNEL_PAYMENT_QUERY_FAILED",
-                message="채널 및 결제수단 분석에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        return await asyncio.to_thread(analyzer.analyze, payload)

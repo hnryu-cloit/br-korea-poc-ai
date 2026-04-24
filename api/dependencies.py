@@ -23,7 +23,7 @@ from services.sales_analyzer import SalesAnalyzer
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-# Singleton-like Gemini client
+# 싱글턴 형태의 Gemini 클라이언트
 _gemini_client = Gemini()
 
 
