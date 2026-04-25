@@ -61,28 +61,28 @@ class InsightSummarizeService:
         )
 
     def generate_menu_insights(self, payload: MenuInsightsRequest) -> MenuInsightsResponse:
-        """수익 구조·상품 구성·판매 단가 분포 데이터로 인사이트 카드 3개 생성"""
+        """수익 구조·메뉴 믹스·매출 집중도 데이터로 점주 운영 액션 카드 3개 생성"""
         prompt = (
-            "아래 매장 운영 데이터를 분석해서 점주에게 필요한 인사이트 카드 3개를 생성하세요.\n\n"
-            "카드 구성 (반드시 이 3가지 순서):\n"
-            "1. 수익 구조 진단 — profitability_data 기반 마진·수익성 진단\n"
-            "2. 상품 구성 최적화 — product_mix_data 기반 집중도·다양성 분석\n"
-            "3. 판매 단가 분포 — price_distribution_data 기반 저·중·고 단가 구성 분석\n\n"
+            "아래 매장 운영 데이터를 분석해서 점주가 바로 실행 가능한 운영 액션 카드 3개를 생성하세요.\n\n"
+            "카드 구성 (반드시 이 3가지 순서, title은 정확히 일치):\n"
+            "1. 수익 구조 인사이트 — profitability_data 기반 마진·할인 부담·순이익 진단\n"
+            "2. 메뉴 믹스 인사이트 — product_mix_data 기반 상위 상품 비중·단가·다양성 분석\n"
+            "3. 매출 집중도 (리스크) — concentration_data 기반 단일 상품 의존 리스크 진단\n\n"
             "규칙:\n"
-            "- summary: 한국어 1~2문장, 실무 실행 관점, 입력 수치 기반\n"
+            "- summary: 한국어 1~2문장, '점주가 무엇을 해야 하는지'가 한 줄에 떨어지게\n"
             "- metrics: 입력 데이터 수치만 사용 (최대 4개), label·value·detail 구성\n"
-            "- actions: 점주가 즉시 실행 가능한 문장 2~3개\n"
-            "- 데이터가 없는 항목은 '데이터 없음'으로 표시\n\n"
+            "- actions: 점주가 즉시 실행 가능한 문장 2~3개 (생산/진열/할인/구성 관점)\n"
+            "- 데이터가 없는 항목은 '데이터 없음'으로 표시, 임의 수치 생성 금지\n\n"
             f"점포: {payload.store_id}\n"
             f"기간: {payload.date_from or '미지정'} ~ {payload.date_to or '미지정'}\n\n"
             f"[수익 구조 데이터]\n{json.dumps(payload.profitability_data, ensure_ascii=False)}\n\n"
-            f"[상품 구성 데이터]\n{json.dumps(payload.product_mix_data, ensure_ascii=False)}\n\n"
-            f"[판매 단가 분포 데이터]\n{json.dumps(payload.price_distribution_data, ensure_ascii=False)}\n\n"
+            f"[메뉴 믹스 데이터]\n{json.dumps(payload.product_mix_data, ensure_ascii=False)}\n\n"
+            f"[매출 집중도 데이터]\n{json.dumps(payload.concentration_data, ensure_ascii=False)}\n\n"
             '반드시 아래 JSON 형식으로만 응답하세요:\n'
             '{"cards": ['
-            '{"title": "수익 구조 진단", "summary": "...", "metrics": [{"label": "...", "value": "...", "detail": "..."}], "actions": ["...", "..."]},'
-            '{"title": "상품 구성 최적화", "summary": "...", "metrics": [...], "actions": [...]},'
-            '{"title": "판매 단가 분포", "summary": "...", "metrics": [...], "actions": [...]}'
+            '{"title": "수익 구조 인사이트", "summary": "...", "metrics": [{"label": "...", "value": "...", "detail": "..."}], "actions": ["...", "..."]},'
+            '{"title": "메뉴 믹스 인사이트", "summary": "...", "metrics": [...], "actions": [...]},'
+            '{"title": "매출 집중도 (리스크)", "summary": "...", "metrics": [...], "actions": [...]}'
             ']}'
         )
 

@@ -269,7 +269,7 @@ class MenuInsightsRequest(BaseModel):
     store_id: str
     profitability_data: Dict[str, Any] = Field(default_factory=dict)
     product_mix_data: Dict[str, Any] = Field(default_factory=dict)
-    price_distribution_data: Dict[str, Any] = Field(default_factory=dict)
+    concentration_data: Dict[str, Any] = Field(default_factory=dict)
     date_from: Optional[str] = None
     date_to: Optional[str] = None
 
