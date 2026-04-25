@@ -7,19 +7,20 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from api.config import Settings, get_settings
-
-logger = logging.getLogger(__name__)
-
 from common.gemini import Gemini
 from services.chance_loss_service import ChanceLossService
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
+from services.insight_summarize_service import InsightSummarizeService
 from services.market_insight_service import MarketInsightService
-from services.ordering_history_insight_service import OrderingHistoryInsightService
+from services.ml_predict_service import MLPredictService
 from services.orchestrator import AgentOrchestrator
+from services.ordering_history_insight_service import OrderingHistoryInsightService
 from services.ordering_service import OrderingService
 from services.production_service import ProductionService
 from services.rag_service import RAGService
 from services.sales_analyzer import SalesAnalyzer
+
+logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -41,6 +42,10 @@ def get_orchestrator(gemini: Gemini = Depends(get_gemini_client)) -> AgentOrches
 
 def get_sales_analyzer(gemini: Gemini = Depends(get_gemini_client)) -> SalesAnalyzer:
     return SalesAnalyzer(gemini_client=gemini)
+
+
+def get_insight_summarize_service(gemini: Gemini = Depends(get_gemini_client)) -> InsightSummarizeService:
+    return InsightSummarizeService(gemini_client=gemini)
 
 
 def get_channel_payment_analyzer(
@@ -74,6 +79,10 @@ def get_ordering_service(gemini: Gemini = Depends(get_gemini_client)) -> Orderin
 
 def get_chance_loss_service() -> ChanceLossService:
     return ChanceLossService()
+
+
+def get_ml_predict_service() -> MLPredictService:
+    return MLPredictService()
 
 
 async def verify_token(

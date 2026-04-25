@@ -1,14 +1,16 @@
 import asyncio
 import logging
-import os
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-import pandas as pd
 from pydantic import BaseModel
-from sqlalchemy import create_engine, text
 
-from api.dependencies import get_chance_loss_service, get_ordering_service, get_production_service, verify_token
+from api.dependencies import (
+    get_chance_loss_service,
+    get_ml_predict_service,
+    get_ordering_service,
+    get_production_service,
+    verify_token,
+)
 from api.error_contract import build_error_detail
 from schemas.contracts import (
     DeadlineAlertBatchRequest,
@@ -32,12 +34,33 @@ from schemas.management import (
     ProductionPredictResponse,
 )
 from services.chance_loss_service import ChanceLossService
-from services.inventory_predictor import InventoryPredictor
+from services.ml_predict_service import MLPredictService
 from services.ordering_service import OrderingService
 from services.production_service import ProductionService, normalize_payload_df
 
 router = APIRouter(tags=["management"])
 logger = logging.getLogger(__name__)
+
+
+def _raise_internal_error(
+    *,
+    request: Request,
+    exc: Exception,
+    log_message: str,
+    error_code: str,
+    message: str,
+    retryable: bool,
+) -> None:
+    logger.exception(log_message)
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=build_error_detail(
+            request,
+            error_code=error_code,
+            message=message,
+            retryable=retryable,
+        ),
+    ) from exc
 
 
 class ChanceLossRequest(BaseModel):
@@ -68,15 +91,13 @@ async def estimate_chance_loss(
             unit_price=payload.unit_price,
         )
     except Exception as exc:
-        logger.exception("찬스로스 추정 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="CHANCE_LOSS_FAILED",
-                message="찬스로스 추정에 실패했습니다.",
-                retryable=True,
-            ),
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="찬스로스 추정 중 오류 발생",
+            error_code="CHANCE_LOSS_FAILED",
+            message="찬스로스 추정에 실패했습니다.",
+            retryable=True,
         )
 
 @router.post(
@@ -105,16 +126,14 @@ async def get_production_simulation(
         )
         return result
     except Exception as exc:
-        logger.exception("시뮬레이션 생성 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PRODUCTION_SIMULATION_FAILED",
-                message="시뮬레이션 생성에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="시뮬레이션 생성 중 오류 발생",
+            error_code="PRODUCTION_SIMULATION_FAILED",
+            message="시뮬레이션 생성에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.post(
@@ -142,16 +161,14 @@ async def predict_production(
             ),
         ) from exc
     except Exception as exc:
-        logger.exception("생산 예측 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PRODUCTION_PREDICT_FAILED",
-                message="생산 예측에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="생산 예측 중 오류 발생",
+            error_code="PRODUCTION_PREDICT_FAILED",
+            message="생산 예측에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.post(
@@ -214,16 +231,14 @@ async def recommend_ordering_compat(
             or OrderingRecommendResponse.model_fields["guardrail_note"].default,
         )
     except Exception as exc:
-        logger.exception("주문 추천 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="ORDERING_RECOMMEND_FAILED",
-                message="주문 추천에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="주문 추천 중 오류 발생",
+            error_code="ORDERING_RECOMMEND_FAILED",
+            message="주문 추천에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.post(
@@ -241,16 +256,14 @@ async def recommend_ordering(
         result = await asyncio.to_thread(service.recommend_ordering, payload)
         return result
     except Exception as exc:
-        logger.exception("주문 추천 중 오류 발생")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="ORDERING_RECOMMEND_FAILED",
-                message="주문 추천에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="주문 추천 중 오류 발생",
+            error_code="ORDERING_RECOMMEND_FAILED",
+            message="주문 추천에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.post(
@@ -272,16 +285,14 @@ async def submit_production_feedback(
             actual_qty=payload.actual_qty,
         )
     except Exception as exc:
-        logger.exception("피드백 처리 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PRODUCTION_FEEDBACK_FAILED",
-                message="피드백 처리에 실패했습니다.",
-                retryable=False,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="피드백 처리 중 오류",
+            error_code="PRODUCTION_FEEDBACK_FAILED",
+            message="피드백 처리에 실패했습니다.",
+            retryable=False,
+        )
 
 
 @router.post(
@@ -304,16 +315,14 @@ async def check_production_exception_rules(
             avg_production_qty=payload.avg_production_qty,
         )
     except Exception as exc:
-        logger.exception("예외 규칙 확인 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PRODUCTION_EXCEPTION_RULE_FAILED",
-                message="예외 규칙 확인에 실패했습니다.",
-                retryable=False,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="예외 규칙 확인 중 오류",
+            error_code="PRODUCTION_EXCEPTION_RULE_FAILED",
+            message="예외 규칙 확인에 실패했습니다.",
+            retryable=False,
+        )
 
 
 @router.get(
@@ -330,16 +339,14 @@ async def get_production_push_alerts(
     try:
         return service.get_push_notification_payloads(store_id=store_id)
     except Exception as exc:
-        logger.exception("PUSH 알림 조회 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PRODUCTION_PUSH_ALERTS_FAILED",
-                message="PUSH 알림 조회에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="PUSH 알림 조회 중 오류",
+            error_code="PRODUCTION_PUSH_ALERTS_FAILED",
+            message="PUSH 알림 조회에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.get(
@@ -356,16 +363,14 @@ async def get_ordering_deadline_alerts(
     try:
         return await asyncio.to_thread(service.get_deadline_alerts, store_id)
     except Exception as exc:
-        logger.exception("마감 알림 조회 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="ORDERING_DEADLINE_ALERT_FAILED",
-                message="마감 알림 조회에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="마감 알림 조회 중 오류",
+            error_code="ORDERING_DEADLINE_ALERT_FAILED",
+            message="마감 알림 조회에 실패했습니다.",
+            retryable=True,
+        )
 
 
 @router.post(
@@ -397,16 +402,14 @@ async def get_ordering_deadline_alerts_batch(
         items = await asyncio.gather(*tasks)
         return DeadlineAlertBatchResponse(items=items)
     except Exception as exc:
-        logger.exception("마감 알림 배치 조회 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="ORDERING_DEADLINE_ALERT_BATCH_FAILED",
-                message="마감 알림 배치 조회에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="마감 알림 배치 조회 중 오류",
+            error_code="ORDERING_DEADLINE_ALERT_BATCH_FAILED",
+            message="마감 알림 배치 조회에 실패했습니다.",
+            retryable=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -418,72 +421,6 @@ class MLPredictRequest(BaseModel):
     store_id: str
     sku: str
 
-
-def _get_db_engine():
-    db_url = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://postgres:postgres@localhost:5435/br_korea_poc",
-    )
-    return create_engine(db_url, pool_pre_ping=True)
-
-
-def _fetch_stock_snapshot(store_id: str, sku: str) -> dict:
-    """core_stock_rate에서 가장 최근 일자의 재고 스냅샷 조회."""
-    engine = _get_db_engine()
-    with engine.connect() as conn:
-        row = conn.execute(
-            text("""
-                SELECT prc_dt, ord_avg, sal_avg, stk_avg, stk_rt, is_stockout
-                FROM core_stock_rate
-                WHERE masked_stor_cd = :store_id
-                  AND item_cd        = :sku
-                ORDER BY prc_dt DESC
-                LIMIT 1
-            """),
-            {"store_id": store_id, "sku": sku},
-        ).fetchone()
-    if row is None:
-        return {}
-    return dict(row._mapping)
-
-
-def _fetch_recent_sales(store_id: str, sku: str, days: int = 7) -> list[dict]:
-    """core_stock_rate에서 최근 N일 판매/재고 이력 조회."""
-    engine = _get_db_engine()
-    with engine.connect() as conn:
-        rows = conn.execute(
-            text("""
-                SELECT prc_dt, sal_avg, stk_avg, ord_avg
-                FROM core_stock_rate
-                WHERE masked_stor_cd = :store_id
-                  AND item_cd        = :sku
-                ORDER BY prc_dt DESC
-                LIMIT :days
-            """),
-            {"store_id": store_id, "sku": sku, "days": days},
-        ).fetchall()
-    return [dict(r._mapping) for r in rows]
-
-
-def _build_predictor_history_df(store_id: str, sku: str, history_rows: list[dict]) -> pd.DataFrame:
-    """InventoryPredictor 입력 형식으로 최근 판매 이력을 변환합니다."""
-    rows: list[dict[str, object]] = []
-    for row in history_rows:
-        prc_dt = str(row.get("prc_dt") or "").strip()
-        if len(prc_dt) != 8 or not prc_dt.isdigit():
-            continue
-        rows.append(
-            {
-                "MASKED_STOR_CD": store_id,
-                "ITEM_CD": sku,
-                "SALE_DT": prc_dt,
-                "TMZON_DIV": 12,
-                "SALE_QTY": float(row.get("sal_avg") or 0.0),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
 @router.post(
     "/predict",
     dependencies=[Depends(verify_token)],
@@ -493,15 +430,12 @@ def _build_predictor_history_df(store_id: str, sku: str, history_rows: list[dict
 async def predict_ml_format(
     payload: MLPredictRequest,
     request: Request,
+    service: MLPredictService = Depends(get_ml_predict_service),
 ) -> dict:
     """ML 모델 I/O 형식으로 1시간 후 재고를 예측합니다."""
     try:
-        snapshot, history = await asyncio.gather(
-            asyncio.to_thread(_fetch_stock_snapshot, payload.store_id, payload.sku),
-            asyncio.to_thread(_fetch_recent_sales, payload.store_id, payload.sku, 7),
-        )
-
-        if not snapshot:
+        result = await asyncio.to_thread(service.predict, payload.store_id, payload.sku)
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=build_error_detail(
@@ -512,72 +446,15 @@ async def predict_ml_format(
                 ),
             )
 
-        current_stock = float(snapshot.get("stk_avg") or 0.0)
-        predicted_sales_next_1h: float | None = None
-
-        # 1) 학습 모델(InventoryPredictor) 우선 사용
-        try:
-            predictor = InventoryPredictor()
-            history_df = _build_predictor_history_df(payload.store_id, payload.sku, history)
-            predicted_sales_next_1h = float(
-                predictor.predict_next_hour_sales(
-                    payload.store_id,
-                    payload.sku,
-                    datetime.now(),
-                    history_df,
-                )
-            )
-            logger.info(
-                "predict_ml_format: model prediction applied store_id=%s sku=%s sales_1h=%.2f",
-                payload.store_id,
-                payload.sku,
-                predicted_sales_next_1h,
-            )
-        except (RuntimeError, ValueError, TypeError) as exc:
-            logger.warning(
-                "predict_ml_format: model prediction unavailable, fallback applied store_id=%s sku=%s error=%s",
-                payload.store_id,
-                payload.sku,
-                exc,
-            )
-
-        # 2) 모델 실패/미로딩 시 기존 휴리스틱 폴백
-        if predicted_sales_next_1h is None:
-            recent_sales = [float(r.get("sal_avg") or 0.0) for r in history]
-            avg_sales = sum(recent_sales) / len(recent_sales) if recent_sales else 0.0
-            predicted_sales_next_1h = round(avg_sales / 8.0, 1)
-
-        predicted_stock_after_1h = round(max(current_stock - predicted_sales_next_1h, 0.0), 1)
-        risk_detected = predicted_stock_after_1h <= max(1.0, current_stock * 0.3)
-        last_updated = snapshot.get("prc_dt", datetime.now().strftime("%Y%m%d"))
-        if len(last_updated) == 8:
-            last_updated = f"{last_updated[:4]}-{last_updated[4:6]}-{last_updated[6:]} 00:00"
-
-        return {
-            "prediction_result": {
-                "store_id": payload.store_id,
-                "sku": payload.sku,
-                "current_status": {
-                    "current_stock": current_stock,
-                    "last_updated": last_updated,
-                },
-                "prediction": {
-                    "predicted_sales_next_1h": predicted_sales_next_1h,
-                    "predicted_stock_after_1h": predicted_stock_after_1h,
-                    "risk_detected": risk_detected,
-                },
-            }
-        }
+        return result
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("ML 형식 예측 중 오류")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=build_error_detail(
-                request,
-                error_code="PREDICT_FAILED",
-                message="예측에 실패했습니다.",
-                retryable=True,
-            ),
-        ) from exc
+        _raise_internal_error(
+            request=request,
+            exc=exc,
+            log_message="ML 형식 예측 중 오류",
+            error_code="PREDICT_FAILED",
+            message="예측에 실패했습니다.",
+            retryable=True,
+        )
