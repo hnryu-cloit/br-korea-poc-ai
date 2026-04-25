@@ -4,6 +4,10 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 ## 최근 업데이트 (2026-04-25)
 
+- 런타임 오류를 수정했습니다.
+  - `services/production_service.py`의 `SalesQueryRequest` 미정의 참조를 수정했습니다.
+  - `analyze()` 내부 도달 불가 레거시 블록을 제거해 미정의 변수 참조(`serialized_rows`) 가능성을 제거했습니다.
+  - 중복 정의되던 `normalize_payload_df`를 단일 정의로 정리했습니다.
 - `POST /sales/query` 요청 스키마를 실행 컨텍스트 기반으로 확장했습니다.
   - `schemas/contracts.py`의 `SalesQueryRequest`에 `business_time`, `page_context`, `card_context_key`, `store_name`, `user_role`, `conversation_history` 필드를 추가했습니다.
   - `ChatHistoryEntry(role, text)` 모델을 신설해 직전 6턴 대화 이력을 표준화했습니다.

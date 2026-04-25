@@ -82,6 +82,7 @@ router → service (또는 pipeline) → common
 * router는 `request` 파싱과 DI 연결만 담당한다.
 * 계산/분석 로직은 반드시 service로 위임한다.
 * 예외는 router에서 `HTTPException`으로 감싸 반환한다.
+* 동일한 500 예외 생성 패턴이 반복되면 router 파일 내 private helper 함수로 공통화한다.
 
 ```python
 @router.post("/query", response_model=SalesQueryResponse)
