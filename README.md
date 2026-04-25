@@ -2,6 +2,27 @@
 
 BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로 실행되며, Google Gemini를 활용한 매출 분석, 생산/주문 가이드, 지식 검색(RAG) 기능을 제공합니다. 현재 백엔드가 프론트 계약을 기준으로 AI 응답을 어댑팅합니다.
 
+## 최근 업데이트 (2026-04-25)
+
+- `POST /sales/query` 요청 스키마를 실행 컨텍스트 기반으로 확장했습니다.
+  - `schemas/contracts.py`의 `SalesQueryRequest`에 `business_time`, `page_context`, `card_context_key`, `store_name`, `user_role`, `conversation_history` 필드를 추가했습니다.
+  - `ChatHistoryEntry(role, text)` 모델을 신설해 직전 6턴 대화 이력을 표준화했습니다.
+  - 각 필드에는 사용 의도(예: `card_context_key`는 카드 클릭 트리거 식별)를 description으로 명시했습니다.
+  - 기존 `query`, `store_id`, `domain`, `business_date`, `system_instruction`, `raw_data_context` 호출 계약은 그대로 유지됩니다.
+- 관리 라우터 반복 예외 처리 패턴을 공통 헬퍼로 정리했습니다.
+  - `api/routers/management.py`에 `_raise_internal_error()`를 추가해 중복 `HTTPException(500)` 생성 코드를 제거했습니다.
+  - 엔드포인트별 `error_code/message/retryable`는 유지되어 응답 계약은 변경하지 않았습니다.
+- 관리 라우터 리팩토링을 적용했습니다.
+  - `api/routers/management.py`의 ML 예측 보조 로직(DB 조회/이력 변환/휴리스틱)을 `services/ml_predict_service.py`로 이동했습니다.
+  - 라우터는 요청 파싱/오류 계약 처리만 담당하고 예측 실행은 `MLPredictService` DI로 위임합니다.
+- AI 계약 스키마 충돌을 정리했습니다.
+  - `schemas/contracts.py`의 중복 모델 충돌 구간에서 생산 패턴 타입명을 `ProductionQtyPattern`으로 분리해 미정의 타입 참조를 해소했습니다.
+- backend `/api/analytics/market-scope-options` 추가 및 서울 25개 구 areaCd 확장 작업이 반영되었습니다.
+- 프론트 콘솔의 `sales` 404/500 로그는 backend 집계/데이터 분기 이슈로 확인되었고, AI 서비스 라우터 호출 자체는 정상 응답(200)을 유지합니다.
+- backend `sales` 안정화 패치가 반영되어 AI 미연결 시에도 backend가 기본 응답으로 degrade됩니다.
+- 프론트 `/analytics/market` 사이드바 active 충돌 수정 및 상권 인사이트 fallback 렌더링 제거 작업을 연동 기준으로 반영했습니다.
+- 이번 세션의 AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
 ## 최근 업데이트 (2026-04-24)
 
 - Gemini grounded 입력 안정화(행 상한 + 프롬프트 예산)를 반영했습니다.
@@ -502,4 +523,74 @@ python pipeline/build_knowledge_base.py
 ## Session Update (2026-04-25, settings logo click navigation 영향도)
 
 - 프론트 `/settings` 로고 클릭 이동(`/`) 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, settings typography size alignment 영향도)
+
+- 프론트 `/settings` 타이포그래피/헤더 사이즈 정렬 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, settings sidebar design-system alignment 영향도)
+
+- 프론트 `/settings` 사이드바 디자인 시스템 정렬 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, settings sidebar rollback 영향도)
+
+- 프론트 `/settings` 사이드바 스타일 롤백이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, settings summary cards white background 영향도)
+
+- 프론트 `/settings` 요약 카드 배경 색상 통일(흰색) 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, prompts textarea width adjustment 영향도)
+
+- 프론트 `/settings/prompts` textarea 폭 조정 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, prompts card equal height 영향도)
+
+- 프론트 `/settings/prompts` 카드 높이 정렬 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, prompts card height 80 영향도)
+
+- 프론트 `/settings/prompts` 카드/입력창 높이 통일 작업이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, floating chat golden-query integration 영향도)
+
+- 프론트 플로팅 챗이 AI 응답 메타(`overlap_candidates`, `follow_up_questions`)를 우선 후보 질문으로 노출하도록 변경되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, floating chat source badge + reference popup 영향도)
+
+- 프론트 플로팅 챗에 출처 배지/근거 팝업 UI가 추가되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, golden query miss badge 영향도)
+
+- 프론트 플로팅 챗에 골든쿼리 미매칭 상태 배지 UI가 추가되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, dashboard recommended question handoff 영향도)
+
+- 프론트 `/dashboard` 추천 질문 클릭 동작이 플로팅 챗 자동 질의로 변경되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, market page sales-trend card removal 영향도)
+
+- 프론트 `/analytics/market` 카드 노출 조정이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, sales metrics info-popover coverage 영향도)
+
+- 프론트 `/sales/metrics` 카드 설명 팝업(UI) 보강이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, floating chat suggested questions pinned to golden prompts 영향도)
+
+- 프론트 플로팅 챗 후보 질문 소스가 골든 프롬프트 중심으로 조정되었습니다.
 - AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
