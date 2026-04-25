@@ -58,7 +58,7 @@ class SimulationReportResponse(BaseModel):
     time_series_data: List[ChartDataPoint]
     actions_timeline: List[str]
 
-class ProductionPattern(BaseModel):
+class ProductionQtyPattern(BaseModel):
     time: str
     qty: int
 

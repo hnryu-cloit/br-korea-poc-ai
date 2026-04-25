@@ -3,9 +3,20 @@ import logging
 
 from fastapi import APIRouter, Depends, Request
 
-from api.dependencies import get_channel_payment_analyzer, get_sales_analyzer, verify_token
+from api.dependencies import (
+    get_channel_payment_analyzer,
+    get_insight_summarize_service,
+    get_sales_analyzer,
+    verify_token,
+)
 from api.error_contract import router_error_handler
 from schemas.contracts import (
+    CampaignNarrativeRequest,
+    CampaignNarrativeResponse,
+    InsightSummarizeRequest,
+    InsightSummarizeResponse,
+    MenuInsightsRequest,
+    MenuInsightsResponse,
     ProfitabilitySimulationRequest,
     ProfitabilitySimulationResponse,
     SalesPromptSuggestRequest,
@@ -14,6 +25,7 @@ from schemas.contracts import (
     SalesQueryResponse,
 )
 from services.channel_payment_analyzer import ChannelPaymentAnalyzer
+from services.insight_summarize_service import InsightSummarizeService
 from services.sales_analyzer import SalesAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -87,6 +99,69 @@ async def get_profitability_simulation(
             payload.date_from,
             payload.date_to,
         )
+
+
+@router.post(
+    "/summarize/insights",
+    response_model=InsightSummarizeResponse,
+    dependencies=[Depends(verify_token)],
+)
+async def summarize_insights(
+    payload: InsightSummarizeRequest,
+    request: Request,
+    service: InsightSummarizeService = Depends(get_insight_summarize_service),
+) -> InsightSummarizeResponse:
+    """매출 인사이트 섹션 요약을 구조화 JSON으로 반환합니다."""
+    async with router_error_handler(
+        request,
+        error_code="INSIGHT_SUMMARIZE_FAILED",
+        message="인사이트 섹션 요약 생성에 실패했습니다.",
+        log_message="인사이트 섹션 요약 오류",
+    ):
+        logger.info("인사이트 섹션 요약 요청: store=%s", payload.store_id)
+        return await asyncio.to_thread(service.summarize_insights, payload)
+
+
+@router.post(
+    "/summarize/campaign",
+    response_model=CampaignNarrativeResponse,
+    dependencies=[Depends(verify_token)],
+)
+async def summarize_campaign(
+    payload: CampaignNarrativeRequest,
+    request: Request,
+    service: InsightSummarizeService = Depends(get_insight_summarize_service),
+) -> CampaignNarrativeResponse:
+    """캠페인 효과 서술을 구조화 JSON으로 반환합니다."""
+    async with router_error_handler(
+        request,
+        error_code="CAMPAIGN_NARRATIVE_FAILED",
+        message="캠페인 서술 생성에 실패했습니다.",
+        log_message="캠페인 서술 생성 오류",
+    ):
+        logger.info("캠페인 서술 생성 요청: store=%s", payload.store_id)
+        return await asyncio.to_thread(service.generate_campaign_narrative, payload)
+
+
+@router.post(
+    "/summarize/menu-insights",
+    response_model=MenuInsightsResponse,
+    dependencies=[Depends(verify_token)],
+)
+async def generate_menu_insights(
+    payload: MenuInsightsRequest,
+    request: Request,
+    service: InsightSummarizeService = Depends(get_insight_summarize_service),
+) -> MenuInsightsResponse:
+    """페이지 데이터 기반 메뉴 인사이트 카드 3개를 Gemini로 생성합니다."""
+    async with router_error_handler(
+        request,
+        error_code="MENU_INSIGHTS_FAILED",
+        message="메뉴 인사이트 생성에 실패했습니다.",
+        log_message="메뉴 인사이트 생성 오류",
+    ):
+        logger.info("메뉴 인사이트 생성 요청: store=%s", payload.store_id)
+        return await asyncio.to_thread(service.generate_menu_insights, payload)
 
 
 @router.post(

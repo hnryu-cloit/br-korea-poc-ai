@@ -3,8 +3,8 @@ from __future__ import annotations
 import datetime
 import os
 import statistics
-import json
 from datetime import time as dt_time
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -15,6 +15,7 @@ from schemas.contracts import (
     ProductionStatusRequest,
     ProductionAlarmResponse,
     RiskLevel,
+    SalesQueryRequest,
     SimulationRequest,
     SimulationReportResponse,
     SimulationSummary,
@@ -36,16 +37,6 @@ from .sql_pipeline import SQLGenerator, QueryExecutor
 
 logger = init_logger(__name__)
 
-def normalize_payload_df(data: list[dict] | None) -> pd.DataFrame:
-    """payload 리스트를 안전하게 DataFrame으로 변환"""
-    if not data:
-        return pd.DataFrame()
-    return pd.DataFrame(data)
-
-from decimal import Decimal
-
-# ... (기존 임포트 하단)
-
 def _convert_decimal(obj):
     if isinstance(obj, Decimal):
         return float(obj)
@@ -63,7 +54,7 @@ class ProductionService:
         """자연어 질의를 받아 SQL 생성, 실행 후 분석 결과 반환 (Grounded Analysis)"""
         logger.info(f"ProductionService analyze: {payload.query}")
         workflow = GroundedWorkflow(self.gemini)
-        result = workflow.run(
+        return workflow.run(
             query=payload.query,
             store_id=payload.store_id,
             domain="production",
@@ -71,66 +62,6 @@ class ProductionService:
             system_instruction=payload.system_instruction,
             golden_query_only=True,
         )
-        return result
-        
-        # 1. SQL 생성
-        generated = self.sql_generator.generate(payload.query, payload.store_id, query_type="production")
-        
-        # 2. SQL 실행
-        try:
-            rows, columns = self.query_executor.run(generated.sql, payload.store_id)
-        except Exception as e:
-            logger.error(f"Production SQL execution failed: {e}")
-            rows, columns = [], []
-        # 3. 결과 기반 답변 생성 (Grounded) - 날짜 규칙 재강조
-        prompt = f"""
-        당신은 베이커리 매장의 생산 관리 전문가입니다.
-        다음은 사용자의 질문에 대해 DB를 조회한 결과 데이터입니다.
-        
-        [질문]
-        {payload.query}
-        
-        [조회 결과 (총 {len(rows)}건)]
-        {serialized_rows}
-        
-        [절대 규칙 - 날짜 언급]
-        - 오늘 날짜는 2026-03-10 입니다.
-        - '최근 n일' 질문에 대한 답변 시, 반드시 오늘(3/10)을 제외하고 영업이 종료된 어제까지의 데이터임을 명시하세요.
-        - 예: "어제(3/9)까지 최근 3일간..." 또는 "3월 7일부터 3월 9일까지..."
-        
-        [답변 가이드]
-        - 데이터가 존재한다면 수치(생산량, 재고량 등)를 반드시 포함하여 구체적으로 답변하세요.
-        - 조회 결과가 비어있다면([]), "해당 조건에 맞는 생산 데이터가 없습니다"라고 친절하게 안내하세요.
-        - 'keywords' 배열에는 사용자의 질문에서 의도를 파악하기 위한 핵심 단어들을 나열하세요.
-        - '근거' 배열에는 주요 수치를 포함하세요.
-        
-        [필수 응답 형식 (JSON)]
-        {{
-          "keywords": ["핵심단어1", "핵심단어2"],
-          "text": "점주에게 보여줄 친절한 답변 텍스트",
-          "evidence": ["조회된 수치 요약", "비교 결과 등"],
-          "actions": ["재고 확인하기", "추가 생산 고려하기"]
-        }}
-        """
-        
-        try:
-            res_raw = self.gemini.call_gemini_text(prompt, response_type="json")
-            data = json.loads(res_raw) if isinstance(res_raw, str) else res_raw
-        except Exception as e:
-            logger.error(f"Grounded response generation failed: {e}")
-            data = {"text": "데이터 조회는 완료되었으나 분석 중 오류가 발생했습니다.", "evidence": [], "actions": [], "keywords": []}
-
-        return {
-            "text": data.get("text", ""),
-            "keywords": data.get("keywords", []),
-            "evidence": data.get("evidence", []) + [f"조회 SQL: {generated.sql}"],
-            "actions": data.get("actions", []),
-            "query_type": "PRODUCTION",
-            "processing_route": "production_service_grounded",
-            "sql": generated.sql,
-            "relevant_tables": generated.relevant_tables,
-            "row_count": len(rows)
-        }
 
     def _get_agent(
         self,
