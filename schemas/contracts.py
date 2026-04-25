@@ -183,15 +183,28 @@ class SalesInsight(BaseModel):
     )
 
 
+class ChatHistoryEntry(BaseModel):
+    role: str
+    text: str
+
+
 class SalesQueryRequest(BaseModel):
     """매출 관련 자연어 질의 요청"""
     store_id: str
     query: str = Field(..., description="점주 질의 (예: '어제 배달 비중이 왜 낮았지?')")
     domain: str | None = Field(None, description="질의 도메인 (production|ordering|sales)")
     business_date: str = Field(default="2026-03-05", description="기준 영업일")
+    business_time: str | None = Field(None, description="현재 시각 HH:mm — 생산 예측·실시간 질의에 사용")
     system_instruction: str | None = Field(None, description="동적 시스템 프롬프트")
     raw_data_context: list[dict[str, Any]] | None = Field(
         None, description="DB에서 조회된 관련 매출 통계 데이터"
+    )
+    page_context: str | None = Field(None, description="현재 화면 경로 (예: /production/status)")
+    card_context_key: str | None = Field(None, description="카드 클릭 트리거 키 (예: production:stock-risk)")
+    store_name: str | None = Field(None, description="매장명 — 응답 개인화용")
+    user_role: str | None = Field(None, description="사용자 역할 (store_owner|hq_admin)")
+    conversation_history: list[ChatHistoryEntry] | None = Field(
+        None, description="직전 최대 6턴 대화 이력 — 멀티턴 문맥 유지용"
     )
 
 
@@ -238,6 +251,76 @@ class SalesQueryResponse(BaseModel):
     overlap_candidates: List[Dict[str, Any]] = Field(default_factory=list)
     masked_fields: List[str] = Field(default_factory=list)
     blocked: bool = False
+
+
+# --- 메뉴 인사이트 카드 (Gemini 생성) ---
+
+class MenuInsightCard(BaseModel):
+    """Gemini가 생성한 개별 인사이트 카드"""
+    title: str
+    summary: str
+    metrics: List[Dict[str, Any]] = Field(default_factory=list)
+    actions: List[str] = Field(default_factory=list)
+    status: str = "active"
+
+
+class MenuInsightsRequest(BaseModel):
+    """페이지 데이터 기반 메뉴 인사이트 생성 요청"""
+    store_id: str
+    profitability_data: Dict[str, Any] = Field(default_factory=dict)
+    product_mix_data: Dict[str, Any] = Field(default_factory=dict)
+    price_distribution_data: Dict[str, Any] = Field(default_factory=dict)
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+
+
+class MenuInsightsResponse(BaseModel):
+    """Gemini 생성 인사이트 카드 목록"""
+    cards: List[MenuInsightCard]
+
+
+# --- 인사이트 섹션 요약 (구조화 출력 전용) ---
+
+class InsightSectionData(BaseModel):
+    """인사이트 섹션 입력 데이터"""
+    title: str = ""
+    summary: str = ""
+    metrics: List[Dict[str, Any]] = Field(default_factory=list)
+    actions: List[str] = Field(default_factory=list)
+
+
+class InsightSummarizeRequest(BaseModel):
+    """매출 인사이트 섹션 요약 요청"""
+    store_id: str
+    sections: Dict[str, InsightSectionData]
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+
+
+class InsightSummarizeResponse(BaseModel):
+    """매출 인사이트 섹션 요약 응답"""
+    peak_hours: str = ""
+    channel_mix: str = ""
+    payment_mix: str = ""
+    menu_mix: str = ""
+
+
+class CampaignNarrativeRequest(BaseModel):
+    """캠페인 효과 서술 생성 요청"""
+    store_id: str
+    campaign_code: Optional[str] = None
+    campaign_name: Optional[str] = None
+    discount_cost: Optional[float] = None
+    uplift_revenue: Optional[float] = None
+    roi_pct: Optional[float] = None
+    periods: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class CampaignNarrativeResponse(BaseModel):
+    """캠페인 효과 서술 응답"""
+    summary: str
+    action1: str
+    action2: str
 
 
 # --- 공통 응답 구조 ---
