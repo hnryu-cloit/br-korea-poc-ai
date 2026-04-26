@@ -4,6 +4,12 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 ## 최근 업데이트 (2026-04-26)
 
+- 주문 추천 옵션별 **차별화된 추천 근거를 1회 호출로 생성**하도록 프롬프트와 응답 매핑을 개선했습니다.
+  - `common/prompt.py`의 `ORDERING_REASONING_PROMPT_TEMPLATE`을 재작성해 LAST_WEEK(최근성)·TWO_WEEKS_AGO(안정성)·LAST_MONTH(시즌성) 의미를 명시하고, 9종 metric을 description에 인용하도록 강제했습니다. 응답 JSON 스키마(`option_details[3]` 형태)를 프롬프트에 명시했습니다.
+  - `services/ordering_service.py` `generate_ordering_insights_and_questions()`는 백엔드가 보내는 `option_type`을 우선 사용하도록 단순화했고, AI 응답 매핑 시 `description`만 `opt.reasoning`에 그대로 사용합니다(`impact_factor` 접두 합성 제거).
+  - LLM 호출 실패·파싱 실패 시 무의미한 기본 폴백 문구("X 데이터 기반")를 제거하고 `opt.reasoning`을 빈 문자열로 두어 백엔드의 metric 기반 동적 문장 생성이 채우도록 위임합니다.
+  - **Gemini 호출은 추천 옵션이 3개여도 요청당 정확히 1회**입니다(루프 호출 금지). 단일 프롬프트가 3개 옵션 컨텍스트를 모두 담고 응답에서 한꺼번에 매핑합니다.
+
 - 프론트 주요 페이지 제목 옆 `i` 버튼 설명 확장(페이지 역할/필요성)이 반영되었습니다.
   - AI 서비스 코드/계약 변경은 없습니다.
 
