@@ -4,6 +4,17 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 ## 최근 업데이트 (2026-04-25)
 
+- backend 전체 QA/치명 회귀 보강 세션 연동 사항을 반영했습니다.
+  - 이번 세션의 AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+  - backend의 analytics/production/audit 안정화 패치가 적용되었으며 AI 서비스 계약 변경은 없습니다.
+
+- backend `inventory-status` 리팩토링 연동 사항을 동기화했습니다.
+  - 기준일 캐시 키(`business_date`) 분리 및 CTE 통합은 backend 내부 변경이며, 이번 세션의 AI 서비스 코드 변경은 없습니다.
+
+- 생산 진단 FIFO 집계 기준 변경 연동 사항을 동기화했습니다.
+  - backend `/api/production/fifo-lots`가 기준일 당일(`lot_date = date`) 집계로 전환되었습니다.
+  - 이번 세션의 AI 서비스 라우터/스키마/서비스 코드는 변경하지 않았습니다.
+
 - 런타임 오류를 수정했습니다.
   - `services/production_service.py`의 `SalesQueryRequest` 미정의 참조를 수정했습니다.
   - `analyze()` 내부 도달 불가 레거시 블록을 제거해 미정의 변수 참조(`serialized_rows`) 가능성을 제거했습니다.
@@ -140,7 +151,7 @@ BR Korea 매장 운영 지원 POC의 AI 서비스입니다. FastAPI 기반으로
 
 - Plan 구현(explainability 병렬 보강 + 기준일시 실사용) 작업은 backend+frontend 범위이며 AI 서비스 코드는 변경하지 않았습니다.
 
-- `POC 010` 기본 점포 및 `기준 일시(기본 2026-03-05 00:00)` UI 추가 작업은 frontend+backend 범위이며 AI 서비스 코드/계약 변경은 없습니다.
+- `POC 010` 기본 점포 및 `기준 일시(기본 2026-03-05 09:00)` UI 추가 작업은 frontend+backend 범위이며 AI 서비스 코드/계약 변경은 없습니다.
 
 - 본사 Settings v3 UI 개편 연계
   - 이번 세션의 코드 변경은 프론트(`/settings`) 화면 개편 중심이며, AI 서비스 코드/계약 변경은 없습니다.
@@ -598,3 +609,49 @@ python pipeline/build_knowledge_base.py
 
 - 프론트 플로팅 챗 후보 질문 소스가 골든 프롬프트 중심으로 조정되었습니다.
 - AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, ordering history chart date-axis alignment 영향도)
+
+- 프론트 `/ordering/history` 차트 날짜 축 보정(필터 기간 전체 일자 표시)이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, SPECIAL ordering basis removal)
+
+- `OrderOptionType`에서 `SPECIAL(특별 기간)` 타입을 제거했습니다.
+- 주문 추천 옵션 생성 로직에서 special_event 기반 추가 옵션 분기를 제거해 추천안이 3개 기준(`LAST_WEEK`, `TWO_WEEKS_AGO`, `LAST_MONTH`)으로 고정됩니다.
+- 특수 이벤트 문구(`special_factors`) 노출도 제거했습니다.
+
+## Session Update (2026-04-25, reference datetime default 09:00 영향도)
+
+- 프론트 기준일시 기본값이 `2026-03-05T09:00`으로 조정되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, weekly revenue x-axis date+weekday tilt 영향도)
+
+- 프론트 `/sales/metrics` 차트 X축 라벨 표기/기울기 UI 개선이 반영되었습니다.
+- AI 서비스 라우터/스키마/서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, treemap chart height reduction 영향도)
+
+- 프론트 `/sales/metrics` Treemap 높이 축소(UI) 변경이 반영되었습니다.
+- AI 서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-25, analytics KPI curation 영향도)
+
+- `/analytics` 하단 KPI 카드 구성이 backend 응답 기준으로 조정되었습니다.
+- AI 서비스 라우터/스키마/서비스 로직 변경은 없습니다.
+
+## Session Update (2026-04-25, takeout/delivery share 표시 영향도)
+
+- `/analytics` 하단 KPI detail 비중 표기 변경이 backend 응답에서 반영되었습니다.
+- AI 서비스 코드 변경은 없습니다.
+
+## Session Update (2026-04-26, backend QA stabilization sync)
+
+- 이번 라운드는 backend 치명 회귀 복구 중심으로 진행되었습니다.
+- AI 서비스 라우터/스키마/프롬프트 계약 변경은 없으며 기존 연동 경로를 유지합니다.
+
+## Session Update (2026-04-26, frontend lint stabilization sync)
+
+- 이번 라운드의 추가 수정은 프론트 lint 안정화입니다.
+- AI 서비스 코드 변경은 없으며 기존 연동 계약을 유지합니다.
