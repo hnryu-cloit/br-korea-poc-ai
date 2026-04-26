@@ -60,8 +60,55 @@ _DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION = """
 6) 출력은 설명(text) + 출처/근거(evidence) + 추가 예상질문 3개(follow_up_questions) 형태를 유지한다.
 """.strip()
 
-_MAX_PROMPT_ROWS = 60
-_MAX_PROMPT_REFERENCE_CHARS = 18000
+_MAX_PROMPT_ROWS = 25
+_MAX_PROMPT_REFERENCE_CHARS = 30000
+
+# Gemini 입력에서 자동으로 제거할 메타/감사 컬럼 (가독성·시간 절약)
+_PRUNE_COLUMNS_EXACT: set[str] = {
+    "source_file",
+    "source_sheet",
+    "loaded_at",
+    "updated_at",
+    "created_at",
+    "ingestion_id",
+    "ingestion_run_id",
+    "row_index",
+    "row_values_json",
+    "erp_send_dt",
+}
+_PRUNE_COLUMN_SUFFIXES: tuple[str, ...] = ("_at", "_by", "_ts")
+
+
+def _is_meta_column(column: str) -> bool:
+    name = (column or "").lower()
+    if name in _PRUNE_COLUMNS_EXACT:
+        return True
+    return any(name.endswith(suffix) for suffix in _PRUNE_COLUMN_SUFFIXES)
+
+
+def _drop_redundant_columns(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """모든 행에서 None/빈 값만 갖는 컬럼은 제거해 입력 토큰을 줄인다."""
+    if not rows:
+        return rows
+    columns = list(rows[0].keys())
+    keep: list[str] = []
+    for column in columns:
+        if _is_meta_column(column):
+            continue
+        has_value = False
+        for row in rows:
+            value = row.get(column)
+            if value is None:
+                continue
+            if isinstance(value, str) and value.strip() == "":
+                continue
+            has_value = True
+            break
+        if has_value:
+            keep.append(column)
+    if len(keep) == len(columns):
+        return rows
+    return [{column: row.get(column) for column in keep} for row in rows]
 
 
 # JSON 직렬화 시 Decimal 값을 float으로 변환
@@ -137,6 +184,39 @@ def _format_number(value: float) -> str:
     return f"{rounded:,.1f}"
 
 
+_COLUMN_LABELS: dict[str, str] = {
+    "item_cd": "품목코드",
+    "item_nm": "품목명",
+    "store_cd": "매장코드",
+    "masked_stor_cd": "매장코드",
+    "stor_cd": "매장코드",
+    "store_nm": "매장명",
+    "sale_dt": "일자",
+    "sale_amt": "매출액",
+    "sale_qty": "판매량",
+    "ord_cnt": "주문건수",
+    "ord_qty": "발주수량",
+    "auto_ord_qty": "자동발주",
+    "manual_ord_qty": "수동발주",
+    "confrm_qty": "확정수량",
+    "confirm_qty": "확정수량",
+    "stk_avg": "평균재고",
+    "stk_rt": "재고율(%)",
+    "disuse_qty": "폐기량",
+    "tmzon_div": "시간대",
+    "channel": "채널",
+    "ho_chnl_div": "채널",
+    "pay_dc_nm": "결제수단",
+    "pay_way_cd": "결제수단",
+}
+
+
+def _humanize_column(column: str) -> str:
+    if not column:
+        return ""
+    return _COLUMN_LABELS.get(column.lower(), "")
+
+
 def _format_cell(column: str, value: Any) -> str:
     if value is None:
         return ""
@@ -146,6 +226,8 @@ def _format_cell(column: str, value: Any) -> str:
         return "Y" if value else "N"
     if isinstance(value, (int, float)):
         numeric = float(value)
+        if abs(numeric) < 1e-12:
+            return "0"
         if any(token in column.lower() for token in ("tmzon", "hour")) and abs(numeric - round(numeric)) < 1e-9:
             return f"{int(round(numeric))}시"
         return _format_number(numeric)
@@ -155,30 +237,71 @@ def _format_cell(column: str, value: Any) -> str:
         return f"{text[:4]}-{text[4:6]}-{text[6:]}"
     if re.fullmatch(r"\d{1,2}", text) and any(token in column.lower() for token in ("tmzon", "hour")):
         return f"{int(text)}시"
+    if re.fullmatch(r"-?\d+(?:\.\d+)?[eE][+-]?\d+", text):
+        try:
+            numeric = float(text)
+        except ValueError:
+            return text
+        if abs(numeric) < 1e-12:
+            return "0"
+        return _format_number(numeric)
     return text
 
 
-# LLM 응답을 신뢰할 수 없을 때 결정론적 폴백 문장 생성
+# LLM 응답이 비어 있거나 검증 실패 시 보여줄 최소한의 폴백
+# (정형 분석은 LLM 책임이고, 폴백은 데이터를 가독성 있게만 보여 주는 안내 수준에 둔다)
 def _build_fallback_text(query: str, rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "조회 결과가 없습니다."
 
-    rendered_rows: list[str] = []
-    for row in rows[:5]:
-        parts: list[str] = []
-        for column, value in row.items():
-            formatted = _format_cell(column, value)
-            if formatted:
-                parts.append(formatted)
-        if parts:
-            rendered_rows.append(" | ".join(parts))
+    name_keys = ("item_nm", "store_nm", "channel", "ho_chnl_div", "pay_dc_nm")
+    top_rows = rows[:3]
 
-    if not rendered_rows:
-        return "조회 결과가 없습니다."
+    metric_columns: list[str] = []
+    if top_rows:
+        for column in top_rows[0].keys():
+            if column in name_keys:
+                continue
+            if not _humanize_column(column):
+                continue
+            if _format_cell(column, top_rows[0].get(column)) == "":
+                continue
+            metric_columns.append(column)
+            if len(metric_columns) >= 3:
+                break
 
-    if len(rendered_rows) == 1:
-        return f"{query} 조회 결과는 {rendered_rows[0]}입니다."
-    return f"{query} 조회 결과는 {', '.join(rendered_rows)}입니다."
+    def _row_title(row: dict[str, Any]) -> str:
+        for key in name_keys:
+            value = row.get(key)
+            if value is None:
+                continue
+            text_value = _format_cell(key, value)
+            if text_value:
+                return text_value
+        return "-"
+
+    intro = (
+        f"AI 분석 답변을 생성하지 못해 조회 결과를 정리해 드립니다. "
+        f"(총 {len(rows)}건, 상위 {len(top_rows)}건 표시)"
+    )
+
+    if metric_columns:
+        header_cells = ["품목/항목"] + [_humanize_column(c) for c in metric_columns]
+        sep = ["---"] * len(header_cells)
+        body_lines = [
+            "| " + " | ".join(header_cells) + " |",
+            "| " + " | ".join(sep) + " |",
+        ]
+        for row in top_rows:
+            cells = [_row_title(row)]
+            for column in metric_columns:
+                cells.append(_format_cell(column, row.get(column)) or "-")
+            body_lines.append("| " + " | ".join(cells) + " |")
+        body = "\n".join(body_lines)
+    else:
+        body = "\n".join(f"- {_row_title(row)}" for row in top_rows)
+
+    return f"{intro}\n\n{body}"
 
 
 def _is_numeric_consistent(query: str, answer_text: str, rows: list[dict[str, Any]]) -> bool:
@@ -187,7 +310,14 @@ def _is_numeric_consistent(query: str, answer_text: str, rows: list[dict[str, An
     allowed = _extract_numbers(query)
     allowed.update(_numbers_from_rows(rows))
     for number in _extract_numbers(answer_text):
-        if not _contains_number(allowed, number):
+        # 식별자(품목코드/매장코드 등 6자 이상 정수)나 연도/회계연도 같은 4자리 정수, 등수(1~10)는 검증에서 제외
+        if number >= 100000 and abs(number - round(number)) < 1e-9:
+            continue
+        if 1900 <= number <= 2100 and abs(number - round(number)) < 1e-9:
+            continue
+        if 1 <= number <= 10 and abs(number - round(number)) < 1e-9:
+            continue
+        if not _contains_number(allowed, number, tolerance=max(0.5, abs(number) * 0.02)):
             return False
     return True
 
@@ -460,30 +590,29 @@ class GroundedWorkflow:
         schema_context = get_schema_context(get_table_hints(query_type))
         target_data_type, business_logic = self.semantic_layer.parse_query_intent(query)
         prompt = f"""
-질문에서 사용된 키워드와 도메인 정보를 바탕으로 조회 의도와 필요한 테이블을 정리하세요.
-
-[도메인]
-{domain}
-
-[질문]
-{query}
-
-[키워드]
-{keywords}
-
-[기본 힌트]
-- semantic_type: {target_data_type}
-- business_logic: {business_logic}
-
-[사용 가능한 스키마]
-{schema_context}
-
-반드시 JSON으로만 답하세요.
-{{
-  "intent": "질문의 조회 의도를 한 문장으로 요약",
-  "relevant_tables": ["table_a", "table_b"]
-}}
-"""
+            질문에서 사용된 키워드와 도메인 정보를 바탕으로 조회 의도와 필요한 테이블을 정리하세요.
+            [도메인]
+            {domain}
+            
+            [질문]
+            {query}
+            
+            [키워드]
+            {keywords}
+            
+            [기본 힌트]
+            - semantic_type: {target_data_type}
+            - business_logic: {business_logic}
+            
+            [사용 가능한 스키마]
+            {schema_context}
+            
+            반드시 JSON으로만 답하세요.
+            {{
+              "intent": "질문의 조회 의도를 한 문장으로 요약",
+              "relevant_tables": ["table_a", "table_b"]
+            }}
+            """
         try:
             raw = self.gemini.call_gemini_text(prompt, response_type="application/json")
             data = json.loads(raw) if isinstance(raw, str) else raw
@@ -512,7 +641,9 @@ class GroundedWorkflow:
     ) -> dict[str, Any]:
         # Converts grounded rows into answer, evidence, and actions.
         active_system_instruction = system_instruction or _DEFAULT_FLOATING_CHAT_SYSTEM_INSTRUCTION
-        prompt_rows, was_truncated = _limit_rows_for_prompt(rows)
+        # 메타/감사·전부-Null 컬럼 제거 후 행/문자수 캡 적용
+        pruned_rows = _drop_redundant_columns(rows)
+        prompt_rows, was_truncated = _limit_rows_for_prompt(pruned_rows)
         reference_columns = list(prompt_rows[0].keys()) if prompt_rows else []
         request_payload = {
             "system_prompt": active_system_instruction,
@@ -537,21 +668,33 @@ class GroundedWorkflow:
         request_payload_json = json.dumps(request_payload, ensure_ascii=False, default=_json_default)
         prompt = f"""
 당신은 매장 운영 데이터를 설명하는 분석가입니다.
-아래 JSON 입력만 근거로 답변 JSON을 생성하세요.
+아래 JSON 입력의 reference_data.rows 만을 근거로, 점주가 한눈에 이해할 수 있는 분석형 답변을 작성하세요.
 
 [입력 JSON]
 {request_payload_json}
 
-규칙:
-- 조회 결과에 없는 수치나 사실은 추가하지 마세요.
-- 값이 없으면 데이터가 없다고 명확히 말하세요.
-- 답변에는 반드시 실행 가능한 액션을 포함하세요.
-- evidence에는 데이터 출처(테이블, 기간, 수치)를 포함하세요.
-- follow_up_questions는 골든쿼리 스타일의 추가 질문 3개를 반환하세요.
+[text 작성 가이드 — 형식은 자율, 다만 다음 원칙을 따르세요]
+- **핵심 요약은 필수**입니다. 첫 줄 또는 첫 단락에서 사용자 질문에 대한 결론을 한두 문장으로 제시하세요.
+  (예: "이번 주 수동 발주는 총 OO건으로 지난주 대비 약 O% 증가했고, 베이커리류에 집중되었습니다.")
+- 그 다음에 데이터의 성격에 맞는 형식을 자유롭게 선택하세요. 예를 들어:
+  · 비교가 필요한 데이터는 마크다운 표(| 품목 | 값 | ... |)로
+  · 단일 지표/추세는 짧은 bullet 또는 문장으로
+  · 카테고리·이상치가 있으면 "주목해야 할 포인트" 또는 "분석 및 시사점" 섹션으로
+- 동일한 템플릿을 매번 반복하지 말고, 데이터의 형태(품목 비교/시간대 분포/단일 지표 등)에 맞게 다르게 정리하세요.
+- 줄바꿈은 \\n 으로, 강조는 **bold**, 표는 마크다운 표를 사용하세요. 모든 마크다운은 text 문자열 안에 그대로 포함하세요.
 
-반드시 JSON으로만 답하세요.
+[엄수 규칙]
+- reference_data.rows 에 없는 수치·품목명·날짜는 절대 만들어내지 마세요. 추정·일반화는 가능하지만 새 숫자는 금지.
+- rows 가 비어 있으면 text 에 "조회 결과가 없습니다." 만 작성하세요.
+- 0 이거나 0E-20 처럼 표기된 값은 모두 0 으로 다루세요.
+- text 는 한국어 기준 800자 이내로 간결하게 작성하세요.
+- evidence: 출처(조회 테이블·기간·총 건수) 1~3개.
+- actions: 점주가 즉시 실행할 후속 액션 2~3개(각 80자 이내).
+- follow_up_questions: 같은 도메인의 추가 질문 3개(중복 금지, 각 30자 이내).
+
+반드시 JSON 으로만 답하세요.
 {{
-  "text": "사용자에게 보여줄 자연어 답변",
+  "text": "마크다운 답변 본문 (핵심 요약 필수, 이후 형식 자율)",
   "evidence": ["근거 1", "근거 2"],
   "actions": ["후속 액션 1", "후속 액션 2"],
   "follow_up_questions": ["추가 질문 1", "추가 질문 2", "추가 질문 3"]
@@ -576,8 +719,14 @@ class GroundedWorkflow:
             }
             if evidence_note and evidence_note not in answer["evidence"]:
                 answer["evidence"] = [evidence_note, *answer["evidence"]]
-            if not _is_numeric_consistent(query, str(answer["text"]), rows):
-                logger.warning("numeric consistency fallback triggered for query=%s", query)
+            if answer["text"] and not _is_numeric_consistent(query, str(answer["text"]), rows):
+                # 텍스트 자체는 살리되 검증 메모를 evidence 앞에 표시해 사용자가 인지하도록 한다
+                logger.warning("numeric consistency check failed (text retained) query=%s", query)
+                note = "AI 답변의 일부 수치가 조회 결과와 일치하지 않을 수 있어 함께 확인이 필요합니다."
+                if note not in answer["evidence"]:
+                    answer["evidence"] = [note, *answer["evidence"]]
+            elif not str(answer["text"]).strip():
+                # 빈 답변일 때만 결정론적 폴백 사용
                 answer["text"] = f"{answer_prefix}{_build_fallback_text(query, rows)}".strip()
             return answer
         except Exception as exc:

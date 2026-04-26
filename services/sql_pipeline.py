@@ -123,20 +123,83 @@ Rules:
 """
 
 
-# 현재 질의에 필요한 스키마 스니펫만 렌더링
+# DB information_schema 기반 동적 스키마 캐시 (1회 로드)
+_DB_SCHEMA_CACHE: dict[str, list[tuple[str, str]]] | None = None
+
+
+def _load_db_schema_from_information_schema() -> dict[str, list[tuple[str, str]]]:
+    """information_schema.columns 에서 (테이블 → [(컬럼명, 데이터타입), ...])를 추출한다."""
+    global _DB_SCHEMA_CACHE
+    if _DB_SCHEMA_CACHE is not None:
+        return _DB_SCHEMA_CACHE
+
+    db_url = os.getenv("DATABASE_URL", _DEFAULT_DB_URL)
+    schema_map: dict[str, list[tuple[str, str]]] = {}
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT table_name, column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    ORDER BY table_name, ordinal_position
+                    """
+                )
+            ).all()
+        for table_name, column_name, data_type in rows:
+            schema_map.setdefault(str(table_name), []).append((str(column_name), str(data_type)))
+    except Exception as exc:
+        logger.warning("DB 스키마 로드 실패(인메모리 _SCHEMA만 사용): %s", exc)
+
+    _DB_SCHEMA_CACHE = schema_map
+    return schema_map
+
+
+def list_known_tables() -> list[str]:
+    """인메모리 + DB 스키마에서 알려진 모든 테이블명을 반환한다."""
+    db_schema = _load_db_schema_from_information_schema()
+    names = set(_SCHEMA.keys()) | set(db_schema.keys())
+    return sorted(names)
+
+
+# 현재 질의에 필요한 스키마 스니펫만 렌더링 (인메모리 + DB 동적 스키마 결합)
 def get_schema_context(table_names: list[str] | None = None) -> str:
-    targets = table_names or list(_SCHEMA.keys())
+    db_schema = _load_db_schema_from_information_schema()
+    targets = table_names or sorted(set(_SCHEMA.keys()) | set(db_schema.keys()))
+
     lines: list[str] = []
     for table_name in targets:
         meta = _SCHEMA.get(table_name)
-        if not meta:
+        db_columns = db_schema.get(table_name, [])
+        if not meta and not db_columns:
             continue
+
         lines.append(f"### {table_name}")
-        lines.append(f"description: {meta['description']}")
+        if meta:
+            lines.append(f"description: {meta['description']}")
         lines.append("columns:")
-        for column_name, description in meta["columns"].items():
-            lines.append(f"  - {column_name}: {description}")
+
+        seen: set[str] = set()
+        if meta:
+            for column_name, description in meta["columns"].items():
+                lines.append(f"  - {column_name}: {description}")
+                seen.add(column_name)
+        for column_name, data_type in db_columns:
+            if column_name in seen:
+                continue
+            lines.append(f"  - {column_name} ({data_type})")
         lines.append("")
+
+    # hint 된 테이블 외에도 후보가 있으면 카탈로그 형태로 이름만 추가 노출
+    if table_names:
+        catalog = sorted(t for t in (set(_SCHEMA.keys()) | set(db_schema.keys())) if t not in set(table_names))
+        if catalog:
+            lines.append("### (other tables — name only)")
+            for chunk_start in range(0, len(catalog), 8):
+                lines.append("  - " + ", ".join(catalog[chunk_start:chunk_start + 8]))
+
     return "\n".join(lines)
 
 
