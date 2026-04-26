@@ -249,7 +249,7 @@ class SalesAnalyzer:
             domain=payload.domain or "sales",
             reference_date=payload.business_date,
             system_instruction=system_instruction,
-            golden_query_only=True,
+            golden_query_only=False,
         )
         # Normalize grounded workflow output into the public API contract.
         return {

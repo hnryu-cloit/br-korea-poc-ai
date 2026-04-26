@@ -61,7 +61,7 @@ class OrderingService:
             domain="ordering",
             reference_date=payload.business_date,
             system_instruction=payload.system_instruction,
-            golden_query_only=True,
+            golden_query_only=False,
         )
 
     def set_historical_data(self, df: pd.DataFrame):

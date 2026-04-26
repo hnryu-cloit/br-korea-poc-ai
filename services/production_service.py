@@ -60,7 +60,7 @@ class ProductionService:
             domain="production",
             reference_date=payload.business_date,
             system_instruction=payload.system_instruction,
-            golden_query_only=True,
+            golden_query_only=False,
         )
 
     def _get_agent(
