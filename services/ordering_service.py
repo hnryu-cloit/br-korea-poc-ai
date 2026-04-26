@@ -436,21 +436,25 @@ class OrderingService:
             for option in option_summaries_from_context:
                 if not isinstance(option, dict):
                     continue
-                option_type = str(option.get("option_id") or "").replace("-", "_").upper()
-                if option_type == "OPT_A":
-                    option_type = "LAST_WEEK"
-                elif option_type == "OPT_B":
-                    option_type = "TWO_WEEKS_AGO"
-                elif option_type == "OPT_C":
-                    option_type = "LAST_MONTH"
+                # 백엔드가 option_type을 직접 넘겨주면 그대로 사용, 없으면 option_id로 매핑
+                option_type = str(option.get("option_type") or "").strip().upper()
+                if not option_type:
+                    legacy = str(option.get("option_id") or "").replace("-", "_").upper()
+                    option_type = {
+                        "OPT_A": "LAST_WEEK",
+                        "OPT_B": "TWO_WEEKS_AGO",
+                        "OPT_C": "LAST_MONTH",
+                    }.get(legacy, legacy)
+                basis_date = str(option.get("basis_date") or option.get("basis") or "").strip()
                 metrics = option.get("reasoning_metrics") or []
                 metrics_text = ", ".join(
                     f"{m.get('key')}={m.get('value')}"
                     for m in metrics
                     if isinstance(m, dict) and m.get("key") and m.get("value")
                 )
+                header = f"- {option_type or 'OPTION'} (기준일 {basis_date or '-'})"
                 options_summary_lines.append(
-                    f"- {option_type or 'OPTION'}: {option.get('total_qty', 0)}건 ({metrics_text})"
+                    f"{header}: 추천 주문량 {option.get('total_qty', 0)}건, 지표[{metrics_text}]"
                 )
         if not options_summary_lines:
             options_summary_lines = [f"- {o.option_type.name}: {o.recommended_qty}건" for o in options]
@@ -481,39 +485,29 @@ class OrderingService:
             summary_insight = ai_data.get("analysis_summary", "")
             closing_msg = ai_data.get("closing_message", "")
 
+            type_to_detail: dict[str, dict] = {}
+            for detail in ai_data.get("option_details", []) or []:
+                if not isinstance(detail, dict):
+                    continue
+                detail_type = str(detail.get("option_type") or "").strip().upper()
+                alias = {"OPT_A": "LAST_WEEK", "OPT_B": "TWO_WEEKS_AGO", "OPT_C": "LAST_MONTH"}
+                detail_type = alias.get(detail_type, detail_type)
+                if detail_type:
+                    type_to_detail[detail_type] = detail
+
             for opt in options:
-                for detail in ai_data.get("option_details", []):
-                    detail_type = str(detail.get("option_type") or "").strip().upper()
-                    if detail_type in {"OPT_A", "LAST_WEEK"} and opt.option_type == OrderOptionType.LAST_WEEK:
-                        opt.reasoning = (
-                            f"[{detail.get('impact_factor')}] {detail.get('description')}"
-                        )
-                        break
-                    if detail_type in {"OPT_B", "TWO_WEEKS_AGO"} and opt.option_type == OrderOptionType.TWO_WEEKS_AGO:
-                        opt.reasoning = (
-                            f"[{detail.get('impact_factor')}] {detail.get('description')}"
-                        )
-                        break
-                    if detail_type in {"OPT_C", "LAST_MONTH"} and opt.option_type == OrderOptionType.LAST_MONTH:
-                        opt.reasoning = (
-                            f"[{detail.get('impact_factor')}] {detail.get('description')}"
-                        )
-                        break
-                if not opt.reasoning:
-                    opt.reasoning = f"{opt.option_type.value} 기반 추천 수량입니다."
+                detail = type_to_detail.get(opt.option_type.name)
+                description = str((detail or {}).get("description") or "").strip()
+                opt.reasoning = description  # 빈 값이면 백엔드가 metric 기반 문장으로 채움
 
             full_summary = "\n\n".join(
                 part for part in (summary_insight, closing_msg) if part
             ).strip()
-            if not full_summary:
-                full_summary = "과거 주문 데이터를 바탕으로 3가지 주문 옵션을 제안합니다."
         except (ValueError, TypeError, json.JSONDecodeError, RuntimeError) as e:
             logger.error(f"LLM Reasoning failed: {e}")
-            full_summary = (
-                "과거 주문 데이터를 바탕으로 산출된 옵션입니다. 매장 상황을 고려하여 선택해 주세요."
-            )
+            full_summary = ""
             for opt in options:
-                opt.reasoning = f"{opt.option_type.value} 데이터 기반"
+                opt.reasoning = ""  # 백엔드 _compose_metric_reasoning이 채움
 
         return options, full_summary
 
