@@ -92,10 +92,9 @@ class ProductionDashboardResponse(BaseModel):
 
 
 class OrderOptionType(str, Enum):
-    LAST_WEEK = "전주 동요일 주문 그대로"
-    TWO_WEEKS_AGO = "전전주 동요일 주문 그대로"
-    LAST_MONTH = "전월 동요일 주문 그대로"
-    SPECIAL = "특별 기간(예: 전년 추석) 주문 추천"
+    LAST_WEEK = "전주 동요일 주문 참고"
+    TWO_WEEKS_AGO = "전전주 동요일 주문 참고"
+    LAST_MONTH = "월 동요일 주문 참고"
 
 
 # --- 1. 생산 관리 Agent (Production Management) ---

@@ -339,8 +339,6 @@ class OrderingService:
             factors.append("캠페인 가중치 반영")
         if context.get("is_holiday"):
             factors.append("휴일 수요 변동 반영")
-        if context.get("special_event"):
-            factors.append(f"특수 이벤트 반영: {context['special_event']}")
         if option.seasonality_weight is not None and option.seasonality_weight != 1.0:
             factors.append(f"시즌성 보정 {option.seasonality_weight:.2f}x")
         weather_summary = self._extract_weather_summary(context)
@@ -415,29 +413,6 @@ class OrderingService:
                 seasonality_weight=season_weight if season_weight != 1.0 else None,
             ),
         ]
-
-    def _append_special_event_option_if_needed(
-        self,
-        store_id: str,
-        target_date: str,
-        target_product: str,
-        context: dict,
-        options: list[OrderingOption],
-    ):
-        """명절 등 특별 이벤트 시나리오를 위한 추가 옵션 계산 로직"""
-        special_event = context.get("special_event")
-        if special_event:
-            qty_special = self._get_historical_qty(store_id, target_date, 365, target_product)
-            if qty_special <= 0:
-                return
-            options.append(
-                OrderingOption(
-                    option_type=OrderOptionType.SPECIAL,
-                    recommended_qty=qty_special,
-                    reasoning="",
-                    expected_sales=qty_special,
-                )
-            )
 
     def generate_ordering_guidance(self, query: str) -> str:
         """주문 질의에 대한 운영 가이드를 생성합니다."""
@@ -620,9 +595,6 @@ class OrderingService:
 
         options = self.calculate_base_ordering_options(
             payload.store_id, payload.target_date, target_product
-        )
-        self._append_special_event_option_if_needed(
-            payload.store_id, payload.target_date, target_product, current_context, options
         )
 
         enriched_options, summary_insight = self.generate_ordering_insights_and_questions(
