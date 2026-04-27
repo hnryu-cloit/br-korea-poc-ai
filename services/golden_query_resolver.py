@@ -613,6 +613,8 @@ JSON:
         last_month_end = this_month_start - timedelta(days=1)
         last_month_start = last_month_end.replace(day=1)
 
+        current_hour = ref.hour if (ref.hour or ref.minute or ref.second) else 9
+
         return {
             "reference_dt": ref.strftime("%Y%m%d"),
             "date_from": date_from.strftime("%Y%m%d"),
@@ -621,6 +623,7 @@ JSON:
             "this_month_end": ref.strftime("%Y%m%d"),
             "last_month_start": last_month_start.strftime("%Y%m%d"),
             "last_month_end": last_month_end.strftime("%Y%m%d"),
+            "current_hour": current_hour,
             "label": inferred.get("label", ""),
         }
 
@@ -675,7 +678,7 @@ JSON:
         rows: list[dict[str, Any]],
         period: dict[str, str],
     ) -> dict[str, Any] | None:
-        if not rows or self.gemini is None:
+        if self.gemini is None:
             return None
 
         prompt_payload = {
@@ -686,6 +689,7 @@ JSON:
             "queried_period": period,
             "relevant_tables": candidate.relevant_tables,
             "row_count": len(rows),
+            "is_empty_result": len(rows) == 0,
             "sample_rows": self._serialize_rows_for_llm(rows),
         }
 
@@ -696,6 +700,12 @@ JSON:
             "- 절대로 rows에 없는 수치를 만들어내지 마세요.\n"
             "- text는 800자 이내, 핵심 요약 1~2문장 + 필요한 경우 마크다운 표/불릿으로 정리하세요.\n"
             "- evidence 2~3개, actions 2~3개(각 80자 이내).\n"
+            "[is_empty_result == true 인 경우 — 결과 0건 처리]\n"
+            "1. 단순히 '데이터가 없습니다'라고만 적지 말고, 0건이 의미하는 바를 점주 시각에서 풀어 주세요.\n"
+            "   예) '오늘은 발주-확정 차이가 10 이상인 품목이 없습니다. 즉, 전 품목이 발주량 그대로 정상 출하된 안정적인 운영 상태입니다.'\n"
+            "2. 조회 기간/지점/조건을 evidence에 명시해 어떤 조건으로 봤는지 알 수 있게 합니다.\n"
+            "3. actions는 임계값 완화·기간 확장·다른 지표 점검 등 실질적 후속 행동을 제안합니다.\n"
+            "4. 데이터가 정말로 누락된 경우(예: 적재 미완료)와 단순 0건을 구별하기 어려우면, 둘 가능성을 모두 짚어 주세요.\n"
             "[follow_up_questions 작성 규칙 — 매우 중요]\n"
             "1. 사용자 원 질문(user_question)과 동일하거나 의미가 거의 같은 문장은 절대 포함 금지.\n"
             "2. 3개 모두 서로 다른 관점이어야 함: (A) 다른 기간(전주/전월/지난달 등)으로 비교, "
@@ -808,6 +818,7 @@ JSON:
             "this_month_end": period["this_month_end"],
             "last_month_start": period["last_month_start"],
             "last_month_end": period["last_month_end"],
+            "current_hour": period["current_hour"],
         }
 
         rows, _ = executor.run(
