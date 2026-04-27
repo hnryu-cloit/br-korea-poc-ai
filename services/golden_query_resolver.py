@@ -130,6 +130,7 @@ class GoldenQueryCandidate:
     abstract_signature: set[str]
     embedding_text: str
     normalized_question: str
+    authored_reference_dt: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -368,6 +369,9 @@ class GoldenQueryEngine:
                         f"slots={','.join(sorted(slots))}",
                     ]
                 )
+                authored_reference_dt = self._parse_authored_reference(
+                    str(row.get("기준일시") or "")
+                )
                 loaded.append(
                     GoldenQueryCandidate(
                         query_id=query_id,
@@ -385,6 +389,7 @@ class GoldenQueryEngine:
                         abstract_signature=abstract_signature,
                         embedding_text=embedding_text,
                         normalized_question=normalized_question,
+                        authored_reference_dt=authored_reference_dt,
                     )
                 )
 
@@ -580,6 +585,18 @@ JSON:
         return picked
 
     @staticmethod
+    def _parse_authored_reference(raw: str) -> datetime | None:
+        text = (raw or "").strip().replace("(KST)", "").strip()
+        if not text:
+            return None
+        for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y%m%d"):
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                continue
+        return None
+
+    @staticmethod
     def _resolve_reference_date(reference_date: str | None) -> datetime:
         raw = (reference_date or os.getenv("SQL_REFERENCE_DATE") or "").strip()
         if raw:
@@ -628,7 +645,35 @@ JSON:
         }
 
     @staticmethod
-    def _normalize_sql_placeholders(sql: str) -> str:
+    def _build_literal_substitutions(authored: datetime) -> dict[str, str]:
+        """CSV 작성 시점의 기준일시(authored)를 anchor로 의미별 placeholder 매핑 생성"""
+        ref_d = authored.replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday = ref_d - timedelta(days=1)
+        this_month_start = ref_d.replace(day=1)
+        last_month_end = this_month_start - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        next_month = (this_month_start + timedelta(days=32)).replace(day=1)
+        this_month_end = next_month - timedelta(days=1)
+        week_start = ref_d - timedelta(days=ref_d.weekday())
+        minus_7 = ref_d - timedelta(days=7)
+        minus_30 = ref_d - timedelta(days=30)
+
+        return {
+            ref_d.strftime("%Y%m%d"): ":reference_dt",
+            yesterday.strftime("%Y%m%d"): "to_char(to_date(:reference_dt, 'YYYYMMDD') - INTERVAL '1 day', 'YYYYMMDD')",
+            this_month_start.strftime("%Y%m%d"): ":this_month_start",
+            this_month_end.strftime("%Y%m%d"): ":this_month_end",
+            last_month_start.strftime("%Y%m%d"): ":last_month_start",
+            last_month_end.strftime("%Y%m%d"): ":last_month_end",
+            week_start.strftime("%Y%m%d"): "to_char(date_trunc('week', to_date(:reference_dt, 'YYYYMMDD')), 'YYYYMMDD')",
+            minus_7.strftime("%Y%m%d"): "to_char(to_date(:reference_dt, 'YYYYMMDD') - INTERVAL '7 day', 'YYYYMMDD')",
+            minus_30.strftime("%Y%m%d"): "to_char(to_date(:reference_dt, 'YYYYMMDD') - INTERVAL '30 day', 'YYYYMMDD')",
+        }
+
+    @classmethod
+    def _normalize_sql_placeholders(
+        cls, sql: str, authored_reference_dt: datetime | None = None
+    ) -> str:
         normalized = sql
         for alias in _STORE_PARAM_ALIASES:
             normalized = re.sub(
@@ -637,6 +682,72 @@ JSON:
                 normalized,
                 flags=re.IGNORECASE,
             )
+
+        # CSV 작성 시점 기준일시 anchor가 있으면 하드코딩 YYYYMMDD 리터럴 → 의미별 placeholder
+        if authored_reference_dt is not None:
+            subs = cls._build_literal_substitutions(authored_reference_dt)
+
+            def _repl_to_date(m: re.Match[str]) -> str:
+                date = m.group(1)
+                if date in subs:
+                    rep = subs[date]
+                    if rep.startswith(":"):
+                        return f"to_date({rep}, 'YYYYMMDD')"
+                    return f"to_date({rep}, 'YYYYMMDD')"
+                return m.group(0)
+
+            def _repl_literal(m: re.Match[str]) -> str:
+                date = m.group(1)
+                return subs.get(date, m.group(0))
+
+            normalized = re.sub(
+                r"TO_DATE\(\s*'(\d{8})'\s*,\s*'YYYYMMDD'\s*\)",
+                _repl_to_date,
+                normalized,
+                flags=re.IGNORECASE,
+            )
+            normalized = re.sub(r"'(\d{8})'", _repl_literal, normalized)
+
+        # CURRENT_DATE 계열 → 시스템 기준일시(:reference_dt) 기반 표현식으로 치환
+        # 1) TO_CHAR(CURRENT_DATE - INTERVAL 'N day(s)', 'YYYYMMDD') → 기준일 - N일
+        def _shifted_to_char(match: re.Match[str]) -> str:
+            sign = match.group("sign")
+            days = match.group("days")
+            return (
+                f"to_char(to_date(:reference_dt, 'YYYYMMDD') {sign} INTERVAL '{days} day', 'YYYYMMDD')"
+            )
+
+        normalized = re.sub(
+            r"TO_CHAR\(\s*CURRENT_DATE\s*(?P<sign>[+-])\s*INTERVAL\s*'(?P<days>\d+)\s*days?'\s*,\s*'YYYYMMDD'\s*\)",
+            _shifted_to_char,
+            normalized,
+            flags=re.IGNORECASE,
+        )
+
+        # 2) TO_CHAR(DATE_TRUNC('week', CURRENT_DATE), 'YYYYMMDD') → 기준일 기준 주 시작
+        normalized = re.sub(
+            r"TO_CHAR\(\s*DATE_TRUNC\(\s*'week'\s*,\s*CURRENT_DATE\s*\)\s*,\s*'YYYYMMDD'\s*\)",
+            "to_char(date_trunc('week', to_date(:reference_dt, 'YYYYMMDD')), 'YYYYMMDD')",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+
+        # 3) TO_CHAR(CURRENT_DATE, 'YYYYMMDD') → 기준일
+        normalized = re.sub(
+            r"TO_CHAR\(\s*CURRENT_DATE\s*,\s*'YYYYMMDD'\s*\)",
+            ":reference_dt",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+
+        # 4) 단독 CURRENT_DATE → 기준일 date 캐스팅
+        normalized = re.sub(
+            r"\bCURRENT_DATE\b",
+            "to_date(:reference_dt, 'YYYYMMDD')",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+
         return normalized
 
     @staticmethod
@@ -804,7 +915,10 @@ JSON:
             return None
 
         period = self._infer_period(query, domain, reference_date)
-        sql = self._normalize_sql_placeholders(match.candidate.sql_template)
+        sql = self._normalize_sql_placeholders(
+            match.candidate.sql_template,
+            authored_reference_dt=match.candidate.authored_reference_dt,
+        )
 
         params = {
             "store_id": store_id,
