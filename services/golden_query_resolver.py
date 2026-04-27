@@ -609,9 +609,18 @@ JSON:
             date_from = end_of_last_month.replace(day=1)
             date_to = end_of_last_month
 
+        this_month_start = ref.replace(day=1)
+        last_month_end = this_month_start - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+
         return {
+            "reference_dt": ref.strftime("%Y%m%d"),
             "date_from": date_from.strftime("%Y%m%d"),
             "date_to": date_to.strftime("%Y%m%d"),
+            "this_month_start": this_month_start.strftime("%Y%m%d"),
+            "this_month_end": ref.strftime("%Y%m%d"),
+            "last_month_start": last_month_start.strftime("%Y%m%d"),
+            "last_month_end": last_month_end.strftime("%Y%m%d"),
             "label": inferred.get("label", ""),
         }
 
@@ -638,6 +647,126 @@ JSON:
                 continue
             cells.append(text)
         return " | ".join(cells)
+
+    @staticmethod
+    def _serialize_rows_for_llm(rows: list[dict[str, Any]], max_rows: int = 30) -> list[dict[str, Any]]:
+        serialized: list[dict[str, Any]] = []
+        for row in rows[:max_rows]:
+            clean: dict[str, Any] = {}
+            for key, value in row.items():
+                if value is None:
+                    clean[key] = None
+                    continue
+                if isinstance(value, (int, float, bool, str)):
+                    if isinstance(value, float) and not math.isfinite(value):
+                        clean[key] = None
+                    else:
+                        clean[key] = value
+                else:
+                    clean[key] = str(value)
+            serialized.append(clean)
+        return serialized
+
+    def _llm_format_answer(
+        self,
+        *,
+        query: str,
+        candidate: GoldenQueryCandidate,
+        rows: list[dict[str, Any]],
+        period: dict[str, str],
+    ) -> dict[str, Any] | None:
+        if not rows or self.gemini is None:
+            return None
+
+        prompt_payload = {
+            "user_question": query,
+            "domain": candidate.domain,
+            "matched_intent": candidate.intent_id or candidate.query_id,
+            "expected_answer_template": candidate.expected_answer or "",
+            "queried_period": period,
+            "relevant_tables": candidate.relevant_tables,
+            "row_count": len(rows),
+            "sample_rows": self._serialize_rows_for_llm(rows),
+        }
+
+        system_instruction = (
+            "당신은 매장 운영 데이터를 친절하게 풀어주는 한국어 분석가입니다.\n"
+            "사용자 질문과 SQL 결과(rows)만 근거로 점주가 즉시 이해할 수 있는 답변을 작성합니다.\n"
+            "- 표/숫자는 한국어 단위(원, 건, 개, 명, %)로 변환하고, 큰 금액은 천 단위 콤마 또는 만/억 단위 요약을 활용하세요.\n"
+            "- 절대로 rows에 없는 수치를 만들어내지 마세요.\n"
+            "- text는 800자 이내, 핵심 요약 1~2문장 + 필요한 경우 마크다운 표/불릿으로 정리하세요.\n"
+            "- evidence 2~3개, actions 2~3개(각 80자 이내).\n"
+            "[follow_up_questions 작성 규칙 — 매우 중요]\n"
+            "1. 사용자 원 질문(user_question)과 동일하거나 의미가 거의 같은 문장은 절대 포함 금지.\n"
+            "2. 3개 모두 서로 다른 관점이어야 함: (A) 다른 기간(전주/전월/지난달 등)으로 비교, "
+            "(B) 다른 분해축(채널·결제·상품·시간대 중 원 질문에 없던 축), (C) 심화·원인 분석(왜? 어디서?).\n"
+            "3. 각 30자 이내, 자연스러운 점주 화법, 명령형보다 의문형 또는 평서형 권장.\n"
+            "4. 직전 응답에 노출된 질문과 표현이 겹치지 않도록 어휘를 다양화."
+        )
+
+        prompt = (
+            "아래 JSON 입력을 바탕으로 점주에게 보낼 답변을 만들어 주세요.\n"
+            "특히 follow_up_questions 3개는 user_question과 의미가 다르고 서로도 겹치지 않는,\n"
+            "이 데이터의 후속 분석으로 이어질 만한 질문이어야 합니다.\n\n"
+            f"[입력]\n{json.dumps(prompt_payload, ensure_ascii=False, default=str)}\n\n"
+            "반드시 아래 JSON 스키마로만 응답하세요.\n"
+            "{\n"
+            '  "text": "마크다운 답변 본문",\n'
+            '  "evidence": ["근거1", "근거2"],\n'
+            '  "actions": ["액션1", "액션2"],\n'
+            '  "follow_up_questions": ["추가질문1", "추가질문2", "추가질문3"]\n'
+            "}"
+        )
+
+        try:
+            raw = self.gemini.call_gemini_text(
+                prompt=prompt,
+                system_instruction=system_instruction,
+                response_type="application/json",
+            )
+        except Exception as exc:
+            logger.warning("골든쿼리 LLM 포맷팅 실패: %s", exc)
+            return None
+
+        if not raw:
+            return None
+
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, json.JSONDecodeError) as exc:
+            logger.warning("골든쿼리 LLM 응답 파싱 실패: %s | raw=%s", exc, str(raw)[:200])
+            return None
+
+        text = str(parsed.get("text") or "").strip()
+        if not text:
+            return None
+        evidence = [str(item).strip() for item in parsed.get("evidence", []) if str(item).strip()][:3]
+        actions = [str(item).strip() for item in parsed.get("actions", []) if str(item).strip()][:3]
+
+        def _normalize_for_compare(value: str) -> str:
+            return re.sub(r"[\s\.\?!,]+", "", value).lower()
+
+        original_norm = _normalize_for_compare(query)
+        seen_norms: set[str] = {original_norm}
+        follow_ups: list[str] = []
+        for item in parsed.get("follow_up_questions", []):
+            cleaned = str(item).strip()
+            if not cleaned:
+                continue
+            norm = _normalize_for_compare(cleaned)
+            if not norm or norm in seen_norms:
+                continue
+            seen_norms.add(norm)
+            follow_ups.append(cleaned)
+            if len(follow_ups) >= 3:
+                break
+
+        return {
+            "text": text,
+            "evidence": evidence,
+            "actions": actions,
+            "follow_up_questions": follow_ups,
+        }
 
     def _build_response_text(self, query: str, rows: list[dict[str, Any]]) -> str:
         if not rows:
@@ -670,10 +799,15 @@ JSON:
         params = {
             "store_id": store_id,
             "target_store_cd": store_id,
+            "reference_dt": period["reference_dt"],
             "date_from": period["date_from"],
             "date_to": period["date_to"],
             "start_date": period["date_from"],
             "end_date": period["date_to"],
+            "this_month_start": period["this_month_start"],
+            "this_month_end": period["this_month_end"],
+            "last_month_start": period["last_month_start"],
+            "last_month_end": period["last_month_end"],
         }
 
         rows, _ = executor.run(
@@ -684,18 +818,40 @@ JSON:
             params=params,
         )
 
-        text = self._build_response_text(query, rows)
-        evidence = [
+        llm_answer = self._llm_format_answer(
+            query=query,
+            candidate=match.candidate,
+            rows=rows,
+            period=period,
+        )
+
+        base_evidence = [
             f"골든쿼리 매칭: {match.candidate.query_id} (score={match.final_score:.2f})",
             f"조회 테이블: {', '.join(match.candidate.relevant_tables) or 'N/A'}",
+            f"조회 기간: {period.get('date_from')} ~ {period.get('date_to')} (행 {len(rows)}건)",
         ]
-        if match.candidate.expected_answer:
-            evidence.append(f"예상 응답 템플릿: {match.candidate.expected_answer}")
+
+        if llm_answer is not None:
+            text = llm_answer["text"]
+            evidence = llm_answer["evidence"] or base_evidence
+            actions = llm_answer["actions"] or [
+                "현재 결과의 핵심 지표 1개를 골라 즉시 점검",
+                "동일 기간으로 다른 도메인(생산/주문) 지표를 비교",
+            ]
+            follow_ups = llm_answer["follow_up_questions"]
+        else:
+            text = self._build_response_text(query, rows)
+            evidence = base_evidence
+            if match.candidate.expected_answer:
+                evidence.append(f"예상 응답 템플릿: {match.candidate.expected_answer}")
+            actions = ["질문 조건을 구체화해 재조회", "동일 기간으로 도메인 비교 조회"]
+            follow_ups = []
 
         return {
             "text": text,
             "evidence": evidence,
-            "actions": ["질문 조건을 구체화해 재조회", "동일 기간으로 도메인 비교 조회"],
+            "actions": actions,
+            "follow_up_questions": follow_ups,
             "intent": f"golden query match: {match.candidate.query_id}",
             "relevant_tables": match.candidate.relevant_tables,
             "sql": sql,
